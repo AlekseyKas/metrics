@@ -69,6 +69,7 @@ func main() {
 	// tickerSend := time.NewTicker(reportInterval)
 	// defer tickerSend.Stop()
 	go UpdateMetrics(ctx, &M, pollInterval)
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -76,16 +77,17 @@ func main() {
 			return
 		default:
 			time.Sleep(reportInterval)
-			err := sendMetrics(M)
+			err := sendMetrics(ctx, M)
 			if err != nil {
 				logrus.Error("Error sending POST: ", err)
 			}
 		}
 	}
+
 }
 
 //sending metrics to server
-func sendMetrics(M Metrics) error {
+func sendMetrics(ctx context.Context, M Metrics) error {
 	metricsMap := structs.Map(M)
 
 	client := resty.New()
@@ -95,13 +97,19 @@ func sendMetrics(M Metrics) error {
 		SetRetryMaxWaitTime(20 * time.Second)
 
 	for k, v := range metricsMap {
-		typeMet := strings.Split(reflect.ValueOf(v).Type().String(), ".")[1]
-		value := fmt.Sprintf("%v", v)
-		_, err := client.R().SetPathParams(map[string]string{
-			"type": typeMet, "value": value, "name": k,
-		}).Post("http://127.0.0.1:8080/update/{type}/{name}/{value}")
-		if err != nil {
-			fmt.Println(err)
+		select {
+		case <-ctx.Done():
+			logrus.Info("Send metrics in map ending!")
+			return nil
+		default:
+			typeMet := strings.Split(reflect.ValueOf(v).Type().String(), ".")[1]
+			value := fmt.Sprintf("%v", v)
+			_, err := client.R().SetPathParams(map[string]string{
+				"type": typeMet, "value": value, "name": k,
+			}).Post("http://127.0.0.1:8080/update/{type}/{name}/{value}")
+			if err != nil {
+				fmt.Println(err)
+			}
 		}
 	}
 	return nil
@@ -109,7 +117,7 @@ func sendMetrics(M Metrics) error {
 
 //wating signals
 func waitSignals(cancel context.CancelFunc) {
-	terminate := make(chan os.Signal)
+	terminate := make(chan os.Signal, 1)
 	signal.Notify(terminate, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	for {
 		sig := <-terminate
