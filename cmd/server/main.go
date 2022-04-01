@@ -99,29 +99,35 @@ func getMetric(mapMetrics map[string]interface{}) http.HandlerFunc {
 		}
 		//nameMertic to url
 		// if _, ok := mapMetrics[nameMet]; ok {
-		nameMet = chi.URLParam(req, "nameMet")
+		// nameMet = chi.URLParam(req, "nameMet")
 		// } else {
 		// 	rw.Header().Add("Content-Type", "text/plain")
 		// 	rw.WriteHeader(http.StatusOK)
+		// 	return
 		// }
+
+		if typeMet != "gauge" && typeMet != "counter" {
+			rw.Header().Add("Content-Type", "text/plain")
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 
 		if typeMet == "gauge" && nameMet == "PollCount" {
 			rw.Header().Add("Content-Type", "text/plain")
 			rw.WriteHeader(http.StatusNotFound)
+			return
 		}
 		if typeMet == "counter" && nameMet == "PollCount" {
 			rw.Write([]byte(fmt.Sprintf("%v", mapMetrics[nameMet])))
 			rw.Header().Add("Content-Type", "text/plain")
 			rw.WriteHeader(http.StatusOK)
+			return
 		}
-		// if typeMet == "counter" && nameMet != "PollCount" {
-		// 	rw.Header().Add("Content-Type", "text/plain")
-		// 	rw.WriteHeader(http.StatusNotFound)
-		// }
 		if typeMet == "gauge" && nameMet != "PollCount" {
 			rw.Write([]byte(fmt.Sprintf("%v", mapMetrics[nameMet])))
 			rw.Header().Add("Content-Type", "text/plain")
 			rw.WriteHeader(http.StatusOK)
+			return
 		}
 	}
 }
@@ -141,14 +147,15 @@ func SaveMetrics(mapMetrics map[string]interface{}) http.HandlerFunc {
 		}
 		//nameMertic to url
 		// if _, ok := mapMetrics[nameMet]; ok {
-		nameMet = chi.URLParam(req, "nameMet")
+		// nameMet = chi.URLParam(req, "nameMet")
 		// }
+
 		if typeMet != "gauge" && typeMet != "counter" {
 			rw.Header().Add("Content-Type", "text/plain")
 			rw.WriteHeader(http.StatusInternalServerError)
 		}
 		//update gauge
-		if typeMet == "gauge" {
+		if typeMet == "gauge" && nameMet != "PollCount" {
 			valueMetFloat, err := strconv.ParseFloat(value, 64)
 			if err != nil {
 				rw.Header().Add("Content-Type", "text/plain")
