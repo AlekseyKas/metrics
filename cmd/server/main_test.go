@@ -145,8 +145,6 @@ func TestRouter(t *testing.T) {
 			resp, _ := testRequest(t, ts, tt.method, tt.request)
 			defer resp.Body.Close()
 			assert.Equal(t, tt.want.statusCode, resp.StatusCode)
-			// assert.Equal(t, tt.want.contentType, resp.Header.Get("Content-Type"))
-			// assert.Equal(t, string(jsonString), body)
 
 		})
 	}

@@ -77,7 +77,7 @@ func main() {
 			return
 		default:
 			time.Sleep(reportInterval)
-			err := sendMetrics(ctx, M)
+			err := saveMetrics(ctx, M)
 			if err != nil {
 				logrus.Error("Error sending POST: ", err)
 			}
@@ -87,7 +87,7 @@ func main() {
 }
 
 //sending metrics to server
-func sendMetrics(ctx context.Context, M Metrics) error {
+func saveMetrics(ctx context.Context, M Metrics) error {
 	metricsMap := structs.Map(M)
 
 	client := resty.New()

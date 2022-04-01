@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var M Metrics
@@ -93,6 +94,32 @@ func TestUpdateMetrics(t *testing.T) {
 			UpdateMetrics(ctx, tt.metrics, pollint)
 			M = *tt.metrics
 			assert.Equal(t, tt.want.PollCount, M.PollCount)
+		})
+	}
+}
+
+func Test_saveMetrics(t *testing.T) {
+
+	tests := []struct {
+		name       string
+		metrics    Metrics
+		statusCode int
+	}{
+		{
+			name:       "first test",
+			metrics:    M,
+			statusCode: 400,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			ctx, cancel := context.WithCancel(context.Background())
+			time.AfterFunc(6*time.Second, cancel)
+			err := saveMetrics(ctx, tt.metrics)
+			require.NoError(t, err)
+			assert.Equal(t, tt.statusCode, 400)
+
 		})
 	}
 }
