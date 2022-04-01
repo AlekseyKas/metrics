@@ -98,12 +98,12 @@ func getMetric(mapMetrics map[string]interface{}) http.HandlerFunc {
 			typeMet = "counter"
 		}
 		//nameMertic to url
-		if _, ok := mapMetrics[nameMet]; ok {
-			nameMet = chi.URLParam(req, "nameMet")
-		} else {
-			rw.Header().Add("Content-Type", "text/plain")
-			rw.WriteHeader(http.StatusNotFound)
-		}
+		// if _, ok := mapMetrics[nameMet]; ok {
+		nameMet = chi.URLParam(req, "nameMet")
+		// } else {
+		// 	rw.Header().Add("Content-Type", "text/plain")
+		// 	rw.WriteHeader(http.StatusOK)
+		// }
 
 		if typeMet == "gauge" && nameMet == "PollCount" {
 			rw.Header().Add("Content-Type", "text/plain")
@@ -114,10 +114,10 @@ func getMetric(mapMetrics map[string]interface{}) http.HandlerFunc {
 			rw.Header().Add("Content-Type", "text/plain")
 			rw.WriteHeader(http.StatusOK)
 		}
-		if typeMet == "counter" && nameMet != "PollCount" {
-			rw.Header().Add("Content-Type", "text/plain")
-			rw.WriteHeader(http.StatusNotFound)
-		}
+		// if typeMet == "counter" && nameMet != "PollCount" {
+		// 	rw.Header().Add("Content-Type", "text/plain")
+		// 	rw.WriteHeader(http.StatusNotFound)
+		// }
 		if typeMet == "gauge" && nameMet != "PollCount" {
 			rw.Write([]byte(fmt.Sprintf("%v", mapMetrics[nameMet])))
 			rw.Header().Add("Content-Type", "text/plain")
@@ -140,40 +140,50 @@ func SaveMetrics(mapMetrics map[string]interface{}) http.HandlerFunc {
 			typeMet = "counter"
 		}
 		//nameMertic to url
-		if _, ok := mapMetrics[nameMet]; ok {
-			nameMet = chi.URLParam(req, "nameMet")
-		} else {
+		// if _, ok := mapMetrics[nameMet]; ok {
+		nameMet = chi.URLParam(req, "nameMet")
+		// }
+		if typeMet != "gauge" && typeMet != "counter" {
 			rw.Header().Add("Content-Type", "text/plain")
-			rw.WriteHeader(http.StatusNotFound)
+			rw.WriteHeader(http.StatusInternalServerError)
 		}
 		//update gauge
-		if typeMet == "gauge" && nameMet != "PollCount" {
+		if typeMet == "gauge" {
 			valueMetFloat, err := strconv.ParseFloat(value, 64)
 			if err != nil {
 				rw.Header().Add("Content-Type", "text/plain")
-				rw.WriteHeader(http.StatusNotFound)
-				logrus.Error("Error parse float64: ", err)
+				rw.WriteHeader(http.StatusBadRequest)
 			}
-			if mapMetrics[nameMet] != gauge(valueMetFloat) {
-				mapMetrics[nameMet] = gauge(valueMetFloat)
-				rw.Header().Add("Content-Type", "text/plain")
-				rw.WriteHeader(http.StatusOK)
+			if err == nil {
+				if mapMetrics[nameMet] != gauge(valueMetFloat) {
+					mapMetrics[nameMet] = gauge(valueMetFloat)
+					rw.Header().Add("Content-Type", "text/plain")
+					rw.WriteHeader(http.StatusOK)
+				}
 			}
 		}
 		//update counter
-		if typeMet == "counter" && nameMet == "PollCount" {
-			valueMetInt, _ := strconv.Atoi(value)
-			if mapMetrics[nameMet] != valueMetInt {
-				i, err := strconv.Atoi(fmt.Sprintf("%v", mapMetrics[nameMet]))
-				if err != nil {
-					rw.Header().Add("Content-Type", "text/plain")
-					rw.WriteHeader(http.StatusNotFound)
-					logrus.Error("Error parse value to int", err)
-				}
-				valueMetInt = valueMetInt + i
-				mapMetrics[nameMet] = counter(valueMetInt)
+		if typeMet == "counter" {
+
+			valueMetInt, err := strconv.Atoi(value)
+			if err != nil {
 				rw.Header().Add("Content-Type", "text/plain")
-				rw.WriteHeader(http.StatusOK)
+				rw.WriteHeader(http.StatusBadRequest)
+			}
+			if err == nil {
+				if mapMetrics[nameMet] != valueMetInt {
+					i, err := strconv.Atoi(fmt.Sprintf("%v", mapMetrics[nameMet]))
+					if err != nil {
+						rw.Header().Add("Content-Type", "text/plain")
+						rw.WriteHeader(http.StatusBadRequest)
+						// logrus.Error("Error parse value to int", err)
+					}
+
+					valueMetInt = valueMetInt + i
+					mapMetrics[nameMet] = counter(valueMetInt)
+					rw.Header().Add("Content-Type", "text/plain")
+					rw.WriteHeader(http.StatusOK)
+				}
 			}
 		}
 
