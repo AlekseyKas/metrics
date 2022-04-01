@@ -69,14 +69,16 @@ func TestRouter(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	assert.Equal(t, string(jsonString), bodygetMetrics)
-
+	defer resp.Body.Close()
 	respVal, bodygetMetric := testRequest(t, ts, "GET", "/value/gauge/HeapSys")
 	assert.Equal(t, http.StatusOK, respVal.StatusCode)
 	assert.Equal(t, "0", bodygetMetric)
+	defer respVal.Body.Close()
 
 	respSave, _ := testRequest(t, ts, "POST", "/update/gauge/HeapSys/0.2201")
 	assert.Equal(t, http.StatusOK, respSave.StatusCode)
 	assert.Equal(t, "text/plain", respSave.Header.Get("Content-Type"))
+	defer respSave.Body.Close()
 
 }
 
