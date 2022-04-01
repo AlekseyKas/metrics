@@ -120,7 +120,6 @@ func getMetric(mapMetrics map[string]interface{}) http.HandlerFunc {
 		}
 		if typeMet == "gauge" && nameMet != "PollCount" {
 			rw.Write([]byte(fmt.Sprintf("%v", mapMetrics[nameMet])))
-			fmt.Println("@@@@@@@@@@@@@@@@@", mapMetrics[nameMet])
 			rw.Header().Add("Content-Type", "text/plain")
 			rw.WriteHeader(http.StatusOK)
 		}
