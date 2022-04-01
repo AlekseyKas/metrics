@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -56,30 +55,101 @@ func TestRouter(t *testing.T) {
 		RandomValue gauge
 	}
 
-	r := chi.NewRouter()
-	r.Route("/", metrics.Router)
-	ts := httptest.NewServer(r)
-	defer ts.Close()
-
 	mm = structs.Map(metr)
 
-	jsonString, _ := json.Marshal(mm)
+	// jsonString, _ := json.Marshal(mm)
 
-	resp, bodygetMetrics := testRequest(t, ts, "GET", "/")
+	type want struct {
+		contentType string
+		statusCode  int
+	}
+	tests := []struct {
+		name    string
+		request string
+		method  string
+		want    want
+	}{
+		{
+			name:    "fist sample#",
+			request: "/update/gauge/HeapAlloc/0.112",
+			method:  "POST",
+			want: want{
+				contentType: "text/plain",
+				statusCode:  200,
+			},
+		},
+		{
+			name:    "second sample#",
+			request: "/update/gauge/TestCount/200",
+			method:  "POST",
+			want: want{
+				contentType: "text/plain",
+				statusCode:  200,
+			},
+		},
+		{
+			name:    "third sample#",
+			request: "/update/unknown/TestCount/200",
+			method:  "POST",
+			want: want{
+				contentType: "text/plain",
+				statusCode:  501,
+			},
+		},
+		{
+			name:    "third sample#",
+			request: "/value/gauge/Alloc",
+			method:  "GET",
+			want: want{
+				contentType: "text/plain",
+				statusCode:  200,
+			},
+		},
+		{
+			name:    "third sample#",
+			request: "/",
+			method:  "GET",
+			want: want{
+				contentType: "text/plain",
+				statusCode:  200,
+			},
+		},
+		{
+			name:    "third sample#",
+			request: "/value/gauge/PollCount",
+			method:  "GET",
+			want: want{
+				contentType: "text/plain",
+				statusCode:  404,
+			},
+		},
+		{
+			name:    "third sample#",
+			request: "/value/gauge/PollCount/none",
+			method:  "GET",
+			want: want{
+				contentType: "text/plain",
+				statusCode:  404,
+			},
+		},
 
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
-	assert.Equal(t, string(jsonString), bodygetMetrics)
-	defer resp.Body.Close()
-	respVal, bodygetMetric := testRequest(t, ts, "GET", "/value/gauge/HeapSys")
-	assert.Equal(t, http.StatusOK, respVal.StatusCode)
-	assert.Equal(t, "0", bodygetMetric)
-	defer respVal.Body.Close()
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := chi.NewRouter()
+			r.Route("/", metrics.Router)
+			ts := httptest.NewServer(r)
+			defer ts.Close()
 
-	respSave, _ := testRequest(t, ts, "POST", "/update/gauge/HeapSys/0.2201")
-	assert.Equal(t, http.StatusOK, respSave.StatusCode)
-	assert.Equal(t, "text/plain", respSave.Header.Get("Content-Type"))
-	defer respSave.Body.Close()
+			resp, _ := testRequest(t, ts, tt.method, tt.request)
+			defer resp.Body.Close()
+			assert.Equal(t, tt.want.statusCode, resp.StatusCode)
+			// assert.Equal(t, tt.want.contentType, resp.Header.Get("Content-Type"))
+			// assert.Equal(t, string(jsonString), body)
 
+		})
+	}
 }
 
 func testRequest(t *testing.T, ts *httptest.Server, method, path string) (*http.Response, string) {
