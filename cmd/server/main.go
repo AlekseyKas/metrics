@@ -178,7 +178,7 @@ func SaveMetrics(mapMetrics map[string]interface{}) http.HandlerFunc {
 				rw.WriteHeader(http.StatusBadRequest)
 			}
 			if err == nil {
-				if mapMetrics[nameMet] != valueMetInt {
+				if _, ok := mapMetrics[nameMet]; ok {
 					i, err := strconv.Atoi(fmt.Sprintf("%v", mapMetrics[nameMet]))
 					if err != nil {
 						rw.Header().Add("Content-Type", "text/plain")
@@ -190,9 +190,10 @@ func SaveMetrics(mapMetrics map[string]interface{}) http.HandlerFunc {
 					mapMetrics[nameMet] = counter(valueMetInt)
 					rw.Header().Add("Content-Type", "text/plain")
 					rw.WriteHeader(http.StatusOK)
+				} else {
+					mapMetrics[nameMet] = counter(valueMetInt)
 				}
 			}
 		}
-
 	}
 }
