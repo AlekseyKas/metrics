@@ -117,7 +117,7 @@ func getMetric(mapMetrics map[string]interface{}) http.HandlerFunc {
 			rw.WriteHeader(http.StatusNotFound)
 			return
 		}
-		if typeMet == "counter" && nameMet == "PollCount" {
+		if typeMet == "counter" {
 			rw.Write([]byte(fmt.Sprintf("%v", mapMetrics[nameMet])))
 			rw.Header().Add("Content-Type", "text/plain")
 			rw.WriteHeader(http.StatusOK)
@@ -152,7 +152,7 @@ func SaveMetrics(mapMetrics map[string]interface{}) http.HandlerFunc {
 
 		if typeMet != "gauge" && typeMet != "counter" {
 			rw.Header().Add("Content-Type", "text/plain")
-			rw.WriteHeader(http.StatusInternalServerError)
+			rw.WriteHeader(http.StatusNotImplemented)
 		}
 		//update gauge
 		if typeMet == "gauge" && nameMet != "PollCount" {
