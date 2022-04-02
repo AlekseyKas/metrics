@@ -9,10 +9,10 @@ import (
 	"reflect"
 	"runtime"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
-	"github.com/fatih/structs"
 	"github.com/go-resty/resty/v2"
 	"github.com/sirupsen/logrus"
 )
@@ -27,49 +27,63 @@ const reportInterval = 10 * time.Second
 
 //Struct for metrics
 type Metrics struct {
-	Alloc         gauge
-	BuckHashSys   gauge
-	Frees         gauge
-	GCCPUFraction gauge
-	GCSys         gauge
-	HeapAlloc     gauge
-	HeapIdle      gauge
-	HeapInuse     gauge
-	HeapObjects   gauge
-	HeapReleased  gauge
-	HeapSys       gauge
-	LastGC        gauge
-	Lookups       gauge
-	MCacheInuse   gauge
-	MCacheSys     gauge
-	MSpanInuse    gauge
-	MSpanSys      gauge
-	Mallocs       gauge
-	NextGC        gauge
-	NumForcedGC   gauge
-	NumGC         gauge
-	OtherSys      gauge
-	PauseTotalNs  gauge
-	StackInuse    gauge
-	StackSys      gauge
-	Sys           gauge
-	TotalAlloc    gauge
-
-	PollCount   counter
-	RandomValue gauge
+	mux       sync.Mutex
+	MM        map[string]interface{}
+	PollCount int
 }
 
-var M Metrics
+var M Metrics = Metrics{MM: make(map[string]interface{})}
+
+func (ptr *Metrics) Get() (values map[string]interface{}) {
+	ptr.mux.Lock()
+	values = ptr.MM
+	ptr.mux.Unlock()
+	return
+}
+
+func (ptr *Metrics) Update() {
+	var memStats runtime.MemStats
+	runtime.ReadMemStats(&memStats)
+	ptr.mux.Lock()
+	ptr.PollCount++
+	ptr.MM["Alloc"] = gauge((memStats.Alloc))
+	ptr.MM["BuckHashSys"] = gauge(memStats.BuckHashSys)
+	ptr.MM["Frees"] = gauge(memStats.Frees)
+	ptr.MM["GCCPUFraction"] = gauge(memStats.GCCPUFraction)
+	ptr.MM["GCSys"] = gauge(memStats.GCSys)
+	ptr.MM["HeapAlloc"] = gauge(memStats.HeapAlloc)
+	ptr.MM["HeapIdle"] = gauge(memStats.HeapIdle)
+	ptr.MM["HeapInuse"] = gauge(memStats.HeapInuse)
+	ptr.MM["HeapObjects"] = gauge(memStats.HeapObjects)
+	ptr.MM["HeapReleased"] = gauge(memStats.HeapReleased)
+	ptr.MM["HeapSys"] = gauge(memStats.HeapSys)
+	ptr.MM["LastGC"] = gauge(memStats.LastGC)
+	ptr.MM["Lookups"] = gauge(memStats.Lookups)
+	ptr.MM["MCacheInuse"] = gauge(memStats.MCacheInuse)
+	ptr.MM["MCacheSys"] = gauge(memStats.MCacheSys)
+	ptr.MM["MSpanInuse"] = gauge(memStats.MSpanInuse)
+	ptr.MM["MSpanSys"] = gauge(memStats.MSpanSys)
+	ptr.MM["Mallocs"] = gauge(memStats.Mallocs)
+	ptr.MM["NextGC"] = gauge(memStats.NextGC)
+	ptr.MM["NumForcedGC"] = gauge(memStats.NumForcedGC)
+	ptr.MM["NumGC"] = gauge(memStats.NumGC)
+	ptr.MM["OtherSys"] = gauge(memStats.OtherSys)
+	ptr.MM["PauseTotalNs"] = gauge(memStats.PauseTotalNs)
+	ptr.MM["StackInuse"] = gauge(memStats.StackInuse)
+	ptr.MM["StackSys"] = gauge(memStats.StackSys)
+	ptr.MM["Sys"] = gauge(memStats.Sys)
+	ptr.MM["TotalAlloc"] = gauge(memStats.TotalAlloc)
+	ptr.MM["RandomValue"] = gauge(rand.Float64())
+	ptr.MM["PollCount"] = counter(ptr.PollCount)
+	ptr.mux.Unlock()
+}
 
 func main() {
-	M = Metrics{}
+	M.Update()
+
 	ctx, cancel := context.WithCancel(context.Background())
 	go waitSignals(cancel)
-
-	//set ticker dor sending
-	// tickerSend := time.NewTicker(reportInterval)
-	// defer tickerSend.Stop()
-	go UpdateMetrics(ctx, &M, pollInterval)
+	go UpdateMetrics(ctx, pollInterval)
 
 	for {
 		select {
@@ -78,7 +92,7 @@ func main() {
 			return
 		default:
 			time.Sleep(reportInterval)
-			err := saveMetrics(ctx, M)
+			err := saveMetrics(ctx)
 			if err != nil {
 				logrus.Error("Error sending POST: ", err)
 			}
@@ -88,16 +102,14 @@ func main() {
 }
 
 //sending metrics to server
-func saveMetrics(ctx context.Context, M Metrics) error {
-	metricsMap := structs.Map(M)
-
+func saveMetrics(ctx context.Context) error {
 	client := resty.New()
 	client.
 		SetRetryCount(1).
 		SetRetryWaitTime(1 * time.Second).
 		SetRetryMaxWaitTime(2 * time.Second)
 
-	for k, v := range metricsMap {
+	for k, v := range M.Get() {
 		select {
 		case <-ctx.Done():
 			logrus.Info("Send metrics in map ending!")
@@ -132,56 +144,15 @@ func waitSignals(cancel context.CancelFunc) {
 }
 
 //Update metrics
-func UpdateMetrics(ctx context.Context, M *Metrics, pollInterval time.Duration) {
-	var memStats runtime.MemStats
-	//Init ticker
-	ticker := time.NewTicker(pollInterval)
-	defer ticker.Stop()
-	//init pollcount
-	PollCount := 0
+func UpdateMetrics(ctx context.Context, pollInterval time.Duration) {
 	for {
 		select {
 		//send command to ending
 		case <-ctx.Done():
 			logrus.Info("Agent is down update metrics!")
 			return
-		default:
-			<-ticker.C
-			runtime.ReadMemStats(&memStats)
-			//upper PollCount
-			PollCount++
-			//Update metrics
-			*M = Metrics{
-				Alloc:         gauge((memStats.Alloc)),
-				BuckHashSys:   gauge(memStats.BuckHashSys),
-				Frees:         gauge(memStats.Frees),
-				GCCPUFraction: gauge(memStats.GCCPUFraction),
-				GCSys:         gauge(memStats.GCSys),
-				HeapAlloc:     gauge(memStats.HeapAlloc),
-				HeapIdle:      gauge(memStats.HeapIdle),
-				HeapInuse:     gauge(memStats.HeapInuse),
-				HeapObjects:   gauge(memStats.HeapObjects),
-				HeapReleased:  gauge(memStats.HeapReleased),
-				HeapSys:       gauge(memStats.HeapSys),
-				LastGC:        gauge(memStats.LastGC),
-				Lookups:       gauge(memStats.Lookups),
-				MCacheInuse:   gauge(memStats.MCacheInuse),
-				MCacheSys:     gauge(memStats.MCacheSys),
-				MSpanInuse:    gauge(memStats.MSpanInuse),
-				MSpanSys:      gauge(memStats.MSpanSys),
-				Mallocs:       gauge(memStats.Mallocs),
-				NextGC:        gauge(memStats.NextGC),
-				NumForcedGC:   gauge(memStats.NumForcedGC),
-				NumGC:         gauge(memStats.NumGC),
-				OtherSys:      gauge(memStats.OtherSys),
-				PauseTotalNs:  gauge(memStats.PauseTotalNs),
-				StackInuse:    gauge(memStats.StackInuse),
-				StackSys:      gauge(memStats.StackSys),
-				Sys:           gauge(memStats.Sys),
-				TotalAlloc:    gauge(memStats.TotalAlloc),
-				RandomValue:   gauge(rand.Float64()),
-				PollCount:     counter(PollCount),
-			}
+		case <-time.After(time.Second * pollInterval):
+			M.Update()
 		}
 	}
 }
