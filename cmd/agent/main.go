@@ -63,7 +63,6 @@ var M Metrics
 
 func main() {
 	M = Metrics{}
-	//init terminate
 	ctx, cancel := context.WithCancel(context.Background())
 	go waitSignals(cancel)
 
@@ -151,7 +150,6 @@ func UpdateMetrics(ctx context.Context, M *Metrics, pollInterval time.Duration) 
 			runtime.ReadMemStats(&memStats)
 			//upper PollCount
 			PollCount++
-			// fmt.Println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!", PollCount)
 			//Update metrics
 			*M = Metrics{
 				Alloc:         gauge((memStats.Alloc)),

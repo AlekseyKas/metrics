@@ -54,6 +54,7 @@ type Metrics struct {
 var metrics Metrics = Metrics{}
 var mapMetrics map[string]interface{} = structs.Map(metrics)
 
+//router
 func (metrics *Metrics) Router(r chi.Router) {
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
@@ -65,13 +66,13 @@ func (metrics *Metrics) Router(r chi.Router) {
 }
 
 func main() {
-
 	r := chi.NewRouter()
 	r.Route("/", metrics.Router)
 	http.ListenAndServe(":8080", r)
 
 }
 
+//Get all metrics
 func getMetrics(metrics map[string]interface{}) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		jsonMetrics, err := json.Marshal(metrics)
@@ -84,27 +85,19 @@ func getMetrics(metrics map[string]interface{}) http.HandlerFunc {
 	}
 }
 
+//Get value metric
 func getMetric(mapMetrics map[string]interface{}) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 
 		typeMet := chi.URLParam(req, "typeMet")
 		nameMet := chi.URLParam(req, "nameMet")
 
-		//typeMertic to url
 		switch typeMet {
 		case "gauge":
 			typeMet = "gauge"
 		case "counter":
 			typeMet = "counter"
 		}
-		//nameMertic to url
-		// if _, ok := mapMetrics[nameMet]; ok {
-		// nameMet = chi.URLParam(req, "nameMet")
-		// } else {
-		// 	rw.Header().Add("Content-Type", "text/plain")
-		// 	rw.WriteHeader(http.StatusOK)
-		// 	return
-		// }
 
 		if typeMet != "gauge" && typeMet != "counter" {
 			rw.Header().Add("Content-Type", "text/plain")
@@ -151,11 +144,6 @@ func SaveMetrics(mapMetrics map[string]interface{}) http.HandlerFunc {
 		case "counter":
 			typeMet = "counter"
 		}
-		//nameMertic to url
-		// if _, ok := mapMetrics[nameMet]; ok {
-		// nameMet = chi.URLParam(req, "nameMet")
-		// }
-
 		if typeMet != "gauge" && typeMet != "counter" {
 			rw.Header().Add("Content-Type", "text/plain")
 			rw.WriteHeader(http.StatusNotImplemented)
@@ -189,7 +177,6 @@ func SaveMetrics(mapMetrics map[string]interface{}) http.HandlerFunc {
 					if err != nil {
 						rw.Header().Add("Content-Type", "text/plain")
 						rw.WriteHeader(http.StatusBadRequest)
-						// logrus.Error("Error parse value to int", err)
 					}
 
 					valueMetInt = valueMetInt + i

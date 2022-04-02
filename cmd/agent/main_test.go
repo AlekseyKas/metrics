@@ -91,11 +91,9 @@ func TestClient(t *testing.T) {
 			err := saveMetrics(ctx, M)
 
 			// UpdateMetrics(ctx, &M, pollInterval)
-			// fmt.Println(&M.Alloc)
 			require.Error(t, err)
 			time.AfterFunc(3*time.Second, cancel)
 			// assert.Equal(t, tt.warnErr, err)
-
 			// assert.Equal(t, string(jsonString), body)
 		})
 	}
