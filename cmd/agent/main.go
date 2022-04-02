@@ -59,8 +59,10 @@ type Metrics struct {
 	RandomValue gauge
 }
 
+var M Metrics
+
 func main() {
-	M := Metrics{}
+	M = Metrics{}
 	//init terminate
 	ctx, cancel := context.WithCancel(context.Background())
 	go waitSignals(cancel)
@@ -92,9 +94,9 @@ func saveMetrics(ctx context.Context, M Metrics) error {
 
 	client := resty.New()
 	client.
-		SetRetryCount(2).
-		SetRetryWaitTime(10 * time.Second).
-		SetRetryMaxWaitTime(20 * time.Second)
+		SetRetryCount(1).
+		SetRetryWaitTime(1 * time.Second).
+		SetRetryMaxWaitTime(2 * time.Second)
 
 	for k, v := range metricsMap {
 		select {
@@ -108,7 +110,7 @@ func saveMetrics(ctx context.Context, M Metrics) error {
 				"type": typeMet, "value": value, "name": k,
 			}).Post("http://127.0.0.1:8080/update/{type}/{name}/{value}")
 			if err != nil {
-				fmt.Println(err)
+				return err
 			}
 		}
 	}

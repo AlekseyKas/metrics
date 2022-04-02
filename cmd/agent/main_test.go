@@ -2,143 +2,102 @@ package main
 
 import (
 	"context"
-	"math/rand"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-var M Metrics
+// var mm map[string]interface{} = make(map[string]interface{})
+// var metr Metrics = Metrics{}
 
-func TestUpdateMetrics(t *testing.T) {
+// func testRequest(t *testing.T, ts *httptest.Server, method, path string) (*http.Response, string) {
+// 	req, err := http.NewRequest(method, ts.URL+path, nil)
+// 	require.NoError(t, err)
 
+// 	resp, err := http.DefaultClient.Do(req)
+// 	require.NoError(t, err)
+
+// 	respBody, err := ioutil.ReadAll(resp.Body)
+// 	require.NoError(t, err)
+
+// 	defer resp.Body.Close()
+
+// 	return resp, string(respBody)
+// }
+
+func TestClient(t *testing.T) {
+	// var nameMetInt counter
+	//init typs
+	type gauge float64
+	type counter int64
+
+	//Struct for metrics
+	type Metrics struct {
+		Alloc         gauge
+		BuckHashSys   gauge
+		Frees         gauge
+		GCCPUFraction gauge
+		GCSys         gauge
+		HeapAlloc     gauge
+		HeapIdle      gauge
+		HeapInuse     gauge
+		HeapObjects   gauge
+		HeapReleased  gauge
+		HeapSys       gauge
+		LastGC        gauge
+		Lookups       gauge
+		MCacheInuse   gauge
+		MCacheSys     gauge
+		MSpanInuse    gauge
+		MSpanSys      gauge
+		Mallocs       gauge
+		NextGC        gauge
+		NumForcedGC   gauge
+		NumGC         gauge
+		OtherSys      gauge
+		PauseTotalNs  gauge
+		StackInuse    gauge
+		StackSys      gauge
+		Sys           gauge
+		TotalAlloc    gauge
+
+		PollCount   counter
+		RandomValue gauge
+	}
+	// mm = structs.Map(metr)
+
+	type want struct {
+		contentType string
+		statusCode  int
+	}
 	tests := []struct {
 		name    string
-		metrics *Metrics
-		want    *Metrics
+		request string
+		warnErr error
 	}{
 		{
-			name: "first #",
-			metrics: &Metrics{
-				Alloc:         gauge(1.2),
-				BuckHashSys:   gauge(2.1),
-				Frees:         gauge(2.1),
-				GCCPUFraction: gauge(2.1),
-				GCSys:         gauge(2.1),
-				HeapAlloc:     gauge(0.00001),
-				HeapIdle:      gauge(3),
-				HeapInuse:     gauge(4),
-				HeapObjects:   gauge(5),
-				HeapReleased:  gauge(6),
-				HeapSys:       gauge(7),
-				LastGC:        gauge(8),
-				Lookups:       gauge(9),
-				MCacheInuse:   gauge(10),
-				MCacheSys:     gauge(11),
-				MSpanInuse:    gauge(12),
-				MSpanSys:      gauge(13),
-				Mallocs:       gauge(14),
-				NextGC:        gauge(15),
-				NumForcedGC:   gauge(16),
-				NumGC:         gauge(17),
-				OtherSys:      gauge(0),
-				PauseTotalNs:  gauge(0),
-				StackInuse:    gauge(0),
-				StackSys:      gauge(8),
-				Sys:           gauge(8),
-				TotalAlloc:    gauge(5),
-				RandomValue:   gauge(rand.Float64()),
-				PollCount:     counter(0),
-			},
-
-			want: &Metrics{
-				Alloc:         gauge(1.2),
-				BuckHashSys:   gauge(2.1),
-				Frees:         gauge(2.1),
-				GCCPUFraction: gauge(2.1),
-				GCSys:         gauge(2.1),
-				HeapAlloc:     gauge(0.00001),
-				HeapIdle:      gauge(3),
-				HeapInuse:     gauge(4),
-				HeapObjects:   gauge(5),
-				HeapReleased:  gauge(6),
-				HeapSys:       gauge(7),
-				LastGC:        gauge(8),
-				Lookups:       gauge(9),
-				MCacheInuse:   gauge(10),
-				MCacheSys:     gauge(11),
-				MSpanInuse:    gauge(12),
-				MSpanSys:      gauge(13),
-				Mallocs:       gauge(14),
-				NextGC:        gauge(15),
-				NumForcedGC:   gauge(16),
-				NumGC:         gauge(17),
-				OtherSys:      gauge(0),
-				PauseTotalNs:  gauge(0),
-				StackInuse:    gauge(0),
-				StackSys:      gauge(8),
-				Sys:           gauge(8),
-				TotalAlloc:    gauge(5),
-				RandomValue:   gauge(rand.Float64()),
-				PollCount:     counter(3),
-			},
+			name:    "fist sample#",
+			request: "/",
+			warnErr: nil,
 		},
+		// TODO: Add test cases.
 	}
+
 	for _, tt := range tests {
-		pollint := 2 * time.Second
-		ctx, cancel := context.WithCancel(context.Background())
-		time.AfterFunc(4*time.Second, cancel)
 		t.Run(tt.name, func(t *testing.T) {
-			UpdateMetrics(ctx, tt.metrics, pollint)
-			M = *tt.metrics
-			assert.Equal(t, tt.want.PollCount, M.PollCount)
+
+			ctx, cancel := context.WithCancel(context.Background())
+			err := saveMetrics(ctx, M)
+
+			// UpdateMetrics(ctx, &M, pollInterval)
+			// fmt.Println(&M.Alloc)
+			require.Error(t, err)
+			time.AfterFunc(3*time.Second, cancel)
+			// assert.Equal(t, tt.warnErr, err)
+
+			// assert.Equal(t, string(jsonString), body)
 		})
 	}
+
 }
-
-// func Test_saveMetrics(t *testing.T) {
-
-// 	tests := []struct {
-// 		name       string
-// 		metrics    Metrics
-// 		statusCode int
-// 	}{
-// 		{
-// 			name:       "first test",
-// 			metrics:    M,
-// 			statusCode: 400,
-// 		},
-// 	}
-// 	for _, tt := range tests {
-// 		t.Run(tt.name, func(t *testing.T) {
-
-// 			ctx, cancel := context.WithCancel(context.Background())
-// 			time.AfterFunc(6*time.Second, cancel)
-// 			err := saveMetrics(ctx, tt.metrics)
-// 			require.NoError(t, err)
-// 			assert.Equal(t, tt.statusCode, 400)
-
-// 		})
-// 	}
-// }
-
-// func Test_saveMetrics(t *testing.T) {
-
-// 	tests := []struct {
-// 		name    string
-// 		metrics Metrics
-// 	}{
-// 		{
-// 			name:    "first test",
-// 			metrics: M,
-// 		},
-// 	}
-// 	for _, tt := range tests {
-// 		t.Run(tt.name, func(t *testing.T) {
-// 			err := sendMetrics(tt.metrics)
-// 			require.Error(t, err)
-
-// 		})
-// 	}
-// }
