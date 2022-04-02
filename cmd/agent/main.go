@@ -36,8 +36,11 @@ var M Metrics = Metrics{MM: make(map[string]interface{})}
 
 func (ptr *Metrics) Get() (values map[string]interface{}) {
 	ptr.mux.Lock()
-	values = ptr.MM
-	ptr.mux.Unlock()
+	defer ptr.mux.Unlock()
+	values = make(map[string]interface{})
+	for k, v := range ptr.MM {
+		values[k] = v
+	}
 	return
 }
 
@@ -45,6 +48,7 @@ func (ptr *Metrics) Update() {
 	var memStats runtime.MemStats
 	runtime.ReadMemStats(&memStats)
 	ptr.mux.Lock()
+	defer ptr.mux.Unlock()
 	ptr.PollCount++
 	ptr.MM["Alloc"] = gauge((memStats.Alloc))
 	ptr.MM["BuckHashSys"] = gauge(memStats.BuckHashSys)
@@ -75,7 +79,6 @@ func (ptr *Metrics) Update() {
 	ptr.MM["TotalAlloc"] = gauge(memStats.TotalAlloc)
 	ptr.MM["RandomValue"] = gauge(rand.Float64())
 	ptr.MM["PollCount"] = counter(ptr.PollCount)
-	ptr.mux.Unlock()
 }
 
 func main() {
@@ -90,8 +93,7 @@ func main() {
 		case <-ctx.Done():
 			logrus.Info("Agent is down send metrics.")
 			return
-		default:
-			time.Sleep(reportInterval)
+		case <-time.After(reportInterval):
 			err := saveMetrics(ctx)
 			if err != nil {
 				logrus.Error("Error sending POST: ", err)
