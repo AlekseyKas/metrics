@@ -117,12 +117,18 @@ func getMetric(mapMetrics map[string]interface{}) http.HandlerFunc {
 			rw.WriteHeader(http.StatusNotFound)
 			return
 		}
-		if typeMet == "counter" {
-			rw.Write([]byte(fmt.Sprintf("%v", mapMetrics[nameMet])))
+		if _, ok := mapMetrics[nameMet]; ok {
+			if typeMet == "counter" {
+				rw.Write([]byte(fmt.Sprintf("%v", mapMetrics[nameMet])))
+				rw.Header().Add("Content-Type", "text/plain")
+				rw.WriteHeader(http.StatusOK)
+				return
+			}
+		} else {
 			rw.Header().Add("Content-Type", "text/plain")
-			rw.WriteHeader(http.StatusOK)
-			return
+			rw.WriteHeader(http.StatusNotFound)
 		}
+
 		if typeMet == "gauge" && nameMet != "PollCount" {
 			rw.Write([]byte(fmt.Sprintf("%v", mapMetrics[nameMet])))
 			rw.Header().Add("Content-Type", "text/plain")
