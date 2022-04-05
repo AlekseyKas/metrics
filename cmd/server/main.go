@@ -3,7 +3,7 @@ package main
 import (
 	"net/http"
 
-	"github.com/AlekseyKas/metrics/metrics/cmd/server/handlers"
+	"github.com/AlekseyKas/metrics/cmd/server/handlers"
 	"github.com/go-chi/chi"
 )
 
