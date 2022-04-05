@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/AlekseyKas/metrics/cmd/server/handlers"
 	"github.com/fatih/structs"
 	"github.com/go-chi/chi"
 	"github.com/stretchr/testify/assert"
@@ -13,7 +14,7 @@ import (
 )
 
 var mm map[string]interface{} = make(map[string]interface{})
-var metr Metrics = Metrics{}
+var metr handlers.Metrics = handlers.Metrics{}
 
 func TestRouter(t *testing.T) {
 	// var nameMetInt counter
@@ -138,7 +139,7 @@ func TestRouter(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := chi.NewRouter()
-			r.Route("/", metrics.Router)
+			r.Route("/", handlers.Metric.Router)
 			ts := httptest.NewServer(r)
 			defer ts.Close()
 
