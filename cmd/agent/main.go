@@ -37,7 +37,7 @@ var M Metrics = Metrics{MM: make(map[string]interface{})}
 func (ptr *Metrics) Get() (values map[string]interface{}) {
 	ptr.mux.Lock()
 	defer ptr.mux.Unlock()
-	values = make(map[string]interface{})
+	values = make(map[string]interface{}, (len(ptr.MM)))
 	for k, v := range ptr.MM {
 		values[k] = v
 	}
