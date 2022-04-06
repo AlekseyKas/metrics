@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/fatih/structs"
+	"github.com/AlekseyKas/metrics/internal/storage"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/sirupsen/logrus"
@@ -16,57 +16,30 @@ import (
 type gauge float64
 type counter int64
 
-//Struct for metrics
-type Metrics struct {
-	Alloc         gauge
-	BuckHashSys   gauge
-	Frees         gauge
-	GCCPUFraction gauge
-	GCSys         gauge
-	HeapAlloc     gauge
-	HeapIdle      gauge
-	HeapInuse     gauge
-	HeapObjects   gauge
-	HeapReleased  gauge
-	HeapSys       gauge
-	LastGC        gauge
-	Lookups       gauge
-	MCacheInuse   gauge
-	MCacheSys     gauge
-	MSpanInuse    gauge
-	MSpanSys      gauge
-	Mallocs       gauge
-	NextGC        gauge
-	NumForcedGC   gauge
-	NumGC         gauge
-	OtherSys      gauge
-	PauseTotalNs  gauge
-	StackInuse    gauge
-	StackSys      gauge
-	Sys           gauge
-	TotalAlloc    gauge
+var storageM storage.Storage
 
-	PollCount   counter
-	RandomValue gauge
+func SetStorage(s storage.Storage) {
+	storageM = s
 }
 
-var Metric Metrics = Metrics{}
-var MapMetrics map[string]interface{} = structs.Map(Metric)
-
 //router
-func (metrics *Metrics) Router(r chi.Router) {
+func Router(r chi.Router) {
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
-	r.Get("/", GetMetrics(MapMetrics))
-	r.Get("/value/{typeMet}/{nameMet}", GetMetric(MapMetrics))
-	r.Post("/update/{typeMet}/{nameMet}/{value}", SaveMetrics(MapMetrics))
+	r.Get("/", getMetrics())
+	r.Get("/value/{typeMet}/{nameMet}", getMetric())
+	r.Post("/update/{typeMet}/{nameMet}/{value}", saveMetrics())
+	// r.Post("/update/{typeMet}/{nameMet}/{value}", saveMetrics())
+
 }
 
 //Get all metrics
-func GetMetrics(metrics map[string]interface{}) http.HandlerFunc {
+func getMetrics() http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
+
+		metrics := storageM.GetMetrics()
 		jsonMetrics, err := json.Marshal(metrics)
 		if err != nil {
 			logrus.Error(err)
@@ -78,8 +51,10 @@ func GetMetrics(metrics map[string]interface{}) http.HandlerFunc {
 }
 
 //Get value metric
-func GetMetric(mapMetrics map[string]interface{}) http.HandlerFunc {
+func getMetric() http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
+
+		metrics := storageM.GetMetrics()
 
 		typeMet := chi.URLParam(req, "typeMet")
 		nameMet := chi.URLParam(req, "nameMet")
@@ -102,9 +77,9 @@ func GetMetric(mapMetrics map[string]interface{}) http.HandlerFunc {
 			rw.WriteHeader(http.StatusNotFound)
 			return
 		}
-		if _, ok := mapMetrics[nameMet]; ok {
+		if _, ok := metrics[nameMet]; ok {
 			if typeMet == "counter" {
-				rw.Write([]byte(fmt.Sprintf("%v", mapMetrics[nameMet])))
+				rw.Write([]byte(fmt.Sprintf("%v", metrics[nameMet])))
 				rw.Header().Add("Content-Type", "text/plain")
 				rw.WriteHeader(http.StatusOK)
 				return
@@ -115,7 +90,7 @@ func GetMetric(mapMetrics map[string]interface{}) http.HandlerFunc {
 		}
 
 		if typeMet == "gauge" && nameMet != "PollCount" {
-			rw.Write([]byte(fmt.Sprintf("%v", mapMetrics[nameMet])))
+			rw.Write([]byte(fmt.Sprintf("%v", metrics[nameMet])))
 			rw.Header().Add("Content-Type", "text/plain")
 			rw.WriteHeader(http.StatusOK)
 			return
@@ -123,11 +98,14 @@ func GetMetric(mapMetrics map[string]interface{}) http.HandlerFunc {
 	}
 }
 
-func SaveMetrics(mapMetrics map[string]interface{}) http.HandlerFunc {
+func saveMetrics() http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		typeMet := chi.URLParam(req, "typeMet")
 		nameMet := chi.URLParam(req, "nameMet")
 		value := chi.URLParam(req, "value")
+
+		metrics := storageM.GetMetrics()
+		fmt.Println("############", metrics)
 
 		//typeMertic to url
 		switch typeMet {
@@ -148,8 +126,10 @@ func SaveMetrics(mapMetrics map[string]interface{}) http.HandlerFunc {
 				rw.WriteHeader(http.StatusBadRequest)
 			}
 			if err == nil {
-				if mapMetrics[nameMet] != gauge(valueMetFloat) {
-					mapMetrics[nameMet] = gauge(valueMetFloat)
+				if metrics[nameMet] != gauge(valueMetFloat) {
+					/////////////
+					storageM.ChangeGauge(nameMet, gauge(valueMetFloat))
+					// metrics[nameMet] = gauge(valueMetFloat)
 					rw.Header().Add("Content-Type", "text/plain")
 					rw.WriteHeader(http.StatusOK)
 				}
@@ -164,19 +144,25 @@ func SaveMetrics(mapMetrics map[string]interface{}) http.HandlerFunc {
 				rw.WriteHeader(http.StatusBadRequest)
 			}
 			if err == nil {
-				if _, ok := mapMetrics[nameMet]; ok {
-					i, err := strconv.Atoi(fmt.Sprintf("%v", mapMetrics[nameMet]))
+				if _, ok := metrics[nameMet]; ok {
+					i, err := strconv.Atoi(fmt.Sprintf("%v", metrics[nameMet]))
 					if err != nil {
 						rw.Header().Add("Content-Type", "text/plain")
 						rw.WriteHeader(http.StatusBadRequest)
 					}
 
 					valueMetInt = valueMetInt + i
-					mapMetrics[nameMet] = counter(valueMetInt)
+					// metrics[nameMet] = counter(valueMetInt)
+					storageM.ChangeGauge(nameMet, counter(valueMetInt))
+
+					////////////
 					rw.Header().Add("Content-Type", "text/plain")
 					rw.WriteHeader(http.StatusOK)
 				} else {
-					mapMetrics[nameMet] = counter(valueMetInt)
+					storageM.ChangeGauge(nameMet, counter(valueMetInt))
+
+					// metrics[nameMet] = counter(valueMetInt)
+					//////////////
 				}
 			}
 		}

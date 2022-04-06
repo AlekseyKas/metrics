@@ -3,86 +3,36 @@ package main
 import (
 	"context"
 	"fmt"
-	"math/rand"
 	"os"
 	"os/signal"
 	"reflect"
 	"runtime"
 	"strings"
-	"sync"
 	"syscall"
 	"time"
 
+	"github.com/AlekseyKas/metrics/internal/storage"
+	"github.com/fatih/structs"
 	"github.com/go-resty/resty/v2"
 	"github.com/sirupsen/logrus"
 )
 
-//init typs
-type gauge float64
-type counter int64
-
-//delay
 const pollInterval = 2 * time.Second
 const reportInterval = 10 * time.Second
 
-//Struct for metrics
-type Metrics struct {
-	mux       sync.Mutex
-	MM        map[string]interface{}
-	PollCount int
-}
+var storageM storage.StorageAgent
 
-var M Metrics = Metrics{MM: make(map[string]interface{})}
-
-func (ptr *Metrics) Get() (values map[string]interface{}) {
-	ptr.mux.Lock()
-	defer ptr.mux.Unlock()
-	values = make(map[string]interface{}, (len(ptr.MM)))
-	for k, v := range ptr.MM {
-		values[k] = v
-	}
-	return
-}
-
-func (ptr *Metrics) Update() {
-	var memStats runtime.MemStats
-	runtime.ReadMemStats(&memStats)
-	ptr.mux.Lock()
-	defer ptr.mux.Unlock()
-	ptr.PollCount++
-	ptr.MM["Alloc"] = gauge((memStats.Alloc))
-	ptr.MM["BuckHashSys"] = gauge(memStats.BuckHashSys)
-	ptr.MM["Frees"] = gauge(memStats.Frees)
-	ptr.MM["GCCPUFraction"] = gauge(memStats.GCCPUFraction)
-	ptr.MM["GCSys"] = gauge(memStats.GCSys)
-	ptr.MM["HeapAlloc"] = gauge(memStats.HeapAlloc)
-	ptr.MM["HeapIdle"] = gauge(memStats.HeapIdle)
-	ptr.MM["HeapInuse"] = gauge(memStats.HeapInuse)
-	ptr.MM["HeapObjects"] = gauge(memStats.HeapObjects)
-	ptr.MM["HeapReleased"] = gauge(memStats.HeapReleased)
-	ptr.MM["HeapSys"] = gauge(memStats.HeapSys)
-	ptr.MM["LastGC"] = gauge(memStats.LastGC)
-	ptr.MM["Lookups"] = gauge(memStats.Lookups)
-	ptr.MM["MCacheInuse"] = gauge(memStats.MCacheInuse)
-	ptr.MM["MCacheSys"] = gauge(memStats.MCacheSys)
-	ptr.MM["MSpanInuse"] = gauge(memStats.MSpanInuse)
-	ptr.MM["MSpanSys"] = gauge(memStats.MSpanSys)
-	ptr.MM["Mallocs"] = gauge(memStats.Mallocs)
-	ptr.MM["NextGC"] = gauge(memStats.NextGC)
-	ptr.MM["NumForcedGC"] = gauge(memStats.NumForcedGC)
-	ptr.MM["NumGC"] = gauge(memStats.NumGC)
-	ptr.MM["OtherSys"] = gauge(memStats.OtherSys)
-	ptr.MM["PauseTotalNs"] = gauge(memStats.PauseTotalNs)
-	ptr.MM["StackInuse"] = gauge(memStats.StackInuse)
-	ptr.MM["StackSys"] = gauge(memStats.StackSys)
-	ptr.MM["Sys"] = gauge(memStats.Sys)
-	ptr.MM["TotalAlloc"] = gauge(memStats.TotalAlloc)
-	ptr.MM["RandomValue"] = gauge(rand.Float64())
-	ptr.MM["PollCount"] = counter(ptr.PollCount)
+func SetStorageAgent(s storage.StorageAgent) {
+	storageM = s
 }
 
 func main() {
-	M.Update()
+	var MapMetrics map[string]interface{} = structs.Map(storage.Metrics{})
+	//инициализация хранилища метрик
+	s := &storage.MetricsStore{
+		MM: MapMetrics,
+	}
+	SetStorageAgent(s)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	go waitSignals(cancel)
@@ -94,7 +44,7 @@ func main() {
 			logrus.Info("Agent is down send metrics.")
 			return
 		case <-time.After(reportInterval):
-			err := saveMetrics(ctx)
+			err := sendMetrics(ctx)
 			if err != nil {
 				logrus.Error("Error sending POST: ", err)
 			}
@@ -104,14 +54,15 @@ func main() {
 }
 
 //sending metrics to server
-func saveMetrics(ctx context.Context) error {
+func sendMetrics(ctx context.Context) error {
 	client := resty.New()
 	client.
 		SetRetryCount(1).
 		SetRetryWaitTime(1 * time.Second).
 		SetRetryMaxWaitTime(2 * time.Second)
 
-	for k, v := range M.Get() {
+	metrics := storageM.GetMetrics()
+	for k, v := range metrics {
 		select {
 		case <-ctx.Done():
 			logrus.Info("Send metrics in map ending!")
@@ -153,8 +104,10 @@ func UpdateMetrics(ctx context.Context, pollInterval time.Duration) {
 		case <-ctx.Done():
 			logrus.Info("Agent is down update metrics!")
 			return
-		case <-time.After(time.Second * pollInterval):
-			M.Update()
+		case <-time.After(pollInterval):
+			var memStats runtime.MemStats
+			runtime.ReadMemStats(&memStats)
+			storageM.ChangeMetrics(memStats)
 		}
 	}
 }

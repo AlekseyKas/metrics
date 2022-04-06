@@ -7,58 +7,16 @@ import (
 	"testing"
 
 	"github.com/AlekseyKas/metrics/cmd/server/handlers"
+	"github.com/AlekseyKas/metrics/internal/storage"
 	"github.com/fatih/structs"
 	"github.com/go-chi/chi"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-var mm map[string]interface{} = make(map[string]interface{})
-var metr handlers.Metrics = handlers.Metrics{}
-
 func TestRouter(t *testing.T) {
-	// var nameMetInt counter
-	//init typs
-	type gauge float64
-	type counter int64
 
-	//Struct for metrics
-	type Metrics struct {
-		Alloc         gauge
-		BuckHashSys   gauge
-		Frees         gauge
-		GCCPUFraction gauge
-		GCSys         gauge
-		HeapAlloc     gauge
-		HeapIdle      gauge
-		HeapInuse     gauge
-		HeapObjects   gauge
-		HeapReleased  gauge
-		HeapSys       gauge
-		LastGC        gauge
-		Lookups       gauge
-		MCacheInuse   gauge
-		MCacheSys     gauge
-		MSpanInuse    gauge
-		MSpanSys      gauge
-		Mallocs       gauge
-		NextGC        gauge
-		NumForcedGC   gauge
-		NumGC         gauge
-		OtherSys      gauge
-		PauseTotalNs  gauge
-		StackInuse    gauge
-		StackSys      gauge
-		Sys           gauge
-		TotalAlloc    gauge
-
-		PollCount   counter
-		RandomValue gauge
-	}
-
-	mm = structs.Map(metr)
-
-	// jsonString, _ := json.Marshal(mm)
+	// mm = structs.Map(metr)
 
 	type want struct {
 		contentType string
@@ -138,8 +96,15 @@ func TestRouter(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			var MapMetrics map[string]interface{} = structs.Map(storage.Metrics{})
+
+			s := &storage.MetricsStore{
+				MM: MapMetrics,
+			}
+			handlers.SetStorage(s)
+
 			r := chi.NewRouter()
-			r.Route("/", handlers.Metric.Router)
+			r.Route("/", handlers.Router)
 			ts := httptest.NewServer(r)
 			defer ts.Close()
 
