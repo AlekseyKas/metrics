@@ -16,6 +16,11 @@ import (
 
 func TestRouter(t *testing.T) {
 
+	// var MapMetrics map[string]interface{} = structs.Map(storage.Metrics{})
+	s := &storage.MetricsStore{
+		MM: structs.Map(storage.Metrics{}),
+	}
+	handlers.SetStorage(s)
 	type want struct {
 		contentType string
 		statusCode  int
@@ -92,11 +97,7 @@ func TestRouter(t *testing.T) {
 
 		// TODO: Add test cases.
 	}
-	var MapMetrics map[string]interface{} = structs.Map(storage.Metrics{})
-	s := &storage.MetricsStore{
-		MM: MapMetrics,
-	}
-	handlers.SetStorage(s)
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
