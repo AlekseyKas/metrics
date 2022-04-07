@@ -11,10 +11,10 @@ import (
 
 func main() {
 
-	var MapMetrics map[string]interface{} = structs.Map(storage.Metrics{})
+	// var MapMetrics map[string]interface{} = structs.Map(storage.Metrics{})
 	//инициализация хранилища метрик
 	s := &storage.MetricsStore{
-		MM: MapMetrics,
+		MM: structs.Map(storage.Metrics{}),
 	}
 	handlers.SetStorage(s)
 

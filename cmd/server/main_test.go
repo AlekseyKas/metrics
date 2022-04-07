@@ -16,8 +16,6 @@ import (
 
 func TestRouter(t *testing.T) {
 
-	// mm = structs.Map(metr)
-
 	type want struct {
 		contentType string
 		statusCode  int
