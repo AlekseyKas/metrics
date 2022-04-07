@@ -45,7 +45,7 @@ func main() {
 			logrus.Info("Agent is down send metrics.")
 			return
 		case <-time.After(reportInterval):
-			err := sendMetricsJson(ctx)
+			err := sendMetricsJSON(ctx)
 			if err != nil {
 				logrus.Error("Error sending POST: ", err)
 			}
@@ -53,14 +53,14 @@ func main() {
 	}
 
 }
-func sendMetricsJson(ctx context.Context) error {
+func sendMetricsJSON(ctx context.Context) error {
 	client := resty.New()
 	client.
 		SetRetryCount(1).
 		SetRetryWaitTime(1 * time.Second).
 		SetRetryMaxWaitTime(2 * time.Second)
 
-	jsonMetrics, err := storageM.GetMetricsJson()
+	jsonMetrics, err := storageM.GetMetricsJSON()
 	if err != nil {
 		logrus.Error("Error getting metrics json format", err)
 	}

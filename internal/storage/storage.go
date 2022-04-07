@@ -67,22 +67,22 @@ type StorageAgent interface {
 	GetMetrics() map[string]interface{}
 	ChangeMetrics(metrics runtime.MemStats) error
 
-	GetMetricsJson() ([]JsonMetrics, error)
+	GetMetricsJSON() ([]JsonMetrics, error)
 }
 
 type Storage interface {
 	GetMetrics() map[string]interface{}
 	ChangeMetric(nameMet string, value interface{}) error
-	GetStructJson() JsonMetrics
+	GetStructJSON() JsonMetrics
 	// ChangeMetricJson(out []byte)
 }
 
-func (m *MetricsStore) GetStructJson() JsonMetrics {
+func (m *MetricsStore) GetStructJSON() JsonMetrics {
 	s := JsonMetrics{}
 	return s
 }
 
-func (m *MetricsStore) GetMetricsJson() ([]JsonMetrics, error) {
+func (m *MetricsStore) GetMetricsJSON() ([]JsonMetrics, error) {
 	m.mux.Lock()
 	defer m.mux.Unlock()
 	// values := make(map[string]interface{}, (len(m.MM)))

@@ -19,7 +19,7 @@ func TestClient(t *testing.T) {
 	SetStorageAgent(s)
 	t.Run(name, func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
-		err := sendMetricsJson(ctx)
+		err := sendMetricsJSON(ctx)
 		require.NoError(t, err)
 		time.AfterFunc(4*time.Second, cancel)
 	})

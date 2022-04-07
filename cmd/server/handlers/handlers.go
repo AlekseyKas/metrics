@@ -48,7 +48,7 @@ func getMetricsJSON() http.HandlerFunc {
 			return
 		}
 
-		s := storageM.GetStructJson()
+		s := storageM.GetStructJSON()
 		err = json.Unmarshal(out, &s)
 		if err != nil {
 			logrus.Error("Error unmarshaling request: ", err)
@@ -100,7 +100,7 @@ func saveMetricsJSON() http.HandlerFunc {
 			http.Error(rw, err.Error(), 500)
 			return
 		}
-		s := storageM.GetStructJson()
+		s := storageM.GetStructJSON()
 		err = json.Unmarshal(out, &s)
 		if err != nil {
 			logrus.Error("Error unmarshaling request: ", err)
