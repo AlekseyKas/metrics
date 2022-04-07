@@ -34,12 +34,12 @@ func Router(r chi.Router) {
 	r.Get("/", getMetrics())
 	r.Get("/value/{typeMet}/{nameMet}", getMetric())
 	r.Post("/update/{typeMet}/{nameMet}/{value}", saveMetrics())
-	r.Post("/update/", saveMetricsJson())
-	r.Post("/value/", getMetricsJson())
+	r.Post("/update/", saveMetricsJSON())
+	r.Post("/value/", getMetricsJSON())
 
 }
 
-func getMetricsJson() http.HandlerFunc {
+func getMetricsJSON() http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		defer req.Body.Close()
 		out, err := ioutil.ReadAll(req.Body)
@@ -92,7 +92,7 @@ func getMetricsJson() http.HandlerFunc {
 }
 
 //save metrics
-func saveMetricsJson() http.HandlerFunc {
+func saveMetricsJSON() http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		defer req.Body.Close()
 		out, err := ioutil.ReadAll(req.Body)
