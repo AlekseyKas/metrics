@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/signal"
@@ -44,13 +45,48 @@ func main() {
 			logrus.Info("Agent is down send metrics.")
 			return
 		case <-time.After(reportInterval):
-			err := sendMetrics(ctx)
+			err := sendMetricsJson(ctx)
 			if err != nil {
 				logrus.Error("Error sending POST: ", err)
 			}
 		}
 	}
 
+}
+func sendMetricsJson(ctx context.Context) error {
+	client := resty.New()
+	client.
+		SetRetryCount(1).
+		SetRetryWaitTime(1 * time.Second).
+		SetRetryMaxWaitTime(2 * time.Second)
+
+	jsonMetrics, err := storageM.GetMetricsJson()
+	if err != nil {
+		logrus.Error("Error getting metrics json format", err)
+	}
+
+	for i := 0; i < len(jsonMetrics); i++ {
+		select {
+		case <-ctx.Done():
+			logrus.Info("Send metrics in map ending!")
+			return nil
+		default:
+			out, err := json.Marshal(jsonMetrics[i])
+			if err != nil {
+				logrus.Error("Error marshaling metric: ", err)
+			}
+
+			_, err = client.R().
+				SetHeader("Content-Type", "application/json").
+				SetBody(out).
+				Post("http://127.0.0.1:8080/update/")
+			if err != nil {
+				return err
+			}
+			// fmt.Println(string(out))
+		}
+	}
+	return nil
 }
 
 //sending metrics to server

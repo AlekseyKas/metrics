@@ -1,11 +1,15 @@
 package storage
 
 import (
+	"fmt"
 	"math/rand"
 	"reflect"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/sirupsen/logrus"
 )
 
 //init typs
@@ -46,6 +50,13 @@ type Metrics struct {
 	RandomValue gauge
 }
 
+type JsonMetrics struct {
+	ID    string   `json:"id"`              // имя метрики
+	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
+	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
+	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
+}
+
 type MetricsStore struct {
 	mux       sync.Mutex
 	MM        map[string]interface{}
@@ -55,11 +66,53 @@ type MetricsStore struct {
 type StorageAgent interface {
 	GetMetrics() map[string]interface{}
 	ChangeMetrics(metrics runtime.MemStats) error
+
+	GetMetricsJson() ([]JsonMetrics, error)
 }
 
 type Storage interface {
 	GetMetrics() map[string]interface{}
-	ChangeGauge(nameMet string, value interface{}) error
+	ChangeMetric(nameMet string, value interface{}) error
+	GetStructJson() JsonMetrics
+	// ChangeMetricJson(out []byte)
+}
+
+func (m *MetricsStore) GetStructJson() JsonMetrics {
+	s := JsonMetrics{}
+	return s
+}
+
+func (m *MetricsStore) GetMetricsJson() ([]JsonMetrics, error) {
+	m.mux.Lock()
+	defer m.mux.Unlock()
+	// values := make(map[string]interface{}, (len(m.MM)))
+	var j []JsonMetrics
+	for k, v := range m.MM {
+		if strings.Split(reflect.ValueOf(v).Type().String(), ".")[1] == "gauge" {
+
+			a, err := strconv.ParseFloat(fmt.Sprintf("%v", v), 64)
+			if err != nil {
+				logrus.Error("Error parsing gauge value: ", err)
+			}
+			j = append(j, JsonMetrics{
+				ID:    k,
+				MType: strings.Split(reflect.ValueOf(v).Type().String(), ".")[1],
+				Value: (&a),
+			})
+		}
+		if strings.Split(reflect.ValueOf(v).Type().String(), ".")[1] == "counter" {
+			i, err := strconv.ParseInt(fmt.Sprintf("%v", v), 10, 64)
+			if err != nil {
+				logrus.Error("Error parsing counter value: ", err)
+			}
+			j = append(j, JsonMetrics{
+				ID:    k,
+				MType: strings.Split(reflect.ValueOf(v).Type().String(), ".")[1],
+				Delta: (&i),
+			})
+		}
+	}
+	return j, nil
 }
 
 func (m *MetricsStore) ChangeMetrics(memStats runtime.MemStats) error {
@@ -98,7 +151,7 @@ func (m *MetricsStore) ChangeMetrics(memStats runtime.MemStats) error {
 	return nil
 }
 
-func (m *MetricsStore) ChangeGauge(nameMet string, value interface{}) error {
+func (m *MetricsStore) ChangeMetric(nameMet string, value interface{}) error {
 	if strings.Split(reflect.ValueOf(value).Type().String(), ".")[1] == "gauge" {
 		m.mux.Lock()
 		defer m.mux.Unlock()
