@@ -17,23 +17,12 @@ func TestClient(t *testing.T) {
 		MM: MapMetrics,
 	}
 	SetStorageAgent(s)
-	require.NoError(t, err)
+	// require.NoError(t, err)
 	t.Run(name, func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
+
 		err := sendMetricsJSON(ctx)
-		require.NoError(t, err, "message")
+		require.NoError(t, err)
 		time.AfterFunc(4*time.Second, cancel)
 	})
 }
-
-// func TestGet(t *testing.T) {
-// 	name := "test getting metrics"
-// 	mm := make(map[string]interface{})
-
-// 	t.Run(name, func(t *testing.T) {
-// 		m := M.Get()
-// 		assert.Equal(t, m, mm)
-
-// 	})
-
-// }

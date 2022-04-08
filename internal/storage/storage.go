@@ -97,7 +97,7 @@ func (m *MetricsStore) GetMetricsJSON() ([]JSONMetrics, error) {
 			j = append(j, JSONMetrics{
 				ID:    k,
 				MType: strings.Split(reflect.ValueOf(v).Type().String(), ".")[1],
-				Value: (&a),
+				Value: &a,
 			})
 		}
 		if strings.Split(reflect.ValueOf(v).Type().String(), ".")[1] == "counter" {
@@ -108,7 +108,7 @@ func (m *MetricsStore) GetMetricsJSON() ([]JSONMetrics, error) {
 			j = append(j, JSONMetrics{
 				ID:    k,
 				MType: strings.Split(reflect.ValueOf(v).Type().String(), ".")[1],
-				Delta: (&i),
+				Delta: &i,
 			})
 		}
 	}
