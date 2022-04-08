@@ -143,6 +143,7 @@ func UpdateMetrics(ctx context.Context, pollInterval time.Duration) {
 		case <-time.After(pollInterval):
 			var memStats runtime.MemStats
 			runtime.ReadMemStats(&memStats)
+			sendMetrics(ctx)
 			storageM.ChangeMetrics(memStats)
 		}
 	}

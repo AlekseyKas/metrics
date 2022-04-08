@@ -22,7 +22,7 @@ func TestClient(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 
 		err := sendMetricsJSON(ctx)
-		require.NoError(t, err)
+		require.Error(t, err)
 		time.AfterFunc(4*time.Second, cancel)
 	})
 }
