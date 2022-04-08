@@ -46,7 +46,6 @@ func getMetricsJSON() http.HandlerFunc {
 
 		out, err := ioutil.ReadAll(req.Body)
 		if err != nil {
-			rw.Header().Add("Content-Type", "application/json")
 			http.Error(rw, err.Error(), 500)
 			return
 		}
@@ -55,39 +54,56 @@ func getMetricsJSON() http.HandlerFunc {
 		err = json.Unmarshal(out, &s)
 		if err != nil {
 			logrus.Error("Error unmarshaling request: ", err)
-		}
+			http.Error(rw, err.Error(), http.StatusInternalServerError)
 
+		}
 		metrics := storageM.GetMetrics()
 		typeMet := s.MType
 		nameMet := s.ID
 
 		if typeMet != "gauge" && typeMet != "counter" {
-			rw.Header().Add("Content-Type", "application/json")
-
 			rw.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
 		if typeMet == "gauge" && nameMet == "PollCount" {
-			rw.Header().Add("Content-Type", "application/json")
 			rw.WriteHeader(http.StatusNotFound)
 			return
 		}
 		if _, ok := metrics[nameMet]; ok {
 			if typeMet == "counter" && strings.Split(reflect.ValueOf(metrics[nameMet]).Type().String(), ".")[1] == "counter" {
-				rw.Write([]byte(fmt.Sprintf("%v", metrics[nameMet])))
-				rw.Header().Add("Content-Type", "application/json")
+				i, err := strconv.Atoi(fmt.Sprintf("%v", metrics[nameMet]))
+				if err != nil {
+					rw.WriteHeader(http.StatusBadRequest)
+				}
+				a := int64(i)
+				s.Delta = &a
+				toSend, err := json.Marshal(s)
+				if err != nil {
+					logrus.Error("Error marshaling struct to sending", err)
+					http.Error(rw, err.Error(), http.StatusInternalServerError)
+				}
+
+				rw.Write([]byte(toSend))
 				rw.WriteHeader(http.StatusOK)
 				return
 			}
 		} else {
-			rw.Header().Add("Content-Type", "application/json")
 			rw.WriteHeader(http.StatusNotFound)
 		}
 
 		if typeMet == "gauge" && nameMet != "PollCount" {
-			rw.Write([]byte(fmt.Sprintf("%v", metrics[nameMet])))
-			rw.Header().Add("Content-Type", "application/json")
+			float, err := strconv.ParseFloat(fmt.Sprintf("%v", metrics[nameMet]), 64)
+			if err != nil {
+				rw.WriteHeader(http.StatusBadRequest)
+			}
+			s.Value = &float
+			toSend, err := json.Marshal(s)
+			if err != nil {
+				logrus.Error("Error marshaling struct to sending", err)
+				http.Error(rw, err.Error(), http.StatusInternalServerError)
+			}
+			rw.Write([]byte(toSend))
 			rw.WriteHeader(http.StatusOK)
 			return
 		}
@@ -99,6 +115,7 @@ func getMetricsJSON() http.HandlerFunc {
 func saveMetricsJSON() http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		defer req.Body.Close()
+
 		out, err := ioutil.ReadAll(req.Body)
 		if err != nil {
 			http.Error(rw, err.Error(), 500)
@@ -113,37 +130,35 @@ func saveMetricsJSON() http.HandlerFunc {
 		typeMet := s.MType
 		nameMet := s.ID
 
+		rw.Header().Add("Content-Type", "application/json")
+
 		if typeMet != "gauge" && typeMet != "counter" {
-			rw.Header().Add("Content-Type", "application/json")
 			rw.WriteHeader(http.StatusNotImplemented)
 		}
 		//update gauge
 		if typeMet == "gauge" && nameMet != "PollCount" {
 			if err != nil {
-				rw.Header().Add("Content-Type", "application/json")
 				rw.WriteHeader(http.StatusBadRequest)
 			}
 			if err == nil {
 				if metrics[nameMet] != gauge(*s.Value) {
 					storageM.ChangeMetric(nameMet, gauge(*s.Value))
-					rw.Header().Add("Content-Type", "application/json")
 					rw.WriteHeader(http.StatusOK)
 				}
 			}
 		}
 		//update counter
 		if typeMet == "counter" {
+
 			var valueMetInt int
 			if err == nil {
 				if _, ok := metrics[nameMet]; ok {
 					i, err := strconv.Atoi(fmt.Sprintf("%v", metrics[nameMet]))
 					if err != nil {
-						rw.Header().Add("Content-Type", "application/json")
 						rw.WriteHeader(http.StatusBadRequest)
 					}
 					valueMetInt := int(*s.Delta) + i
 					storageM.ChangeMetric(nameMet, counter(valueMetInt))
-					rw.Header().Add("Content-Type", "application/json")
 					rw.WriteHeader(http.StatusOK)
 				} else {
 					storageM.ChangeMetric(nameMet, counter(valueMetInt))
@@ -204,6 +219,7 @@ func getMetric() http.HandlerFunc {
 				return
 			}
 		} else {
+
 			rw.Header().Add("Content-Type", "text/plain")
 			rw.WriteHeader(http.StatusNotFound)
 		}
