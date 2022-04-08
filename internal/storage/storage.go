@@ -50,7 +50,7 @@ type Metrics struct {
 	RandomValue gauge
 }
 
-type JsonMetrics struct {
+type JSONMetrics struct {
 	ID    string   `json:"id"`              // имя метрики
 	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
 	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
@@ -67,26 +67,26 @@ type StorageAgent interface {
 	GetMetrics() map[string]interface{}
 	ChangeMetrics(metrics runtime.MemStats) error
 
-	GetMetricsJSON() ([]JsonMetrics, error)
+	GetMetricsJSON() ([]JSONMetrics, error)
 }
 
 type Storage interface {
 	GetMetrics() map[string]interface{}
 	ChangeMetric(nameMet string, value interface{}) error
-	GetStructJSON() JsonMetrics
+	GetStructJSON() JSONMetrics
 	// ChangeMetricJson(out []byte)
 }
 
-func (m *MetricsStore) GetStructJSON() JsonMetrics {
-	s := JsonMetrics{}
+func (m *MetricsStore) GetStructJSON() JSONMetrics {
+	s := JSONMetrics{}
 	return s
 }
 
-func (m *MetricsStore) GetMetricsJSON() ([]JsonMetrics, error) {
+func (m *MetricsStore) GetMetricsJSON() ([]JSONMetrics, error) {
 	m.mux.Lock()
 	defer m.mux.Unlock()
 	// values := make(map[string]interface{}, (len(m.MM)))
-	var j []JsonMetrics
+	var j []JSONMetrics
 	for k, v := range m.MM {
 		if strings.Split(reflect.ValueOf(v).Type().String(), ".")[1] == "gauge" {
 
@@ -94,7 +94,7 @@ func (m *MetricsStore) GetMetricsJSON() ([]JsonMetrics, error) {
 			if err != nil {
 				logrus.Error("Error parsing gauge value: ", err)
 			}
-			j = append(j, JsonMetrics{
+			j = append(j, JSONMetrics{
 				ID:    k,
 				MType: strings.Split(reflect.ValueOf(v).Type().String(), ".")[1],
 				Value: (&a),
@@ -105,7 +105,7 @@ func (m *MetricsStore) GetMetricsJSON() ([]JsonMetrics, error) {
 			if err != nil {
 				logrus.Error("Error parsing counter value: ", err)
 			}
-			j = append(j, JsonMetrics{
+			j = append(j, JSONMetrics{
 				ID:    k,
 				MType: strings.Split(reflect.ValueOf(v).Type().String(), ".")[1],
 				Delta: (&i),

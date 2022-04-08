@@ -60,18 +60,18 @@ func sendMetricsJSON(ctx context.Context) error {
 		SetRetryWaitTime(1 * time.Second).
 		SetRetryMaxWaitTime(2 * time.Second)
 
-	jsonMetrics, err := storageM.GetMetricsJSON()
+	JSONMetrics, err := storageM.GetMetricsJSON()
 	if err != nil {
 		logrus.Error("Error getting metrics json format", err)
 	}
 
-	for i := 0; i < len(jsonMetrics); i++ {
+	for i := 0; i < len(JSONMetrics); i++ {
 		select {
 		case <-ctx.Done():
 			logrus.Info("Send metrics in map ending!")
 			return nil
 		default:
-			out, err := json.Marshal(jsonMetrics[i])
+			out, err := json.Marshal(JSONMetrics[i])
 			if err != nil {
 				logrus.Error("Error marshaling metric: ", err)
 			}

@@ -17,10 +17,11 @@ func TestClient(t *testing.T) {
 		MM: MapMetrics,
 	}
 	SetStorageAgent(s)
+	require.NoError(t, err)
 	t.Run(name, func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		err := sendMetricsJSON(ctx)
-		require.NoError(t, err)
+		require.NoError(t, err, "message")
 		time.AfterFunc(4*time.Second, cancel)
 	})
 }

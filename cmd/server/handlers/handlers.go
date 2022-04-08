@@ -59,7 +59,7 @@ func getMetricsJSON() http.HandlerFunc {
 		nameMet := s.ID
 
 		if typeMet != "gauge" && typeMet != "counter" {
-			rw.Header().Add("Content-Type", "text/plain")
+			rw.Header().Add("Content-Type", "application/json")
 			rw.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -154,11 +154,11 @@ func getMetrics() http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 
 		metrics := storageM.GetMetrics()
-		jsonMetrics, err := json.Marshal(metrics)
+		JSONMetrics, err := json.Marshal(metrics)
 		if err != nil {
 			logrus.Error(err)
 		}
-		rw.Write(jsonMetrics)
+		rw.Write(JSONMetrics)
 		rw.Header().Add("Content-Type", "text/plain")
 		rw.WriteHeader(http.StatusOK)
 	}
