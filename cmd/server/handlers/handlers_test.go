@@ -115,10 +115,11 @@ func TestRouter(t *testing.T) {
 
 			buff := bytes.NewBuffer(body)
 			req, err := http.NewRequest(tt.method, ts.URL+tt.url, buff)
-
-			resp, err := http.DefaultClient.Do(req)
-			require.Equal(t, tt.want.statusCode, resp.StatusCode)
 			require.NoError(t, err)
+
+			resp, errr := http.DefaultClient.Do(req)
+			require.Equal(t, tt.want.statusCode, resp.StatusCode)
+			require.NoError(t, errr)
 
 			// respb, err := ioutil.ReadAll(resp.Body)
 			// require.NoError(t, err)
