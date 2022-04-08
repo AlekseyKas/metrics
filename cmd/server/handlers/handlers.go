@@ -42,6 +42,7 @@ func Router(r chi.Router) {
 func getMetricsJSON() http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		defer req.Body.Close()
+
 		out, err := ioutil.ReadAll(req.Body)
 		if err != nil {
 			http.Error(rw, err.Error(), 500)
@@ -182,6 +183,7 @@ func getMetric() http.HandlerFunc {
 
 		if typeMet != "gauge" && typeMet != "counter" {
 			rw.Header().Add("Content-Type", "text/plain")
+
 			rw.WriteHeader(http.StatusInternalServerError)
 			return
 		}
