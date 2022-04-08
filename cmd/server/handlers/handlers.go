@@ -141,10 +141,15 @@ func saveMetricsJSON() http.HandlerFunc {
 				rw.WriteHeader(http.StatusBadRequest)
 			}
 			if err == nil {
-				if metrics[nameMet] != gauge(*s.Value) {
-					storageM.ChangeMetric(nameMet, gauge(*s.Value))
-					rw.WriteHeader(http.StatusOK)
+				if s.Value == nil {
+					rw.WriteHeader(http.StatusInternalServerError)
+				} else {
+					if metrics[nameMet] != gauge(*s.Value) {
+						storageM.ChangeMetric(nameMet, gauge(*s.Value))
+						rw.WriteHeader(http.StatusOK)
+					}
 				}
+
 			}
 		}
 		//update counter
@@ -157,9 +162,14 @@ func saveMetricsJSON() http.HandlerFunc {
 					if err != nil {
 						rw.WriteHeader(http.StatusBadRequest)
 					}
-					valueMetInt := int(*s.Delta) + i
-					storageM.ChangeMetric(nameMet, counter(valueMetInt))
-					rw.WriteHeader(http.StatusOK)
+					fmt.Println("ssssssssssssssssssssss", s.Delta)
+					if s.Delta == nil {
+						rw.WriteHeader(http.StatusInternalServerError)
+					} else {
+						valueMetInt := int(*s.Delta) + i
+						storageM.ChangeMetric(nameMet, counter(valueMetInt))
+						rw.WriteHeader(http.StatusOK)
+					}
 				} else {
 					storageM.ChangeMetric(nameMet, counter(valueMetInt))
 				}
