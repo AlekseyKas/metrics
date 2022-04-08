@@ -126,6 +126,7 @@ func saveMetricsJSON() http.HandlerFunc {
 		if err != nil {
 			logrus.Error("Error unmarshaling request: ", err)
 		}
+		fmt.Println("&&&&&&&&&&&&&&&&&&&&&&", string(out))
 		metrics := storageM.GetMetrics()
 		typeMet := s.MType
 		nameMet := s.ID
@@ -162,7 +163,6 @@ func saveMetricsJSON() http.HandlerFunc {
 					if err != nil {
 						rw.WriteHeader(http.StatusBadRequest)
 					}
-					fmt.Println("ssssssssssssssssssssss", s.Delta)
 					if s.Delta == nil {
 						rw.WriteHeader(http.StatusInternalServerError)
 					} else {
