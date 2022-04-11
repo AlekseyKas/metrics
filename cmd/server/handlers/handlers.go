@@ -173,6 +173,7 @@ func saveMetricsJSON() http.HandlerFunc {
 				} else {
 					valueMetInt = int(*s.Delta)
 					storageM.ChangeMetric(nameMet, counter(valueMetInt))
+					rw.WriteHeader(http.StatusOK)
 				}
 			}
 		}
