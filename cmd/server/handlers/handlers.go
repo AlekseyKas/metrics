@@ -49,7 +49,7 @@ func getMetricsJSON() http.HandlerFunc {
 			http.Error(rw, err.Error(), 500)
 			return
 		}
-
+		fmt.Println("uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuot", string(out))
 		s := storageM.GetStructJSON()
 		err = json.Unmarshal(out, &s)
 		if err != nil {
