@@ -78,7 +78,12 @@ func sendMetricsJSON(ctx context.Context) error {
 			// }
 			var buf bytes.Buffer
 			encoder := json.NewEncoder(&buf)
-			encoder.Encode(JSONMetrics[i])
+			err = encoder.Encode(JSONMetrics[i])
+			if err != nil {
+				logrus.Error(err)
+			}
+			logrus.Info(string(buf.Bytes()))
+
 			_, err = client.R().
 				SetHeader("Content-Type", "application/json").
 				SetBody(buf.Bytes()).
