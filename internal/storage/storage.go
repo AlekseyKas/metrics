@@ -184,7 +184,6 @@ func (m *MetricsStore) ChangeMetrics(memStats runtime.MemStats) error {
 
 func (m *MetricsStore) ChangeMetric(nameMet string, value interface{}) error {
 	// if strings.Split(reflect.ValueOf(value).Type().String(), ".")[1] == "gauge" {
-	fmt.Println(";;;;;;;;;;;;;;;;;;;;;")
 	m.mux.Lock()
 	defer m.mux.Unlock()
 	// if err == nil {

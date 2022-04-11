@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -81,16 +82,22 @@ func getMetricsJSON() http.HandlerFunc {
 				}
 				a := int64(i)
 				s.Delta = &a
-				toSend, err := json.Marshal(s)
-				if err != nil {
-					logrus.Error("Error marshaling struct to sending", err)
-					http.Error(rw, err.Error(), http.StatusInternalServerError)
-				}
+				// toSend, err := json.Marshal(s)
+				// if err != nil {
+				// 	logrus.Error("Error marshaling struct to sending", err)
+				// 	http.Error(rw, err.Error(), http.StatusInternalServerError)
+				// }
+				var buf bytes.Buffer
+				// buf =
+				encoder := json.NewEncoder(&buf)
+				encoder.Encode(s)
+				// logrus.Infof("%+v", string(toSend))
+				// json.Encoder()
 				// op := storageM.GetStructJSON()
 				// json.Unmarshal(toSend, &op)
 
 				// fmt.Println("9090909090", op)
-				rw.Write([]byte(toSend))
+				rw.Write(buf.Bytes())
 				rw.WriteHeader(http.StatusOK)
 				return
 			}
@@ -138,7 +145,7 @@ func saveMetricsJSON() http.HandlerFunc {
 		if err != nil {
 			http.Error(rw, err.Error(), http.StatusBadRequest)
 		}
-		fmt.Println("33333333333333333333333333", s)
+
 		metrics := storageM.GetMetrics()
 		typeMet := s.MType
 		nameMet := s.ID
