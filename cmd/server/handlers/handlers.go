@@ -129,7 +129,7 @@ func saveMetricsJSON() http.HandlerFunc {
 		metrics := storageM.GetMetrics()
 		typeMet := s.MType
 		nameMet := s.ID
-		fmt.Println("&&&&&&&&&&&&&&&&&&&&&&", nameMet)
+		fmt.Println("&&&&&&&&&&&&&&&&&&&&&&", nameMet, s.MType, s.Delta, s.Value)
 
 		rw.Header().Add("Content-Type", "application/json")
 
