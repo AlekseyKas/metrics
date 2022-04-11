@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"reflect"
@@ -63,6 +64,13 @@ type MetricsStore struct {
 	PollCount int
 }
 
+type ValidStruct struct {
+	ID    interface{} `json:"id"`              // имя метрики
+	MType interface{} `json:"type"`            // параметр, принимающий значение gauge или counter
+	Delta interface{} `json:"delta,omitempty"` // значение метрики в случае передачи counter
+	Value interface{} `json:"value,omitempty"` // значение метрики в случае передачи gauge
+}
+
 type StorageAgent interface {
 	GetMetrics() map[string]interface{}
 	ChangeMetrics(metrics runtime.MemStats) error
@@ -74,7 +82,30 @@ type Storage interface {
 	GetMetrics() map[string]interface{}
 	ChangeMetric(nameMet string, value interface{}) error
 	GetStructJSON() JSONMetrics
+	ValidStruct(out []byte) bool
 	// ChangeMetricJson(out []byte)
+}
+
+func (m *MetricsStore) ValidStruct(out []byte) bool {
+	var b bool
+
+	v := ValidStruct{}
+	err := json.Unmarshal(out, &v)
+	if err != nil {
+		logrus.Error("Error unmarshaling in validation: ", err)
+	}
+	if v.MType == "counter" && v.Delta != nil {
+		if reflect.ValueOf(v.Delta).Type().String() == "float64" {
+			b = true
+		}
+	}
+	if v.MType == "gauge" && v.Value != nil {
+		if reflect.ValueOf(v.Value).Type().String() == "float64" {
+			b = true
+		}
+	}
+	fmt.Println(reflect.ValueOf(v.Delta).Type().String())
+	return b
 }
 
 func (m *MetricsStore) GetStructJSON() JSONMetrics {
@@ -153,6 +184,7 @@ func (m *MetricsStore) ChangeMetrics(memStats runtime.MemStats) error {
 
 func (m *MetricsStore) ChangeMetric(nameMet string, value interface{}) error {
 	// if strings.Split(reflect.ValueOf(value).Type().String(), ".")[1] == "gauge" {
+	fmt.Println(";;;;;;;;;;;;;;;;;;;;;")
 	m.mux.Lock()
 	defer m.mux.Unlock()
 	m.MM[nameMet] = value

@@ -118,18 +118,20 @@ func saveMetricsJSON() http.HandlerFunc {
 
 		out, err := ioutil.ReadAll(req.Body)
 		if err != nil {
-			http.Error(rw, err.Error(), 500)
+			rw.WriteHeader(http.StatusBadRequest)
 			return
 		}
 		s := storageM.GetStructJSON()
 		err = json.Unmarshal(out, &s)
 		if err != nil {
 			logrus.Error("Error unmarshaling request: ", err)
+			rw.WriteHeader(http.StatusBadRequest)
+
 		}
 		metrics := storageM.GetMetrics()
 		typeMet := s.MType
 		nameMet := s.ID
-		fmt.Println("&&&&&&&&&&&&&&&&&&&&&&", nameMet, s.MType, *s.Delta, s.Value)
+		fmt.Println("[[[[[[[[[[[[[[[[[[[[", string(out))
 
 		rw.Header().Add("Content-Type", "application/json")
 
@@ -137,7 +139,7 @@ func saveMetricsJSON() http.HandlerFunc {
 			rw.WriteHeader(http.StatusNotImplemented)
 		}
 		//update gauge
-		if typeMet == "gauge" && nameMet != "PollCount" {
+		if typeMet == "gauge" {
 			if err != nil {
 				rw.WriteHeader(http.StatusBadRequest)
 			}
