@@ -44,18 +44,22 @@ func getMetricsJSON() http.HandlerFunc {
 		defer req.Body.Close()
 		rw.Header().Add("Content-Type", "application/json")
 
-		out, err := ioutil.ReadAll(req.Body)
-		if err != nil {
-			http.Error(rw, err.Error(), 500)
-			return
-		}
-		fmt.Println("uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuot", string(out))
+		// out, err := ioutil.ReadAll(req.Body)
+		// if err != nil {
+		// 	http.Error(rw, err.Error(), 500)
+		// 	return
+		// }
+		// fmt.Println("uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuot", string(out))
 		s := storageM.GetStructJSON()
-		err = json.Unmarshal(out, &s)
-		if err != nil {
-			logrus.Error("Error unmarshaling request: ", err)
-			http.Error(rw, err.Error(), http.StatusInternalServerError)
+		// err = json.Unmarshal(out, &s)
+		// if err != nil {
+		// 	logrus.Error("Error unmarshaling request: ", err)
+		// 	http.Error(rw, err.Error(), http.StatusInternalServerError)
 
+		// }
+		err := json.NewDecoder(req.Body).Decode(&s)
+		if err != nil {
+			http.Error(rw, err.Error(), http.StatusBadRequest)
 		}
 		metrics := storageM.GetMetrics()
 		typeMet := s.MType
