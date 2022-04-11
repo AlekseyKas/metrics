@@ -158,19 +158,22 @@ func saveMetricsJSON() http.HandlerFunc {
 
 			var valueMetInt int
 			if err == nil {
+				i, err := strconv.Atoi(fmt.Sprintf("%v", metrics[nameMet]))
+				if err != nil {
+					rw.WriteHeader(http.StatusBadRequest)
+				}
 				if _, ok := metrics[nameMet]; ok {
-					i, err := strconv.Atoi(fmt.Sprintf("%v", metrics[nameMet]))
-					if err != nil {
-						rw.WriteHeader(http.StatusBadRequest)
-					}
+
+					fmt.Println("[[[[[[[[[[[[[[[", int(*s.Delta), i)
 					if s.Delta == nil {
 						rw.WriteHeader(http.StatusInternalServerError)
 					} else {
-						valueMetInt := int(*s.Delta) + i
+						valueMetInt = int(*s.Delta) + i
 						storageM.ChangeMetric(nameMet, counter(valueMetInt))
 						rw.WriteHeader(http.StatusOK)
 					}
 				} else {
+					valueMetInt = int(*s.Delta) + i
 					storageM.ChangeMetric(nameMet, counter(valueMetInt))
 				}
 			}
