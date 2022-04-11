@@ -157,7 +157,7 @@ func saveMetricsJSON() http.HandlerFunc {
 		}
 		//update counter
 		if typeMet == "counter" {
-			fmt.Println("8888888888888888888888888888", nameMet, typeMet)
+			fmt.Println("8888888888888888888888888888", nameMet, typeMet, s.Delta)
 			var valueMetInt int
 			if err == nil {
 				if _, ok := metrics[nameMet]; ok {
