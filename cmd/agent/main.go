@@ -82,7 +82,7 @@ func sendMetricsJSON(ctx context.Context) error {
 			if err != nil {
 				logrus.Error(err)
 			}
-			logrus.Info(string(buf.Bytes()))
+			logrus.Info(buf.String())
 
 			_, err = client.R().
 				SetHeader("Content-Type", "application/json").
