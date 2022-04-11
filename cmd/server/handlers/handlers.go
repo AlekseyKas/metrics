@@ -124,7 +124,7 @@ func saveMetricsJSON() http.HandlerFunc {
 			rw.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		fmt.Println(out, "oooooooooooooooooooooooooooooooooout")
+		fmt.Println(string(out), "oooooooooooooooooooooooooooooooooout")
 		s := storageM.GetStructJSON()
 		err = json.Unmarshal(out, &s)
 		if err != nil {
