@@ -169,6 +169,7 @@ func saveMetricsJSON() http.HandlerFunc {
 						rw.WriteHeader(http.StatusInternalServerError)
 					} else {
 						valueMetInt = int(*s.Delta) + i
+						fmt.Println("60000000000000", i)
 						fmt.Println("66666666666666666666666", *s.Delta, nameMet, valueMetInt)
 						storageM.ChangeMetric(nameMet, counter(valueMetInt))
 						rw.WriteHeader(http.StatusOK)
