@@ -3,7 +3,6 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -123,12 +122,11 @@ func saveMetricsJSON() http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		defer req.Body.Close()
 
-		out, err := ioutil.ReadAll(req.Body)
-		if err != nil {
-			rw.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		fmt.Println(string(out), "oooooooooooooooooooooooooooooooooout")
+		// out, err := ioutil.ReadAll(req.Body)
+		// if err != nil {
+		// 	rw.WriteHeader(http.StatusBadRequest)
+		// 	return
+		// }
 		s := storageM.GetStructJSON()
 		// err = json.Unmarshal(out, &s)
 		// if err != nil {
@@ -136,14 +134,14 @@ func saveMetricsJSON() http.HandlerFunc {
 		// 	rw.WriteHeader(http.StatusBadRequest)
 
 		// }
-		err = json.NewDecoder(req.Body).Decode(&s)
+		err := json.NewDecoder(req.Body).Decode(&s)
 		if err != nil {
 			http.Error(rw, err.Error(), http.StatusBadRequest)
 		}
+		fmt.Println("33333333333333333333333333", s)
 		metrics := storageM.GetMetrics()
 		typeMet := s.MType
 		nameMet := s.ID
-		fmt.Println("[[[[[[[[[[[[[[[[[[[[", string(out))
 
 		rw.Header().Add("Content-Type", "application/json")
 
@@ -169,7 +167,7 @@ func saveMetricsJSON() http.HandlerFunc {
 		}
 		//update counter
 		if typeMet == "counter" {
-			fmt.Println("8888888888888888888888888888", nameMet, typeMet, *s.Delta)
+			// fmt.Println("8888888888888888888888888888", nameMet, typeMet, *s.Delta)
 			var valueMetInt int
 			if err == nil {
 				if _, ok := metrics[nameMet]; ok {
@@ -181,14 +179,14 @@ func saveMetricsJSON() http.HandlerFunc {
 						rw.WriteHeader(http.StatusInternalServerError)
 					} else {
 						valueMetInt = int(*s.Delta) + i
-						fmt.Println("60000000000000", i)
-						fmt.Println("66666666666666666666666", *s.Delta, nameMet, valueMetInt)
+						// fmt.Println("60000000000000", i)
+						// fmt.Println("66666666666666666666666", *s.Delta, nameMet, valueMetInt)
 						storageM.ChangeMetric(nameMet, counter(valueMetInt))
 						rw.WriteHeader(http.StatusOK)
 					}
 				} else {
 					valueMetInt = int(*s.Delta)
-					fmt.Println("7777777777777777777777", *s.Delta, nameMet, valueMetInt)
+					// fmt.Println("7777777777777777777777", *s.Delta, nameMet, valueMetInt)
 					storageM.ChangeMetric(nameMet, counter(valueMetInt))
 					rw.WriteHeader(http.StatusOK)
 				}
