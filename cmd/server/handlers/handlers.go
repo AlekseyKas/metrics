@@ -126,10 +126,10 @@ func saveMetricsJSON() http.HandlerFunc {
 		if err != nil {
 			logrus.Error("Error unmarshaling request: ", err)
 		}
-		fmt.Println("&&&&&&&&&&&&&&&&&&&&&&", string(out))
 		metrics := storageM.GetMetrics()
 		typeMet := s.MType
 		nameMet := s.ID
+		fmt.Println("&&&&&&&&&&&&&&&&&&&&&&", nameMet)
 
 		rw.Header().Add("Content-Type", "application/json")
 
@@ -158,13 +158,11 @@ func saveMetricsJSON() http.HandlerFunc {
 
 			var valueMetInt int
 			if err == nil {
-				i, err := strconv.Atoi(fmt.Sprintf("%v", metrics[nameMet]))
-				if err != nil {
-					rw.WriteHeader(http.StatusBadRequest)
-				}
 				if _, ok := metrics[nameMet]; ok {
-
-					fmt.Println("[[[[[[[[[[[[[[[", int(*s.Delta), i)
+					i, err := strconv.Atoi(fmt.Sprintf("%v", metrics[nameMet]))
+					if err != nil {
+						rw.WriteHeader(http.StatusBadRequest)
+					}
 					if s.Delta == nil {
 						rw.WriteHeader(http.StatusInternalServerError)
 					} else {
@@ -173,7 +171,7 @@ func saveMetricsJSON() http.HandlerFunc {
 						rw.WriteHeader(http.StatusOK)
 					}
 				} else {
-					valueMetInt = int(*s.Delta) + i
+					valueMetInt = int(*s.Delta)
 					storageM.ChangeMetric(nameMet, counter(valueMetInt))
 				}
 			}
