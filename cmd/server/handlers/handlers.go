@@ -130,11 +130,15 @@ func saveMetricsJSON() http.HandlerFunc {
 		}
 		fmt.Println(string(out), "oooooooooooooooooooooooooooooooooout")
 		s := storageM.GetStructJSON()
-		err = json.Unmarshal(out, &s)
-		if err != nil {
-			logrus.Error("Error unmarshaling request: ", err)
-			rw.WriteHeader(http.StatusBadRequest)
+		// err = json.Unmarshal(out, &s)
+		// if err != nil {
+		// 	logrus.Error("Error unmarshaling request: ", err)
+		// 	rw.WriteHeader(http.StatusBadRequest)
 
+		// }
+		err = json.NewDecoder(req.Body).Decode(&s)
+		if err != nil {
+			http.Error(rw, err.Error(), http.StatusBadRequest)
 		}
 		metrics := storageM.GetMetrics()
 		typeMet := s.MType
