@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"encoding/json"
 	"fmt"
 	"math/rand"
 	"reflect"
@@ -64,12 +63,12 @@ type MetricsStore struct {
 	PollCount int
 }
 
-type ValidStruct struct {
-	ID    interface{} `json:"id"`              // имя метрики
-	MType interface{} `json:"type"`            // параметр, принимающий значение gauge или counter
-	Delta interface{} `json:"delta,omitempty"` // значение метрики в случае передачи counter
-	Value interface{} `json:"value,omitempty"` // значение метрики в случае передачи gauge
-}
+// type ValidStruct struct {
+// 	ID    interface{} `json:"id"`              // имя метрики
+// 	MType interface{} `json:"type"`            // параметр, принимающий значение gauge или counter
+// 	Delta interface{} `json:"delta,omitempty"` // значение метрики в случае передачи counter
+// 	Value interface{} `json:"value,omitempty"` // значение метрики в случае передачи gauge
+// }
 
 type StorageAgent interface {
 	GetMetrics() map[string]interface{}
@@ -82,31 +81,31 @@ type Storage interface {
 	GetMetrics() map[string]interface{}
 	ChangeMetric(nameMet string, value interface{}) error
 	GetStructJSON() JSONMetrics
-	ValidStruct(out []byte) bool
+	// ValidStruct(out []byte) bool
 	// ChangeMetricJson(out []byte)
 }
 
-func (m *MetricsStore) ValidStruct(out []byte) bool {
-	var b bool
+// func (m *MetricsStore) ValidStruct(out []byte) bool {
+// 	var b bool
 
-	v := ValidStruct{}
-	err := json.Unmarshal(out, &v)
-	if err != nil {
-		logrus.Error("Error unmarshaling in validation: ", err)
-	}
-	if v.MType == "counter" && v.Delta != nil {
-		if reflect.ValueOf(v.Delta).Type().String() == "float64" {
-			b = true
-		}
-	}
-	if v.MType == "gauge" && v.Value != nil {
-		if reflect.ValueOf(v.Value).Type().String() == "float64" {
-			b = true
-		}
-	}
-	fmt.Println(reflect.ValueOf(v.Delta).Type().String())
-	return b
-}
+// 	v := ValidStruct{}
+// 	err := json.Unmarshal(out, &v)
+// 	if err != nil {
+// 		logrus.Error("Error unmarshaling in validation: ", err)
+// 	}
+// 	if v.MType == "counter" && v.Delta != nil {
+// 		if reflect.ValueOf(v.Delta).Type().String() == "float64" {
+// 			b = true
+// 		}
+// 	}
+// 	if v.MType == "gauge" && v.Value != nil {
+// 		if reflect.ValueOf(v.Value).Type().String() == "float64" {
+// 			b = true
+// 		}
+// 	}
+// 	fmt.Println(reflect.ValueOf(v.Delta).Type().String())
+// 	return b
+// }
 
 func (m *MetricsStore) GetStructJSON() JSONMetrics {
 	s := JSONMetrics{}

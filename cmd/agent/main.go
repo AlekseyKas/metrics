@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -71,14 +72,16 @@ func sendMetricsJSON(ctx context.Context) error {
 			logrus.Info("Send metrics in map ending!")
 			return nil
 		default:
-			out, err := json.Marshal(JSONMetrics[i])
-			if err != nil {
-				logrus.Error("Error marshaling metric: ", err)
-			}
-
+			// out, err := json.Marshal(JSONMetrics[i])
+			// if err != nil {
+			// 	logrus.Error("Error marshaling metric: ", err)
+			// }
+			var buf bytes.Buffer
+			encoder := json.NewEncoder(&buf)
+			encoder.Encode(JSONMetrics[i])
 			_, err = client.R().
 				SetHeader("Content-Type", "application/json").
-				SetBody(out).
+				SetBody(buf.Bytes()).
 				Post("http://127.0.0.1:8080/update/")
 			if err != nil {
 				return err
@@ -110,6 +113,7 @@ func sendMetrics(ctx context.Context) error {
 				"type": typeMet, "value": value, "name": k,
 			}).Post("http://127.0.0.1:8080/update/{type}/{name}/{value}")
 			if err != nil {
+				logrus.Error(err)
 				return err
 			}
 		}
