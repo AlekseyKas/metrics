@@ -152,15 +152,13 @@ func (m *MetricsStore) ChangeMetrics(memStats runtime.MemStats) error {
 }
 
 func (m *MetricsStore) ChangeMetric(nameMet string, value interface{}) error {
-	if strings.Split(reflect.ValueOf(value).Type().String(), ".")[1] == "gauge" {
-		m.mux.Lock()
-		defer m.mux.Unlock()
-		m.MM[nameMet] = value
-	} else {
-		m.mux.Lock()
-		defer m.mux.Unlock()
-		m.MM[nameMet] = value
-	}
+	// if strings.Split(reflect.ValueOf(value).Type().String(), ".")[1] == "gauge" {
+	m.mux.Lock()
+	defer m.mux.Unlock()
+	m.MM[nameMet] = value
+	// } else {
+
+	// }
 	return nil
 }
 
