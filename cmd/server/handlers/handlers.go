@@ -83,7 +83,10 @@ func getMetricsJSON() http.HandlerFunc {
 					logrus.Error("Error marshaling struct to sending", err)
 					http.Error(rw, err.Error(), http.StatusInternalServerError)
 				}
+				// op := storageM.GetStructJSON()
+				// json.Unmarshal(toSend, &op)
 
+				// fmt.Println("9090909090", op)
 				rw.Write([]byte(toSend))
 				rw.WriteHeader(http.StatusOK)
 				return
@@ -121,6 +124,7 @@ func saveMetricsJSON() http.HandlerFunc {
 			rw.WriteHeader(http.StatusBadRequest)
 			return
 		}
+		fmt.Println(out, "oooooooooooooooooooooooooooooooooout")
 		s := storageM.GetStructJSON()
 		err = json.Unmarshal(out, &s)
 		if err != nil {
@@ -194,6 +198,7 @@ func getMetrics() http.HandlerFunc {
 		if err != nil {
 			logrus.Error(err)
 		}
+
 		rw.Write(JSONMetrics)
 		rw.Header().Add("Content-Type", "text/plain")
 		rw.WriteHeader(http.StatusOK)

@@ -187,6 +187,8 @@ func (m *MetricsStore) ChangeMetric(nameMet string, value interface{}) error {
 	fmt.Println(";;;;;;;;;;;;;;;;;;;;;")
 	m.mux.Lock()
 	defer m.mux.Unlock()
+	// if err == nil {
+	// if _, ok := metrics[nameMet]; ok {
 	m.MM[nameMet] = value
 	// } else {
 
