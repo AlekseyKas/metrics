@@ -55,10 +55,10 @@ func main() {
 }
 func sendMetricsJSON(ctx context.Context) error {
 	client := resty.New()
-	client.
-		SetRetryCount(1).
-		SetRetryWaitTime(1 * time.Second).
-		SetRetryMaxWaitTime(2 * time.Second)
+	// client.
+	// 	SetRetryCount(1).
+	// 	SetRetryWaitTime(1 * time.Second).
+	// 	SetRetryMaxWaitTime(2 * time.Second)
 
 	JSONMetrics, err := storageM.GetMetricsJSON()
 	if err != nil {
@@ -92,10 +92,10 @@ func sendMetricsJSON(ctx context.Context) error {
 //sending metrics to server
 func sendMetrics(ctx context.Context) error {
 	client := resty.New()
-	client.
-		SetRetryCount(1).
-		SetRetryWaitTime(1 * time.Second).
-		SetRetryMaxWaitTime(2 * time.Second)
+	// client.
+	// SetRetryCount(1).
+	// SetRetryWaitTime(1 * time.Second).
+	// SetRetryMaxWaitTime(2 * time.Second)
 
 	metrics := storageM.GetMetrics()
 	for k, v := range metrics {

@@ -59,6 +59,7 @@ func getMetricsJSON() http.HandlerFunc {
 		// }
 		err := json.NewDecoder(req.Body).Decode(&s)
 		if err != nil {
+			logrus.Info(err)
 			http.Error(rw, err.Error(), http.StatusBadRequest)
 		}
 		metrics := storageM.GetMetrics()
