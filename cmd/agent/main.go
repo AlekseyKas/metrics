@@ -25,9 +25,9 @@ import (
 // const reportInterval = 10 * time.Second
 
 type Param struct {
-	POLL_INTERVAL   time.Duration `env:"POLL_INTERVAL"`
-	REPORT_INTERVAL time.Duration `env:"REPORT_INTERVAL"`
-	ADDRESS         string        `env:"ADDRESS"`
+	PollInterval   time.Duration `env:"POLL_INTERVAL"`
+	ReportInterval time.Duration `env:"REPORT_INTERVAL"`
+	Address        string        `env:"ADDRESS"`
 }
 
 var storageM storage.StorageAgent
@@ -46,15 +46,15 @@ func main() {
 	p := GetParam()
 	ctx, cancel := context.WithCancel(context.Background())
 	go waitSignals(cancel)
-	go UpdateMetrics(ctx, p.POLL_INTERVAL)
+	go UpdateMetrics(ctx, p.PollInterval)
 
 	for {
 		select {
 		case <-ctx.Done():
 			logrus.Info("Agent is down send metrics.")
 			return
-		case <-time.After(p.REPORT_INTERVAL):
-			err := sendMetricsJSON(ctx, p.ADDRESS)
+		case <-time.After(p.ReportInterval):
+			err := sendMetricsJSON(ctx, p.Address)
 			if err != nil {
 				logrus.Error("Error sending POST: ", err)
 			}

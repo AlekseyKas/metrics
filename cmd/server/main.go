@@ -12,7 +12,7 @@ import (
 )
 
 type Param struct {
-	ADDRESS string `env:"ADDRESS"`
+	Address string `env:"ADDRESS"`
 }
 
 func main() {
@@ -26,7 +26,7 @@ func main() {
 	a := GetParam()
 	r := chi.NewRouter()
 	r.Route("/", handlers.Router)
-	http.ListenAndServe(a.ADDRESS, r)
+	http.ListenAndServe(a.Address, r)
 }
 
 //get param from env
@@ -36,8 +36,8 @@ func GetParam() Param {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if param.ADDRESS == "" {
-		param.ADDRESS = "127.0.0.1:8080"
+	if param.Address == "" {
+		param.Address = "127.0.0.1:8080"
 	}
 	return param
 }
