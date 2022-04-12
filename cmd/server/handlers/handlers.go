@@ -148,11 +148,11 @@ func saveMetricsJSON() http.HandlerFunc {
 			rw.WriteHeader(http.StatusBadRequest)
 
 		}
-
+		logrus.Info("ooooooooooooooooooooooo", string(out))
 		metrics := storageM.GetMetrics()
 		typeMet := s.MType
 		nameMet := s.ID
-
+		logrus.Info("sssssssssssssssssssssss", s)
 		rw.Header().Add("Content-Type", "application/json")
 
 		if typeMet != "gauge" && typeMet != "counter" {
@@ -181,10 +181,14 @@ func saveMetricsJSON() http.HandlerFunc {
 					if err != nil {
 						rw.WriteHeader(http.StatusBadRequest)
 					}
+					logrus.Info("ooooooolllllllldddddd", i)
+					logrus.Info("neeeeewwwwwwwwwwwwww", *s.Delta)
+
 					valueMetInt = int(*s.Delta) + i
 					storageM.ChangeMetric(nameMet, counter(valueMetInt))
 					rw.WriteHeader(http.StatusOK)
 				} else {
+					logrus.Info("neeeeewwwwwwwwwwwwww", *s.Delta)
 					valueMetInt = int(*s.Delta)
 					storageM.ChangeMetric(nameMet, counter(valueMetInt))
 					rw.WriteHeader(http.StatusOK)
