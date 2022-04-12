@@ -165,7 +165,7 @@ jobs:
       - name: "Code increment #4"
         if: always()
         run: |
-          devopstest -test.list -test.v -test.run=^TestIteration4$ \
+          devopstest -test.v -test.run=^TestIteration4$ \
             -source-path=. \
             -binary-path=cmd/server/server \
             -agent-binary-path=cmd/agent/agent -test.trace=/tmp/bla
