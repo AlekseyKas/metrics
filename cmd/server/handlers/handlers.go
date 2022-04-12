@@ -182,9 +182,11 @@ func saveMetricsJSON() http.HandlerFunc {
 					i, err := strconv.Atoi(fmt.Sprintf("%v", metrics[nameMet]))
 					if err != nil {
 						rw.WriteHeader(http.StatusBadRequest)
+						logrus.Info("555555555555555555555555555555555")
 					}
 					if s.Delta == nil {
 						rw.WriteHeader(http.StatusInternalServerError)
+						logrus.Info("666666666666666666666666666666666")
 					} else {
 						valueMetInt = int(*s.Delta) + i
 
