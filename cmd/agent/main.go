@@ -70,14 +70,14 @@ func GetParam() Param {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if param.POLL_INTERVAL == 0 {
-		param.POLL_INTERVAL = 2 * time.Second
+	if param.PollInterval == 0 {
+		param.PollInterval = 2 * time.Second
 	}
-	if param.REPORT_INTERVAL == 0 {
-		param.REPORT_INTERVAL = 10 * time.Second
+	if param.ReportInterval == 0 {
+		param.ReportInterval = 10 * time.Second
 	}
-	if param.ADDRESS == "" {
-		param.ADDRESS = "127.0.0.1:8080"
+	if param.Address == "" {
+		param.Address = "127.0.0.1:8080"
 	}
 	return param
 }
