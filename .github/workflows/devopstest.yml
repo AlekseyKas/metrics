@@ -168,8 +168,8 @@ jobs:
           devopstest -test.list -test.v -test.run=^TestIteration4$ \
             -source-path=. \
             -binary-path=cmd/server/server \
-            -agent-binary-path=cmd/agent/agent -test.trace bla
-          cat bla
+            -agent-binary-path=cmd/agent/agent -test.trace=/tmp/bla
+          cat /tmp/bla
           echo 11111111111111111111111111111111111111111111111111111111111111111111111
           devopstest -test.v -test.run=^TestIteration4$ \
             -source-path=. \
