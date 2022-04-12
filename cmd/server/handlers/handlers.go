@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -44,24 +45,19 @@ func getMetricsJSON() http.HandlerFunc {
 		defer req.Body.Close()
 		rw.Header().Add("Content-Type", "application/json")
 
-		// out, err := ioutil.ReadAll(req.Body)
-		// if err != nil {
-		// 	http.Error(rw, err.Error(), 500)
-		// 	return
-		// }
-		// fmt.Println("uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuot", string(out))
-		s := storageM.GetStructJSON()
-		// err = json.Unmarshal(out, &s)
-		// if err != nil {
-		// 	logrus.Error("Error unmarshaling request: ", err)
-		// 	http.Error(rw, err.Error(), http.StatusInternalServerError)
-
-		// }
-		err := json.NewDecoder(req.Body).Decode(&s)
+		out, err := ioutil.ReadAll(req.Body)
 		if err != nil {
-			logrus.Info(err)
-			http.Error(rw, err.Error(), http.StatusBadRequest)
+			http.Error(rw, err.Error(), 500)
+			return
 		}
+
+		s := storageM.GetStructJSON()
+		err = json.Unmarshal(out, &s)
+		if err != nil {
+			logrus.Error("Error unmarshaling request: ", err)
+			http.Error(rw, err.Error(), http.StatusInternalServerError)
+		}
+
 		metrics := storageM.GetMetrics()
 		typeMet := s.MType
 		nameMet := s.ID
@@ -88,16 +84,16 @@ func getMetricsJSON() http.HandlerFunc {
 				// 	logrus.Error("Error marshaling struct to sending", err)
 				// 	http.Error(rw, err.Error(), http.StatusInternalServerError)
 				// }
-				var buf bytes.Buffer
-				// buf =
-				encoder := json.NewEncoder(&buf)
-				encoder.Encode(s)
-				// logrus.Infof("%+v", string(toSend))
-				// json.Encoder()
-				// op := storageM.GetStructJSON()
 				// json.Unmarshal(toSend, &op)
 
-				// fmt.Println("9090909090", op)
+				var buf bytes.Buffer
+				encoder := json.NewEncoder(&buf)
+				err = encoder.Encode(s)
+				if err != nil {
+					logrus.Info(err)
+					http.Error(rw, err.Error(), http.StatusBadRequest)
+				}
+
 				rw.Write(buf.Bytes())
 				rw.WriteHeader(http.StatusOK)
 				return
@@ -117,13 +113,16 @@ func getMetricsJSON() http.HandlerFunc {
 			// 	logrus.Error("Error marshaling struct to sending", err)
 			// 	http.Error(rw, err.Error(), http.StatusInternalServerError)
 			// }
-			var buf bytes.Buffer
-			encode := json.NewEncoder(&buf)
-			err = encode.Encode(s)
-			if err != nil {
-				logrus.Error("Error encoding struct gauge: ", err)
-			}
 			// rw.Write([]byte(toSend))
+
+			var buf bytes.Buffer
+			encoder := json.NewEncoder(&buf)
+			err = encoder.Encode(s)
+			if err != nil {
+				logrus.Info(err)
+				http.Error(rw, err.Error(), http.StatusBadRequest)
+			}
+			rw.Write(buf.Bytes())
 			rw.WriteHeader(http.StatusOK)
 			return
 		}
@@ -136,21 +135,17 @@ func saveMetricsJSON() http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		defer req.Body.Close()
 
-		// out, err := ioutil.ReadAll(req.Body)
-		// if err != nil {
-		// 	rw.WriteHeader(http.StatusBadRequest)
-		// 	return
-		// }
-		s := storageM.GetStructJSON()
-		// err = json.Unmarshal(out, &s)
-		// if err != nil {
-		// 	logrus.Error("Error unmarshaling request: ", err)
-		// 	rw.WriteHeader(http.StatusBadRequest)
-
-		// }
-		err := json.NewDecoder(req.Body).Decode(&s)
+		out, err := ioutil.ReadAll(req.Body)
 		if err != nil {
-			http.Error(rw, err.Error(), http.StatusBadRequest)
+			rw.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		s := storageM.GetStructJSON()
+		err = json.Unmarshal(out, &s)
+		if err != nil {
+			logrus.Error("Error unmarshaling request: ", err)
+			rw.WriteHeader(http.StatusBadRequest)
+
 		}
 
 		metrics := storageM.GetMetrics()
@@ -181,7 +176,6 @@ func saveMetricsJSON() http.HandlerFunc {
 		}
 		//update counter
 		if typeMet == "counter" {
-			// fmt.Println("8888888888888888888888888888", nameMet, typeMet, *s.Delta)
 			var valueMetInt int
 			if err == nil {
 				if _, ok := metrics[nameMet]; ok {
@@ -193,14 +187,12 @@ func saveMetricsJSON() http.HandlerFunc {
 						rw.WriteHeader(http.StatusInternalServerError)
 					} else {
 						valueMetInt = int(*s.Delta) + i
-						// fmt.Println("60000000000000", i)
-						// fmt.Println("66666666666666666666666", *s.Delta, nameMet, valueMetInt)
+
 						storageM.ChangeMetric(nameMet, counter(valueMetInt))
 						rw.WriteHeader(http.StatusOK)
 					}
 				} else {
 					valueMetInt = int(*s.Delta)
-					// fmt.Println("7777777777777777777777", *s.Delta, nameMet, valueMetInt)
 					storageM.ChangeMetric(nameMet, counter(valueMetInt))
 					rw.WriteHeader(http.StatusOK)
 				}
@@ -214,17 +206,20 @@ func getMetrics() http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 
 		metrics := storageM.GetMetrics()
+		var buf bytes.Buffer
+		encoder := json.NewEncoder(&buf)
+		err := encoder.Encode(metrics)
+		if err != nil {
+			http.Error(rw, err.Error(), http.StatusBadRequest)
+		}
+		rw.Write(buf.Bytes())
+
 		// JSONMetrics, err := json.Marshal(metrics)
 		// if err != nil {
 		// 	logrus.Error(err)
 		// }
-		var buf bytes.Buffer
-		encode := json.NewEncoder(&buf)
-		err := encode.Encode(metrics)
-		if err != nil {
-			logrus.Error("Error encoding metrics getmetric: ", err)
-		}
 		// rw.Write(JSONMetrics)
+
 		rw.Header().Add("Content-Type", "text/plain")
 		rw.WriteHeader(http.StatusOK)
 	}
