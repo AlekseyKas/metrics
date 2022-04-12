@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"reflect"
@@ -14,13 +15,20 @@ import (
 	"time"
 
 	"github.com/AlekseyKas/metrics/internal/storage"
+	"github.com/caarlos0/env/v6"
 	"github.com/fatih/structs"
 	"github.com/go-resty/resty/v2"
 	"github.com/sirupsen/logrus"
 )
 
-const pollInterval = 2 * time.Second
-const reportInterval = 10 * time.Second
+// const pollInterval = 2 * time.Second
+// const reportInterval = 10 * time.Second
+
+type Param struct {
+	POLL_INTERVAL   time.Duration `env:"POLL_INTERVAL"`
+	REPORT_INTERVAL time.Duration `env:"REPORT_INTERVAL"`
+	ADDRESS         string        `env:"ADDRESS"`
+}
 
 var storageM storage.StorageAgent
 
@@ -35,18 +43,18 @@ func main() {
 		MM: MapMetrics,
 	}
 	SetStorageAgent(s)
-
+	p := GetParam()
 	ctx, cancel := context.WithCancel(context.Background())
 	go waitSignals(cancel)
-	go UpdateMetrics(ctx, pollInterval)
+	go UpdateMetrics(ctx, p.POLL_INTERVAL)
 
 	for {
 		select {
 		case <-ctx.Done():
 			logrus.Info("Agent is down send metrics.")
 			return
-		case <-time.After(reportInterval):
-			err := sendMetricsJSON(ctx)
+		case <-time.After(p.REPORT_INTERVAL):
+			err := sendMetricsJSON(ctx, p.ADDRESS)
 			if err != nil {
 				logrus.Error("Error sending POST: ", err)
 			}
@@ -54,7 +62,26 @@ func main() {
 	}
 
 }
-func sendMetricsJSON(ctx context.Context) error {
+
+//get param from env
+func GetParam() Param {
+	var param Param
+	err := env.Parse(&param)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if param.POLL_INTERVAL == 0 {
+		param.POLL_INTERVAL = 2 * time.Second
+	}
+	if param.REPORT_INTERVAL == 0 {
+		param.REPORT_INTERVAL = 10 * time.Second
+	}
+	if param.ADDRESS == "" {
+		param.ADDRESS = "127.0.0.1:8080"
+	}
+	return param
+}
+func sendMetricsJSON(ctx context.Context, address string) error {
 	client := resty.New()
 	// client.
 	// 	SetRetryCount(1).
@@ -80,14 +107,14 @@ func sendMetricsJSON(ctx context.Context) error {
 			encoder := json.NewEncoder(&buf)
 			err = encoder.Encode(JSONMetrics[i])
 			if err != nil {
-				logrus.Error("33333333333333333333333333333333333333 - ", err)
+				logrus.Error(err)
 			}
 			logrus.Info(buf.String())
 
 			_, err = client.R().
 				SetHeader("Content-Type", "application/json").
 				SetBody(buf.Bytes()).
-				Post("http://127.0.0.1:8080/update/")
+				Post("http://" + address + "/update/")
 			if err != nil {
 				return err
 			}

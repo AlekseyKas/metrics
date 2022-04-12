@@ -20,8 +20,8 @@ func TestClient(t *testing.T) {
 	// require.NoError(t, err)
 	t.Run(name, func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
-
-		err := sendMetricsJSON(ctx)
+		p := GetParam()
+		err := sendMetricsJSON(ctx, p.ADDRESS)
 		require.Error(t, err)
 		time.AfterFunc(4*time.Second, cancel)
 	})

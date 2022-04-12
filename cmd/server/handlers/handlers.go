@@ -57,7 +57,7 @@ func getMetricsJSON() http.HandlerFunc {
 			logrus.Error("Error unmarshaling request: ", err)
 			http.Error(rw, err.Error(), http.StatusInternalServerError)
 		}
-		logrus.Infof("%+v", s)
+		// logrus.Infof("%+v", s)
 
 		metrics := storageM.GetMetrics()
 		typeMet := s.MType
@@ -95,6 +95,7 @@ func getMetricsJSON() http.HandlerFunc {
 					http.Error(rw, err.Error(), http.StatusBadRequest)
 				}
 
+				logrus.Info("buuuuuuf", buf.String())
 				rw.Write(buf.Bytes())
 				rw.WriteHeader(http.StatusOK)
 				return
