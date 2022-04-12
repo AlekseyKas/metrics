@@ -112,12 +112,18 @@ func getMetricsJSON() http.HandlerFunc {
 				rw.WriteHeader(http.StatusBadRequest)
 			}
 			s.Value = &float
-			toSend, err := json.Marshal(s)
+			// toSend, err := json.Marshal(s)
+			// if err != nil {
+			// 	logrus.Error("Error marshaling struct to sending", err)
+			// 	http.Error(rw, err.Error(), http.StatusInternalServerError)
+			// }
+			var buf bytes.Buffer
+			encode := json.NewEncoder(&buf)
+			err = encode.Encode(s)
 			if err != nil {
-				logrus.Error("Error marshaling struct to sending", err)
-				http.Error(rw, err.Error(), http.StatusInternalServerError)
+				logrus.Error("Error encoding struct gauge: ", err)
 			}
-			rw.Write([]byte(toSend))
+			// rw.Write([]byte(toSend))
 			rw.WriteHeader(http.StatusOK)
 			return
 		}
@@ -208,12 +214,17 @@ func getMetrics() http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 
 		metrics := storageM.GetMetrics()
-		JSONMetrics, err := json.Marshal(metrics)
+		// JSONMetrics, err := json.Marshal(metrics)
+		// if err != nil {
+		// 	logrus.Error(err)
+		// }
+		var buf bytes.Buffer
+		encode := json.NewEncoder(&buf)
+		err := encode.Encode(metrics)
 		if err != nil {
-			logrus.Error(err)
+			logrus.Error("Error encoding metrics getmetric: ", err)
 		}
-
-		rw.Write(JSONMetrics)
+		// rw.Write(JSONMetrics)
 		rw.Header().Add("Content-Type", "text/plain")
 		rw.WriteHeader(http.StatusOK)
 	}
