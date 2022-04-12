@@ -80,7 +80,7 @@ func sendMetricsJSON(ctx context.Context) error {
 			encoder := json.NewEncoder(&buf)
 			err = encoder.Encode(JSONMetrics[i])
 			if err != nil {
-				logrus.Error(err)
+				logrus.Error("33333333333333333333333333333333333333 - ", err)
 			}
 			logrus.Info(buf.String())
 
