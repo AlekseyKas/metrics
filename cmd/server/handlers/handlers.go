@@ -80,13 +80,6 @@ func getMetricsJSON() http.HandlerFunc {
 				}
 				a := int64(i)
 				s.Delta = &a
-				// toSend, err := json.Marshal(s)
-				// if err != nil {
-				// 	logrus.Error("Error marshaling struct to sending", err)
-				// 	http.Error(rw, err.Error(), http.StatusInternalServerError)
-				// }
-				// json.Unmarshal(toSend, &op)
-
 				var buf bytes.Buffer
 				encoder := json.NewEncoder(&buf)
 				err = encoder.Encode(s)
@@ -110,12 +103,6 @@ func getMetricsJSON() http.HandlerFunc {
 				rw.WriteHeader(http.StatusBadRequest)
 			}
 			s.Value = &float
-			// toSend, err := json.Marshal(s)
-			// if err != nil {
-			// 	logrus.Error("Error marshaling struct to sending", err)
-			// 	http.Error(rw, err.Error(), http.StatusInternalServerError)
-			// }
-			// rw.Write([]byte(toSend))
 
 			var buf bytes.Buffer
 			encoder := json.NewEncoder(&buf)
@@ -151,13 +138,9 @@ func saveMetricsJSON() http.HandlerFunc {
 			rw.WriteHeader(http.StatusBadRequest)
 
 		}
-		logrus.Info("ooooooooooooooooooooooo", string(out))
 		metrics := storageM.GetMetrics()
 		typeMet := s.MType
 		nameMet := s.ID
-		logrus.Info("sssssssssssssssssssssss", s)
-		// rw.Header().Add("Content-Type", "application/json")
-
 		if typeMet != "gauge" && typeMet != "counter" {
 			rw.WriteHeader(http.StatusNotImplemented)
 			return
@@ -188,15 +171,11 @@ func saveMetricsJSON() http.HandlerFunc {
 						rw.WriteHeader(http.StatusBadRequest)
 						return
 					}
-					logrus.Info("ooooooolllllllldddddd", i)
-					logrus.Info("neeeeewwwwwwwwwwwwww", *s.Delta)
-
 					valueMetInt = int(*s.Delta) + i
 					storageM.ChangeMetric(nameMet, counter(valueMetInt))
 					rw.WriteHeader(http.StatusOK)
 					return
 				} else {
-					logrus.Info("neeeeewwwwwwwwwwwwww", *s.Delta)
 					valueMetInt = int(*s.Delta)
 					storageM.ChangeMetric(nameMet, counter(valueMetInt))
 					rw.WriteHeader(http.StatusOK)
@@ -220,16 +199,9 @@ func getMetrics() http.HandlerFunc {
 		if err != nil {
 			http.Error(rw, err.Error(), http.StatusBadRequest)
 		}
-		rw.Write(buf.Bytes())
-
-		// JSONMetrics, err := json.Marshal(metrics)
-		// if err != nil {
-		// 	logrus.Error(err)
-		// }
-		// rw.Write(JSONMetrics)
-
 		rw.Header().Add("Content-Type", "text/plain")
 		rw.WriteHeader(http.StatusOK)
+		rw.Write(buf.Bytes())
 	}
 }
 
@@ -263,9 +235,9 @@ func getMetric() http.HandlerFunc {
 		}
 		if _, ok := metrics[nameMet]; ok {
 			if typeMet == "counter" {
-				rw.Write([]byte(fmt.Sprintf("%v", metrics[nameMet])))
 				rw.Header().Add("Content-Type", "text/plain")
 				rw.WriteHeader(http.StatusOK)
+				rw.Write([]byte(fmt.Sprintf("%v", metrics[nameMet])))
 				return
 			}
 		} else {

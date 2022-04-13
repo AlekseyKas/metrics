@@ -4,13 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
-	"reflect"
 	"runtime"
-	"strings"
 	"syscall"
 	"time"
 
@@ -20,9 +17,6 @@ import (
 	"github.com/go-resty/resty/v2"
 	"github.com/sirupsen/logrus"
 )
-
-// const pollInterval = 2 * time.Second
-// const reportInterval = 10 * time.Second
 
 type Param struct {
 	PollInterval   time.Duration `env:"POLL_INTERVAL"`
@@ -99,10 +93,6 @@ func sendMetricsJSON(ctx context.Context, address string) error {
 			logrus.Info("Send metrics in map ending!")
 			return nil
 		default:
-			// out, err := json.Marshal(JSONMetrics[i])
-			// if err != nil {
-			// 	logrus.Error("Error marshaling metric: ", err)
-			// }
 			var buf bytes.Buffer
 			encoder := json.NewEncoder(&buf)
 			err = encoder.Encode(JSONMetrics[i])
@@ -118,40 +108,39 @@ func sendMetricsJSON(ctx context.Context, address string) error {
 			if err != nil {
 				return err
 			}
-			// fmt.Println(string(out))
 		}
 	}
 	return nil
 }
 
 //sending metrics to server
-func sendMetrics(ctx context.Context) error {
-	client := resty.New()
-	// client.
-	// SetRetryCount(1).
-	// SetRetryWaitTime(1 * time.Second).
-	// SetRetryMaxWaitTime(2 * time.Second)
+// func sendMetrics(ctx context.Context, address string) error {
+// 	client := resty.New()
+// 	// client.
+// 	// SetRetryCount(1).
+// 	// SetRetryWaitTime(1 * time.Second).
+// 	// SetRetryMaxWaitTime(2 * time.Second)
 
-	metrics := storageM.GetMetrics()
-	for k, v := range metrics {
-		select {
-		case <-ctx.Done():
-			logrus.Info("Send metrics in map ending!")
-			return nil
-		default:
-			typeMet := strings.Split(reflect.ValueOf(v).Type().String(), ".")[1]
-			value := fmt.Sprintf("%v", v)
-			_, err := client.R().SetPathParams(map[string]string{
-				"type": typeMet, "value": value, "name": k,
-			}).Post("http://127.0.0.1:8080/update/{type}/{name}/{value}")
-			if err != nil {
-				logrus.Error(err)
-				return err
-			}
-		}
-	}
-	return nil
-}
+// 	metrics := storageM.GetMetrics()
+// 	for k, v := range metrics {
+// 		select {
+// 		case <-ctx.Done():
+// 			logrus.Info("Send metrics in map ending!")
+// 			return nil
+// 		default:
+// 			typeMet := strings.Split(reflect.ValueOf(v).Type().String(), ".")[1]
+// 			value := fmt.Sprintf("%v", v)
+// 			_, err := client.R().SetPathParams(map[string]string{
+// 				"type": typeMet, "value": value, "name": k,
+// 			}).Post("http://" + address + "/update/{type}/{name}/{value}")
+// 			if err != nil {
+// 				logrus.Error(err)
+// 				return err
+// 			}
+// 		}
+// 	}
+// 	return nil
+// }
 
 //wating signals
 func waitSignals(cancel context.CancelFunc) {
@@ -179,7 +168,7 @@ func UpdateMetrics(ctx context.Context, pollInterval time.Duration) {
 		case <-time.After(pollInterval):
 			var memStats runtime.MemStats
 			runtime.ReadMemStats(&memStats)
-			sendMetrics(ctx)
+			// sendMetrics(ctx)
 			storageM.ChangeMetrics(memStats)
 		}
 	}
