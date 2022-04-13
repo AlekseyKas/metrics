@@ -13,10 +13,10 @@ import (
 )
 
 type Param struct {
-	Address       string `env:"ADDRESS"`
-	StoreInterval int    `env: "STORE_INTERVAL"`
-	StoreFile     string `env: "STORE_FILE"`
-	Restore       bool   `env: "RESTORE"`
+	Address string `env:"ADDRESS"`
+	// StoreInterval int    `env: "STORE_INTERVAL"`
+	// StoreFile     string `env: "STORE_FILE"`
+	// Restore       bool   `env: "RESTORE"`
 }
 
 func main() {
@@ -45,14 +45,14 @@ func GetParam() Param {
 	if param.Address == "" {
 		param.Address = "127.0.0.1:8080"
 	}
-	if param.StoreInterval == 0 {
-		param.StoreInterval = 300
-	}
-	if param.StoreFile == "" {
-		param.StoreFile = "/tmp/devops-metrics-db.json"
-	}
-	if param.Restore == false {
+	// if param.StoreInterval == 0 {
+	// 	param.StoreInterval = 300
+	// }
+	// if param.StoreFile == "" {
+	// 	param.StoreFile = "/tmp/devops-metrics-db.json"
+	// }
+	// if param.Restore == false {
 
-	}
+	// }
 	return param
 }

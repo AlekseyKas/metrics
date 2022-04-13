@@ -156,7 +156,7 @@ func saveMetricsJSON() http.HandlerFunc {
 		typeMet := s.MType
 		nameMet := s.ID
 		logrus.Info("sssssssssssssssssssssss", s)
-		rw.Header().Add("Content-Type", "application/json")
+		// rw.Header().Add("Content-Type", "application/json")
 
 		if typeMet != "gauge" && typeMet != "counter" {
 			rw.WriteHeader(http.StatusNotImplemented)
@@ -275,9 +275,9 @@ func getMetric() http.HandlerFunc {
 		}
 
 		if typeMet == "gauge" && nameMet != "PollCount" {
-			rw.Write([]byte(fmt.Sprintf("%v", metrics[nameMet])))
 			rw.Header().Add("Content-Type", "text/plain")
 			rw.WriteHeader(http.StatusOK)
+			rw.Write([]byte(fmt.Sprintf("%v", metrics[nameMet])))
 			return
 		}
 	}
