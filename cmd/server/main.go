@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 
@@ -12,7 +13,10 @@ import (
 )
 
 type Param struct {
-	Address string `env:"ADDRESS"`
+	Address       string `env:"ADDRESS"`
+	StoreInterval int    `env: "STORE_INTERVAL"`
+	StoreFile     string `env: "STORE_FILE"`
+	Restore       bool   `env: "RESTORE"`
 }
 
 func main() {
@@ -23,21 +27,32 @@ func main() {
 		MM: structs.Map(storage.Metrics{}),
 	}
 	handlers.SetStorage(s)
-	a := GetParam()
+	env := GetParam()
+	fmt.Println(env)
 	r := chi.NewRouter()
 	r.Route("/", handlers.Router)
-	http.ListenAndServe(a.Address, r)
+	http.ListenAndServe(env.Address, r)
 }
 
 //get param from env
 func GetParam() Param {
 	var param Param
+
 	err := env.Parse(&param)
 	if err != nil {
 		log.Fatal(err)
 	}
 	if param.Address == "" {
 		param.Address = "127.0.0.1:8080"
+	}
+	if param.StoreInterval == 0 {
+		param.StoreInterval = 300
+	}
+	if param.StoreFile == "" {
+		param.StoreFile = "/tmp/devops-metrics-db.json"
+	}
+	if param.Restore == false {
+
 	}
 	return param
 }

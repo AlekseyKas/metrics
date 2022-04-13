@@ -127,6 +127,8 @@ func getMetricsJSON() http.HandlerFunc {
 			rw.Write(buf.Bytes())
 			rw.WriteHeader(http.StatusOK)
 			return
+		} else {
+			rw.WriteHeader(http.StatusNotFound)
 		}
 
 	}
@@ -158,6 +160,7 @@ func saveMetricsJSON() http.HandlerFunc {
 
 		if typeMet != "gauge" && typeMet != "counter" {
 			rw.WriteHeader(http.StatusNotImplemented)
+			return
 		}
 		//update gauge
 		if typeMet == "gauge" {
@@ -167,6 +170,7 @@ func saveMetricsJSON() http.HandlerFunc {
 				if metrics[nameMet] != gauge(*s.Value) {
 					storageM.ChangeMetric(nameMet, gauge(*s.Value))
 					rw.WriteHeader(http.StatusOK)
+					return
 				}
 			}
 		}
@@ -174,6 +178,7 @@ func saveMetricsJSON() http.HandlerFunc {
 		if typeMet == "counter" {
 			if err != nil {
 				rw.WriteHeader(http.StatusBadRequest)
+				return
 			}
 			var valueMetInt int
 			if s.Delta != nil {
@@ -181,6 +186,7 @@ func saveMetricsJSON() http.HandlerFunc {
 					i, err := strconv.Atoi(fmt.Sprintf("%v", metrics[nameMet]))
 					if err != nil {
 						rw.WriteHeader(http.StatusBadRequest)
+						return
 					}
 					logrus.Info("ooooooolllllllldddddd", i)
 					logrus.Info("neeeeewwwwwwwwwwwwww", *s.Delta)
@@ -188,11 +194,13 @@ func saveMetricsJSON() http.HandlerFunc {
 					valueMetInt = int(*s.Delta) + i
 					storageM.ChangeMetric(nameMet, counter(valueMetInt))
 					rw.WriteHeader(http.StatusOK)
+					return
 				} else {
 					logrus.Info("neeeeewwwwwwwwwwwwww", *s.Delta)
 					valueMetInt = int(*s.Delta)
 					storageM.ChangeMetric(nameMet, counter(valueMetInt))
 					rw.WriteHeader(http.StatusOK)
+					return
 				}
 			} else {
 				rw.WriteHeader(http.StatusBadRequest)
