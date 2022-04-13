@@ -19,9 +19,9 @@ import (
 )
 
 type Param struct {
-	PollInterval   time.Duration `env:"POLL_INTERVAL"`
-	ReportInterval time.Duration `env:"REPORT_INTERVAL"`
-	Address        string        `env:"ADDRESS"`
+	PollInterval   int    `env:"POLL_INTERVAL" envDefault:"2"`
+	ReportInterval int    `env:"REPORT_INTERVAL" envDefault:"10"`
+	Address        string `env:"ADDRESS" envDefault:"127.0.0.1:8080"`
 }
 
 var storageM storage.StorageAgent
@@ -38,16 +38,17 @@ func main() {
 	}
 	SetStorageAgent(s)
 	p := GetParam()
+
 	ctx, cancel := context.WithCancel(context.Background())
 	go waitSignals(cancel)
-	go UpdateMetrics(ctx, p.PollInterval)
+	go UpdateMetrics(ctx, time.Duration(p.PollInterval)*time.Second)
 
 	for {
 		select {
 		case <-ctx.Done():
 			logrus.Info("Agent is down send metrics.")
 			return
-		case <-time.After(p.ReportInterval):
+		case <-time.After(time.Duration(p.ReportInterval) * time.Second):
 			err := sendMetricsJSON(ctx, p.Address)
 			if err != nil {
 				logrus.Error("Error sending POST: ", err)
@@ -64,15 +65,15 @@ func GetParam() Param {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if param.PollInterval == 0 {
-		param.PollInterval = 2 * time.Second
-	}
-	if param.ReportInterval == 0 {
-		param.ReportInterval = 10 * time.Second
-	}
-	if param.Address == "" {
-		param.Address = "127.0.0.1:8080"
-	}
+	// if param.PollInterval == 0 {
+	// 	param.PollInterval = 2 * time.Second
+	// }
+	// if param.ReportInterval == 0 {
+	// 	param.ReportInterval = 10 * time.Second
+	// }
+	// if param.Address == "" {
+	// 	param.Address = "127.0.0.1:8080"
+	// }
 	return param
 }
 func sendMetricsJSON(ctx context.Context, address string) error {

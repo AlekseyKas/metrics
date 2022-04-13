@@ -20,10 +20,10 @@ import (
 type gauge float64
 type counter int64
 
-var storageM storage.Storage
+var StorageM storage.Storage
 
 func SetStorage(s storage.Storage) {
-	storageM = s
+	StorageM = s
 }
 
 //router
@@ -44,14 +44,14 @@ func getMetricsJSON() http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		defer req.Body.Close()
 		rw.Header().Add("Content-Type", "application/json")
-
+		fmt.Println()
 		out, err := ioutil.ReadAll(req.Body)
 		if err != nil {
 			http.Error(rw, err.Error(), 500)
 			return
 		}
 
-		s := storageM.GetStructJSON()
+		s := StorageM.GetStructJSON()
 		err = json.Unmarshal(out, &s)
 		if err != nil {
 			logrus.Error("Error unmarshaling request: ", err)
@@ -59,7 +59,7 @@ func getMetricsJSON() http.HandlerFunc {
 		}
 		// logrus.Infof("%+v", s)
 
-		metrics := storageM.GetMetrics()
+		metrics := StorageM.GetMetrics()
 		typeMet := s.MType
 		nameMet := s.ID
 
@@ -131,14 +131,14 @@ func saveMetricsJSON() http.HandlerFunc {
 			rw.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		s := storageM.GetStructJSON()
+		s := StorageM.GetStructJSON()
 		err = json.Unmarshal(out, &s)
 		if err != nil {
 			logrus.Error("Error unmarshaling request: ", err)
 			rw.WriteHeader(http.StatusBadRequest)
 
 		}
-		metrics := storageM.GetMetrics()
+		metrics := StorageM.GetMetrics()
 		typeMet := s.MType
 		nameMet := s.ID
 		if typeMet != "gauge" && typeMet != "counter" {
@@ -151,7 +151,7 @@ func saveMetricsJSON() http.HandlerFunc {
 				rw.WriteHeader(http.StatusInternalServerError)
 			} else {
 				if metrics[nameMet] != gauge(*s.Value) {
-					storageM.ChangeMetric(nameMet, gauge(*s.Value))
+					StorageM.ChangeMetric(nameMet, gauge(*s.Value), false)
 					rw.WriteHeader(http.StatusOK)
 					return
 				}
@@ -172,12 +172,12 @@ func saveMetricsJSON() http.HandlerFunc {
 						return
 					}
 					valueMetInt = int(*s.Delta) + i
-					storageM.ChangeMetric(nameMet, counter(valueMetInt))
+					StorageM.ChangeMetric(nameMet, counter(valueMetInt), false)
 					rw.WriteHeader(http.StatusOK)
 					return
 				} else {
 					valueMetInt = int(*s.Delta)
-					storageM.ChangeMetric(nameMet, counter(valueMetInt))
+					StorageM.ChangeMetric(nameMet, counter(valueMetInt), false)
 					rw.WriteHeader(http.StatusOK)
 					return
 				}
@@ -192,7 +192,7 @@ func saveMetricsJSON() http.HandlerFunc {
 func getMetrics() http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 
-		metrics := storageM.GetMetrics()
+		metrics := StorageM.GetMetrics()
 		var buf bytes.Buffer
 		encoder := json.NewEncoder(&buf)
 		err := encoder.Encode(metrics)
@@ -209,7 +209,7 @@ func getMetrics() http.HandlerFunc {
 func getMetric() http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 
-		metrics := storageM.GetMetrics()
+		metrics := StorageM.GetMetrics()
 
 		typeMet := chi.URLParam(req, "typeMet")
 		nameMet := chi.URLParam(req, "nameMet")
@@ -261,7 +261,7 @@ func saveMetrics() http.HandlerFunc {
 		nameMet := chi.URLParam(req, "nameMet")
 		value := chi.URLParam(req, "value")
 
-		metrics := storageM.GetMetrics()
+		metrics := StorageM.GetMetrics()
 		//typeMertic to url
 		switch typeMet {
 		case "gauge":
@@ -282,7 +282,7 @@ func saveMetrics() http.HandlerFunc {
 			}
 			if err == nil {
 				if metrics[nameMet] != gauge(valueMetFloat) {
-					storageM.ChangeMetric(nameMet, gauge(valueMetFloat))
+					StorageM.ChangeMetric(nameMet, gauge(valueMetFloat), false)
 					rw.Header().Add("Content-Type", "text/plain")
 					rw.WriteHeader(http.StatusOK)
 				}
@@ -306,12 +306,12 @@ func saveMetrics() http.HandlerFunc {
 
 					valueMetInt = valueMetInt + i
 
-					storageM.ChangeMetric(nameMet, counter(valueMetInt))
+					StorageM.ChangeMetric(nameMet, counter(valueMetInt), false)
 
 					rw.Header().Add("Content-Type", "text/plain")
 					rw.WriteHeader(http.StatusOK)
 				} else {
-					storageM.ChangeMetric(nameMet, counter(valueMetInt))
+					StorageM.ChangeMetric(nameMet, counter(valueMetInt), false)
 				}
 			}
 		}

@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"reflect"
@@ -79,8 +80,16 @@ type StorageAgent interface {
 
 type Storage interface {
 	GetMetrics() map[string]interface{}
-	ChangeMetric(nameMet string, value interface{}) error
+	ChangeMetric(nameMet string, value interface{}, toFile bool) error
 	GetStructJSON() JSONMetrics
+	LoadMetricsFile(file []byte)
+}
+
+func (m *MetricsStore) LoadMetricsFile(file []byte) {
+	err := json.Unmarshal(file, &m.MM)
+	if err != nil {
+		logrus.Error("Error unmarshaling file to map", err)
+	}
 }
 
 func (m *MetricsStore) GetStructJSON() JSONMetrics {
@@ -91,7 +100,6 @@ func (m *MetricsStore) GetStructJSON() JSONMetrics {
 func (m *MetricsStore) GetMetricsJSON() ([]JSONMetrics, error) {
 	m.mux.Lock()
 	defer m.mux.Unlock()
-	// values := make(map[string]interface{}, (len(m.MM)))
 	var j []JSONMetrics
 	for k, v := range m.MM {
 		if strings.Split(reflect.ValueOf(v).Type().String(), ".")[1] == "gauge" {
@@ -157,14 +165,11 @@ func (m *MetricsStore) ChangeMetrics(memStats runtime.MemStats) error {
 	return nil
 }
 
-func (m *MetricsStore) ChangeMetric(nameMet string, value interface{}) error {
+func (m *MetricsStore) ChangeMetric(nameMet string, value interface{}, toFile bool) error {
 
 	m.mux.Lock()
 	defer m.mux.Unlock()
-
-	logrus.Info("befor 1111111111111111111111111111111111111111", m.MM, nameMet)
 	m.MM[nameMet] = value
-	logrus.Info("after 1111111111111111111111111111111111111111", m.MM, nameMet)
 
 	return nil
 }
