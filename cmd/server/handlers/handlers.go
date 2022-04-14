@@ -73,52 +73,85 @@ func getMetricsJSON() http.HandlerFunc {
 			rw.WriteHeader(http.StatusNotFound)
 			return
 		}
-		if _, ok := metrics[nameMet]; ok {
-			if typeMet == "counter" && strings.Split(reflect.ValueOf(metrics[nameMet]).Type().String(), ".")[1] == "counter" {
-				i, err := strconv.Atoi(fmt.Sprintf("%v", metrics[nameMet]))
-				if err != nil {
-					rw.WriteHeader(http.StatusBadRequest)
-				}
-				a := int64(i)
-				s.Delta = &a
-				var buf bytes.Buffer
-				encoder := json.NewEncoder(&buf)
-				err = encoder.Encode(s)
-				if err != nil {
-					logrus.Info(err)
-					http.Error(rw, err.Error(), http.StatusBadRequest)
-				}
+		if typeMet == "counter" {
 
-				logrus.Info("buuuuuuf", buf.String())
-				rw.Write(buf.Bytes())
-				rw.WriteHeader(http.StatusOK)
-				return
+			if _, ok := metrics[nameMet]; ok {
+
+				if typeMet == "counter" && strings.Split(reflect.ValueOf(metrics[nameMet]).Type().String(), ".")[1] == "counter" {
+					i, err := strconv.Atoi(fmt.Sprintf("%v", metrics[nameMet]))
+					if err != nil {
+						rw.WriteHeader(http.StatusBadRequest)
+					}
+					a := int64(i)
+					s.Delta = &a
+					var buf bytes.Buffer
+					encoder := json.NewEncoder(&buf)
+					err = encoder.Encode(s)
+					if err != nil {
+						logrus.Info(err)
+						http.Error(rw, err.Error(), http.StatusBadRequest)
+					}
+					rw.Write(buf.Bytes())
+					rw.WriteHeader(http.StatusOK)
+					return
+				} else {
+					rw.WriteHeader(http.StatusNotFound)
+				}
+			} else {
+				rw.WriteHeader(http.StatusNotFound)
 			}
-		} else {
-			rw.WriteHeader(http.StatusNotFound)
 		}
 
-		if typeMet == "gauge" && nameMet != "PollCount" {
-			float, err := strconv.ParseFloat(fmt.Sprintf("%v", metrics[nameMet]), 64)
-			if err != nil {
-				rw.WriteHeader(http.StatusBadRequest)
-			}
-			s.Value = &float
+		if typeMet == "gauge" {
+			if _, ok := metrics[nameMet]; ok {
 
-			var buf bytes.Buffer
-			encoder := json.NewEncoder(&buf)
-			err = encoder.Encode(s)
-			if err != nil {
-				logrus.Info(err)
-				http.Error(rw, err.Error(), http.StatusBadRequest)
+				if strings.Split(reflect.ValueOf(metrics[nameMet]).Type().String(), ".")[1] == "gauge" {
+
+					float, err := strconv.ParseFloat(fmt.Sprintf("%v", metrics[nameMet]), 64)
+					if err != nil {
+						rw.WriteHeader(http.StatusBadRequest)
+					}
+					s.Value = &float
+
+					var buf bytes.Buffer
+					encoder := json.NewEncoder(&buf)
+					err = encoder.Encode(s)
+					if err != nil {
+						logrus.Info(err)
+						http.Error(rw, err.Error(), http.StatusBadRequest)
+					}
+					rw.Write(buf.Bytes())
+					rw.WriteHeader(http.StatusOK)
+					return
+				} else {
+					rw.WriteHeader(http.StatusNotFound)
+				}
+			} else {
+				rw.WriteHeader(http.StatusNotFound)
 			}
-			rw.Write(buf.Bytes())
-			rw.WriteHeader(http.StatusOK)
-			return
-		} else {
-			rw.WriteHeader(http.StatusNotFound)
+
 		}
 
+		// if typeMet == "gauge" && nameMet != "PollCount" {
+		// 	float, err := strconv.ParseFloat(fmt.Sprintf("%v", metrics[nameMet]), 64)
+		// 	if err != nil {
+		// 		rw.WriteHeader(http.StatusBadRequest)
+		// 	}
+		// 	s.Value = &float
+
+		// 	var buf bytes.Buffer
+		// 	encoder := json.NewEncoder(&buf)
+		// 	err = encoder.Encode(s)
+		// 	if err != nil {
+		// 		logrus.Info(err)
+		// 		http.Error(rw, err.Error(), http.StatusBadRequest)
+		// 	}
+		// 	rw.Write(buf.Bytes())
+		// 	rw.WriteHeader(http.StatusOK)
+		// 	return
+		// } else {
+		// 	rw.WriteHeader(http.StatusNotFound)
+		// }
 	}
 }
 
