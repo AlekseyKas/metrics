@@ -85,7 +85,6 @@ func (m *MetricsStore) LoadMetricsFile(file []byte) {
 	m.mux.Lock()
 	defer m.mux.Unlock()
 	var jMetric []JSONMetrics
-
 	err := json.Unmarshal(file, &jMetric)
 	if err != nil {
 		logrus.Error("Error unmarshaling file to map", err)
@@ -110,7 +109,8 @@ func (m *MetricsStore) LoadMetricsFile(file []byte) {
 			case "counter":
 				m.MM[jMetric[i].ID] = counter(*jMetric[i].Delta)
 			case "gauge":
-				m.MM[jMetric[i].ID] = gauge(*jMetric[i].Delta)
+				fmt.Println("45677777777777", jMetric[i])
+				m.MM[jMetric[i].ID] = gauge(*jMetric[i].Value)
 			}
 		}
 	}
