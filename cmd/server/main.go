@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -12,19 +11,12 @@ import (
 	"time"
 
 	"github.com/AlekseyKas/metrics/cmd/server/handlers"
+	"github.com/AlekseyKas/metrics/internal/config"
 	"github.com/AlekseyKas/metrics/internal/storage"
-	"github.com/caarlos0/env"
 	"github.com/fatih/structs"
 	"github.com/go-chi/chi"
 	"github.com/sirupsen/logrus"
 )
-
-type Param struct {
-	Address       string `env:"ADDRESS" envDefault:"127.0.0.1:8080"`
-	StoreInterval int    `env:"STORE_INTERVAL" envDefault:"5"`
-	StoreFile     string `env:"STORE_FILE" envDefault:"/tmp/devops-metrics-db.json"`
-	Restore       bool   `env:"RESTORE" envDefault:"true"`
-}
 
 var wg sync.WaitGroup
 
@@ -36,7 +28,7 @@ func main() {
 		MM: structs.Map(storage.Metrics{}),
 	}
 	handlers.SetStorage(s)
-	env := GetParam()
+	env := config.LoadConfig()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	wg.Add(1)
@@ -51,50 +43,13 @@ func main() {
 	wg.Wait()
 }
 
-//get param from env
-func GetParam() Param {
-	var Parametrs Param
-	err := env.Parse(&Parametrs)
-	if err != nil {
-		log.Fatal(err)
-	}
-	// if Parametrs.Address == "" {
-	// 	Parametrs.Address = "127.0.0.1:8080"
-	// }
-	// if Parametrs.StoreInterval == 0 {
-	// 	Parametrs.StoreInterval = 5
-	// }
-
-	// f, bo := os.LookupEnv("STORE_FILE")
-	// if f == "" && bo == true {
-	// 	Parametrs.StoreFile = "none"
-	// }
-	// if f == "" && bo == false {
-	// 	Parametrs.StoreFile = "/tmp/devops-metrics-db.json"
-	// }
-	// s, _ := os.LookupEnv("RESTORE")
-	// switch s {
-	// case "":
-	// 	Parametrs.Restore = true
-	// case "true":
-	// 	Parametrs.Restore = true
-	// case "false":
-	// 	Parametrs.Restore = false
-	// }
-	return Parametrs
-}
-
-func syncFile(env Param, ctx context.Context) {
+func syncFile(env config.Param, ctx context.Context) {
 	if env.StoreFile == "" {
 		for {
-			select {
-			case <-ctx.Done():
-				logrus.Info("File syncing is down")
-				wg.Done()
-				return
-			case <-time.After(time.Duration(env.StoreInterval) * time.Second):
-				logrus.Info("Writing to disk disable.")
-			}
+			<-ctx.Done()
+			logrus.Info("File syncing is down")
+			wg.Done()
+			return
 		}
 	} else {
 		//restore data from file
@@ -108,24 +63,46 @@ func syncFile(env Param, ctx context.Context) {
 			}
 			handlers.StorageM.LoadMetricsFile(file)
 		}
-		for {
-			select {
-			case <-ctx.Done():
+		if env.StoreInterval == 0 {
+			metrics, _ := handlers.StorageM.GetMetricsJSON()
+			file, err := os.Create(env.StoreFile)
+			if err != nil {
+				logrus.Error("Error open file for writing: ", err)
+			}
+			defer file.Close()
+
+			data, err := json.Marshal(metrics)
+			if err != nil {
+				logrus.Error("Error marshaling metrics : ", err)
+			}
+			file.Write(data)
+			for {
+				<-ctx.Done()
 				logrus.Info("File syncing is down")
 				wg.Done()
 				return
-			case <-time.After(time.Duration(env.StoreInterval) * time.Second):
-				metrics := handlers.StorageM.GetMetrics()
-				file, err := os.Create(env.StoreFile)
-				if err != nil {
-					logrus.Error("Error open file for writing: ", err)
+			}
+		} else {
+			for {
+				select {
+				case <-ctx.Done():
+					logrus.Info("File syncing is down")
+					wg.Done()
+					return
+				case <-time.After(env.StoreInterval):
+					metrics, _ := handlers.StorageM.GetMetricsJSON()
+					file, err := os.OpenFile(env.StoreFile, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0777)
+					if err != nil {
+						logrus.Error("Error open file for writing: ", err)
+					}
+					defer file.Close()
+
+					data, err := json.Marshal(metrics)
+					if err != nil {
+						logrus.Error("Error marshaling metrics : ", err)
+					}
+					file.Write(data)
 				}
-				defer file.Close()
-				data, err := json.Marshal(metrics)
-				if err != nil {
-					logrus.Error("Error marshaling metrics : ", err)
-				}
-				file.Write(data)
 			}
 		}
 	}

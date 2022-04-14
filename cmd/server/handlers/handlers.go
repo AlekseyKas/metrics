@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/AlekseyKas/metrics/internal/config"
 	"github.com/AlekseyKas/metrics/internal/storage"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
@@ -141,6 +142,7 @@ func saveMetricsJSON() http.HandlerFunc {
 		metrics := StorageM.GetMetrics()
 		typeMet := s.MType
 		nameMet := s.ID
+		p := config.LoadConfig()
 		if typeMet != "gauge" && typeMet != "counter" {
 			rw.WriteHeader(http.StatusNotImplemented)
 			return
@@ -151,7 +153,7 @@ func saveMetricsJSON() http.HandlerFunc {
 				rw.WriteHeader(http.StatusInternalServerError)
 			} else {
 				if metrics[nameMet] != gauge(*s.Value) {
-					StorageM.ChangeMetric(nameMet, gauge(*s.Value), false)
+					StorageM.ChangeMetric(nameMet, gauge(*s.Value), p)
 					rw.WriteHeader(http.StatusOK)
 					return
 				}
@@ -172,12 +174,12 @@ func saveMetricsJSON() http.HandlerFunc {
 						return
 					}
 					valueMetInt = int(*s.Delta) + i
-					StorageM.ChangeMetric(nameMet, counter(valueMetInt), false)
+					StorageM.ChangeMetric(nameMet, counter(valueMetInt), p)
 					rw.WriteHeader(http.StatusOK)
 					return
 				} else {
 					valueMetInt = int(*s.Delta)
-					StorageM.ChangeMetric(nameMet, counter(valueMetInt), false)
+					StorageM.ChangeMetric(nameMet, counter(valueMetInt), p)
 					rw.WriteHeader(http.StatusOK)
 					return
 				}
@@ -260,7 +262,7 @@ func saveMetrics() http.HandlerFunc {
 		typeMet := chi.URLParam(req, "typeMet")
 		nameMet := chi.URLParam(req, "nameMet")
 		value := chi.URLParam(req, "value")
-
+		p := config.LoadConfig()
 		metrics := StorageM.GetMetrics()
 		//typeMertic to url
 		switch typeMet {
@@ -282,7 +284,7 @@ func saveMetrics() http.HandlerFunc {
 			}
 			if err == nil {
 				if metrics[nameMet] != gauge(valueMetFloat) {
-					StorageM.ChangeMetric(nameMet, gauge(valueMetFloat), false)
+					StorageM.ChangeMetric(nameMet, gauge(valueMetFloat), p)
 					rw.Header().Add("Content-Type", "text/plain")
 					rw.WriteHeader(http.StatusOK)
 				}
@@ -306,12 +308,12 @@ func saveMetrics() http.HandlerFunc {
 
 					valueMetInt = valueMetInt + i
 
-					StorageM.ChangeMetric(nameMet, counter(valueMetInt), false)
+					StorageM.ChangeMetric(nameMet, counter(valueMetInt), p)
 
 					rw.Header().Add("Content-Type", "text/plain")
 					rw.WriteHeader(http.StatusOK)
 				} else {
-					StorageM.ChangeMetric(nameMet, counter(valueMetInt), false)
+					StorageM.ChangeMetric(nameMet, counter(valueMetInt), p)
 				}
 			}
 		}

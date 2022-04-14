@@ -4,12 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"os"
 	"reflect"
 	"runtime"
 	"strconv"
 	"strings"
 	"sync"
 
+	"github.com/AlekseyKas/metrics/internal/config"
 	"github.com/sirupsen/logrus"
 )
 
@@ -80,15 +82,77 @@ type StorageAgent interface {
 
 type Storage interface {
 	GetMetrics() map[string]interface{}
-	ChangeMetric(nameMet string, value interface{}, toFile bool) error
+	ChangeMetric(nameMet string, value interface{}, params config.Param) error
 	GetStructJSON() JSONMetrics
 	LoadMetricsFile(file []byte)
+	GetMetricsJSON() ([]JSONMetrics, error)
 }
 
+// func (m *MetricsStore) GetMetricsJSON() []JSONMetrics {
+// 	var jMetric JSONMetrics
+// 	var metrics []JSONMetrics
+// 	for k, v := range m.MM {
+// 		switch strings.Split(reflect.ValueOf(v).Type().String(), ".")[1] {
+// 		case "counter":
+// 			i, err := strconv.Atoi(fmt.Sprintf("%v", v))
+// 			if err != nil {
+// 				logrus.Error("Error convert int counter")
+// 			}
+// 			ii := int64(i)
+// 			jMetric = JSONMetrics{
+// 				ID:    k,
+// 				MType: "counter",
+// 				Delta: &ii,
+// 			}
+// 			metrics = append(metrics, jMetric)
+// 		case "gauge":
+// 			f, err := strconv.ParseFloat(fmt.Sprintf("%v", v), 64)
+// 			if err != nil {
+// 				logrus.Error("Error convert int float")
+// 			}
+// 			jMetric = JSONMetrics{
+// 				ID:    k,
+// 				MType: "counter",
+// 				Value: &f,
+// 			}
+// 			metrics = append(metrics, jMetric)
+// 		}
+// 	}
+// 	return metrics
+// }
+
 func (m *MetricsStore) LoadMetricsFile(file []byte) {
-	err := json.Unmarshal(file, &m.MM)
+	m.mux.Lock()
+	defer m.mux.Unlock()
+	var jMetric []JSONMetrics
+
+	err := json.Unmarshal(file, &jMetric)
 	if err != nil {
 		logrus.Error("Error unmarshaling file to map", err)
+	}
+	for i := 0; i < len(jMetric); i++ {
+		if _, ok := m.MM[jMetric[i].ID]; ok {
+			for k, _ := range m.MM {
+				if k == jMetric[i].ID {
+					if jMetric[i].Delta != nil {
+						v := jMetric[i].Delta
+						m.MM[k] = counter(*v)
+					}
+					if jMetric[i].Value != nil {
+						v := jMetric[i].Value
+						m.MM[k] = gauge(*v)
+					}
+				}
+			}
+		} else {
+			ty := jMetric[i].MType
+			switch ty {
+			case "counter":
+				m.MM[jMetric[i].ID] = counter(*jMetric[i].Delta)
+			case "gauge":
+				m.MM[jMetric[i].ID] = gauge(*jMetric[i].Delta)
+			}
+		}
 	}
 }
 
@@ -165,11 +229,31 @@ func (m *MetricsStore) ChangeMetrics(memStats runtime.MemStats) error {
 	return nil
 }
 
-func (m *MetricsStore) ChangeMetric(nameMet string, value interface{}, toFile bool) error {
-
+func (m *MetricsStore) ChangeMetric(nameMet string, value interface{}, params config.Param) error {
+	sl, err := m.GetMetricsJSON()
+	if err != nil {
+		logrus.Error(err)
+	}
 	m.mux.Lock()
 	defer m.mux.Unlock()
-	m.MM[nameMet] = value
+	if params.StoreInterval == 0 {
+		m.MM[nameMet] = value
+		file, err := os.OpenFile(params.StoreFile, os.O_WRONLY|os.O_TRUNC, 0777)
+		if err != nil {
+			logrus.Error("Error open file for writing:!!!!!!!! ", err)
+		}
+		defer file.Close()
+
+		data, err := json.Marshal(sl)
+		if err != nil {
+			logrus.Error("Error marshaling metrics : ", err)
+		}
+		file.Write(data)
+	} else {
+		// m.mux.Lock()
+		// defer m.mux.Unlock()
+		m.MM[nameMet] = value
+	}
 
 	return nil
 }
