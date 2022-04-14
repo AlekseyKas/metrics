@@ -132,11 +132,13 @@ func syncFile(env Param, ctx context.Context) {
 }
 
 func fileExist(file string) bool {
+	var b bool
 	_, err := os.Stat(file)
 	if os.IsNotExist(err) {
-		return false
+		return b
 	}
-	return true
+	b = true
+	return b
 }
 
 //wating signals
