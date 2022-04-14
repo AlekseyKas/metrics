@@ -66,13 +66,6 @@ type MetricsStore struct {
 	PollCount int
 }
 
-// type ValidStruct struct {
-// 	ID    interface{} `json:"id"`              // имя метрики
-// 	MType interface{} `json:"type"`            // параметр, принимающий значение gauge или counter
-// 	Delta interface{} `json:"delta,omitempty"` // значение метрики в случае передачи counter
-// 	Value interface{} `json:"value,omitempty"` // значение метрики в случае передачи gauge
-// }
-
 type StorageAgent interface {
 	GetMetrics() map[string]interface{}
 	ChangeMetrics(metrics runtime.MemStats) error
@@ -88,39 +81,6 @@ type Storage interface {
 	GetMetricsJSON() ([]JSONMetrics, error)
 }
 
-// func (m *MetricsStore) GetMetricsJSON() []JSONMetrics {
-// 	var jMetric JSONMetrics
-// 	var metrics []JSONMetrics
-// 	for k, v := range m.MM {
-// 		switch strings.Split(reflect.ValueOf(v).Type().String(), ".")[1] {
-// 		case "counter":
-// 			i, err := strconv.Atoi(fmt.Sprintf("%v", v))
-// 			if err != nil {
-// 				logrus.Error("Error convert int counter")
-// 			}
-// 			ii := int64(i)
-// 			jMetric = JSONMetrics{
-// 				ID:    k,
-// 				MType: "counter",
-// 				Delta: &ii,
-// 			}
-// 			metrics = append(metrics, jMetric)
-// 		case "gauge":
-// 			f, err := strconv.ParseFloat(fmt.Sprintf("%v", v), 64)
-// 			if err != nil {
-// 				logrus.Error("Error convert int float")
-// 			}
-// 			jMetric = JSONMetrics{
-// 				ID:    k,
-// 				MType: "counter",
-// 				Value: &f,
-// 			}
-// 			metrics = append(metrics, jMetric)
-// 		}
-// 	}
-// 	return metrics
-// }
-
 func (m *MetricsStore) LoadMetricsFile(file []byte) {
 	m.mux.Lock()
 	defer m.mux.Unlock()
@@ -132,7 +92,7 @@ func (m *MetricsStore) LoadMetricsFile(file []byte) {
 	}
 	for i := 0; i < len(jMetric); i++ {
 		if _, ok := m.MM[jMetric[i].ID]; ok {
-			for k, _ := range m.MM {
+			for k := range m.MM {
 				if k == jMetric[i].ID {
 					if jMetric[i].Delta != nil {
 						v := jMetric[i].Delta

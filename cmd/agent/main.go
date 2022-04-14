@@ -4,25 +4,18 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"log"
 	"os"
 	"os/signal"
 	"runtime"
 	"syscall"
 	"time"
 
+	"github.com/AlekseyKas/metrics/internal/config"
 	"github.com/AlekseyKas/metrics/internal/storage"
-	"github.com/caarlos0/env/v6"
 	"github.com/fatih/structs"
 	"github.com/go-resty/resty/v2"
 	"github.com/sirupsen/logrus"
 )
-
-type Param struct {
-	PollInterval   int    `env:"POLL_INTERVAL" envDefault:"2"`
-	ReportInterval int    `env:"REPORT_INTERVAL" envDefault:"10"`
-	Address        string `env:"ADDRESS" envDefault:"127.0.0.1:8080"`
-}
 
 var storageM storage.StorageAgent
 
@@ -37,18 +30,17 @@ func main() {
 		MM: MapMetrics,
 	}
 	SetStorageAgent(s)
-	p := GetParam()
-
+	p := config.LoadConfig()
 	ctx, cancel := context.WithCancel(context.Background())
 	go waitSignals(cancel)
-	go UpdateMetrics(ctx, time.Duration(p.PollInterval)*time.Second)
+	go UpdateMetrics(ctx, p.PollInterval)
 
 	for {
 		select {
 		case <-ctx.Done():
 			logrus.Info("Agent is down send metrics.")
 			return
-		case <-time.After(time.Duration(p.ReportInterval) * time.Second):
+		case <-time.After(p.ReportInterval):
 			err := sendMetricsJSON(ctx, p.Address)
 			if err != nil {
 				logrus.Error("Error sending POST: ", err)
@@ -58,24 +50,6 @@ func main() {
 
 }
 
-//get param from env
-func GetParam() Param {
-	var param Param
-	err := env.Parse(&param)
-	if err != nil {
-		log.Fatal(err)
-	}
-	// if param.PollInterval == 0 {
-	// 	param.PollInterval = 2 * time.Second
-	// }
-	// if param.ReportInterval == 0 {
-	// 	param.ReportInterval = 10 * time.Second
-	// }
-	// if param.Address == "" {
-	// 	param.Address = "127.0.0.1:8080"
-	// }
-	return param
-}
 func sendMetricsJSON(ctx context.Context, address string) error {
 	client := resty.New()
 	// client.

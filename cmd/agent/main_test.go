@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/AlekseyKas/metrics/internal/config"
 	"github.com/AlekseyKas/metrics/internal/storage"
 	"github.com/fatih/structs"
 	"github.com/stretchr/testify/require"
@@ -20,7 +21,7 @@ func TestClient(t *testing.T) {
 	// require.NoError(t, err)
 	t.Run(name, func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
-		p := GetParam()
+		p := config.LoadConfig()
 		err := sendMetricsJSON(ctx, p.Address)
 		require.Error(t, err)
 		time.AfterFunc(4*time.Second, cancel)
