@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -29,7 +30,7 @@ func main() {
 	}
 	handlers.SetStorage(s)
 	env := config.LoadConfig()
-
+	fmt.Println("eeeeeeeeeeeeeeeeeeeeeeeeeeeeee", env)
 	ctx, cancel := context.WithCancel(context.Background())
 	wg.Add(1)
 	go syncFile(env, ctx)
@@ -45,6 +46,8 @@ func main() {
 
 func syncFile(env config.Param, ctx context.Context) {
 	if env.StoreFile == "" {
+		fmt.Println("11111111111111111111111111111111111111", env)
+
 		for {
 			<-ctx.Done()
 			logrus.Info("File syncing is down")
@@ -55,6 +58,8 @@ func syncFile(env config.Param, ctx context.Context) {
 		//restore data from file
 
 		if env.Restore && fileExist(env.StoreFile) {
+			fmt.Println("22222222222222222222222222222222222222", env)
+
 			file, err := os.ReadFile(env.StoreFile)
 			if err != nil {
 				logrus.Error("Error open file for writing: ", err)
@@ -64,6 +69,8 @@ func syncFile(env config.Param, ctx context.Context) {
 			handlers.StorageM.LoadMetricsFile(file)
 		}
 		if env.StoreInterval == 0 {
+			fmt.Println("3333333333333333333333333333333333333333333333", env)
+
 			metrics, _ := handlers.StorageM.GetMetricsJSON()
 			file, err := os.Create(env.StoreFile)
 			if err != nil {
@@ -90,6 +97,8 @@ func syncFile(env config.Param, ctx context.Context) {
 					wg.Done()
 					return
 				case <-time.After(env.StoreInterval):
+					fmt.Println("44444444444444444444444444444444444444444444", env)
+
 					metrics, _ := handlers.StorageM.GetMetricsJSON()
 					file, err := os.OpenFile(env.StoreFile, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0777)
 					if err != nil {
