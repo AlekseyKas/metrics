@@ -88,7 +88,7 @@ func CompressGzip(next http.Handler) http.Handler {
 			return
 		}
 		defer gz.Close()
-
+		logrus.Info("0000000000000000", r.Body, "[[[[[[[[[[[[", r.Header)
 		w.Header().Set("Content-Encoding", "gzip")
 		w.Header().Set("Vary", "Accept-Encoding")
 		w.Header().Del("Content-Length")
