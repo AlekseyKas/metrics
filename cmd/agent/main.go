@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"flag"
 	"os"
 	"os/signal"
 	"runtime"
@@ -30,24 +31,52 @@ func main() {
 		MM: MapMetrics,
 	}
 	SetStorageAgent(s)
-	p := config.LoadConfig()
+	termEnvFlags()
 	ctx, cancel := context.WithCancel(context.Background())
 	go waitSignals(cancel)
-	go UpdateMetrics(ctx, p.PollInterval)
+	go UpdateMetrics(ctx, config.FlagsAgent.POLL_INTERVAL)
 
 	for {
 		select {
 		case <-ctx.Done():
 			logrus.Info("Agent is down send metrics.")
 			return
-		case <-time.After(p.ReportInterval):
-			err := sendMetricsJSON(ctx, p.Address)
+		case <-time.After(config.FlagsAgent.REPORT_INTERVAL):
+			err := sendMetricsJSON(ctx, config.FlagsAgent.ADDRESS)
 			if err != nil {
 				logrus.Error("Error sending POST: ", err)
 			}
 		}
 	}
 
+}
+
+func termEnvFlags() {
+	flag.StringVar(&config.FlagsAgent.ADDRESS, "a", "127.0.0.1:8080", "Address")
+	flag.DurationVar(&config.FlagsAgent.REPORT_INTERVAL, "r", 10000000000, "Report interval")
+	flag.DurationVar(&config.FlagsAgent.POLL_INTERVAL, "p", 2000000000, "Poll interval")
+
+	flag.Parse()
+
+	env := config.LoadConfig()
+	envADDR, _ := os.LookupEnv("ADDRESS")
+	if envADDR == "" {
+		config.ArgsM.Address = config.FlagsAgent.ADDRESS
+	} else {
+		config.ArgsM.Address = env.Address
+	}
+	envRest, _ := os.LookupEnv("REPORT_INTERVAL")
+	if envRest == "" {
+		config.ArgsM.ReportInterval = config.FlagsAgent.REPORT_INTERVAL
+	} else {
+		config.ArgsM.ReportInterval = env.ReportInterval
+	}
+	envStoreint, _ := os.LookupEnv("POLL_INTERVAL")
+	if envStoreint == "" {
+		config.ArgsM.PollInterval = config.FlagsAgent.POLL_INTERVAL
+	} else {
+		config.ArgsM.PollInterval = env.PollInterval
+	}
 }
 
 func sendMetricsJSON(ctx context.Context, address string) error {

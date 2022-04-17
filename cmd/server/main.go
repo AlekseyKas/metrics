@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"net/http"
 	"os"
@@ -23,28 +24,28 @@ var wg sync.WaitGroup
 
 func main() {
 
-	// var MapMetrics map[string]interface{} = structs.Map(storage.Metrics{})
 	//инициализация хранилища метрик
 	s := &storage.MetricsStore{
 		MM: structs.Map(storage.Metrics{}),
 	}
+	termEnvFlags()
+
 	handlers.SetStorage(s)
-	env := config.LoadConfig()
-	fmt.Println("eeeeeeeeeeeeeeeeeeeeeeeeeeeeee", env)
+
 	ctx, cancel := context.WithCancel(context.Background())
 	wg.Add(1)
-	go syncFile(env, ctx)
+	go syncFile(config.ArgsM, ctx)
 	wg.Add(1)
 	go waitSignals(cancel)
 
 	r := chi.NewRouter()
 	r.Route("/", handlers.Router)
-	go http.ListenAndServe(env.Address, r)
+	go http.ListenAndServe(config.ArgsM.Address, r)
 
 	wg.Wait()
 }
 
-func syncFile(env config.Param, ctx context.Context) {
+func syncFile(env config.Args, ctx context.Context) {
 	if env.StoreFile == "" {
 		fmt.Println("11111111111111111111111111111111111111", env)
 
@@ -57,8 +58,8 @@ func syncFile(env config.Param, ctx context.Context) {
 	} else {
 		//restore data from file
 
+		fmt.Println("22222222222222222222222222222222222222", config.ArgsM.Address, config.ArgsM.Restore, config.ArgsM.StoreFile, config.ArgsM.StoreInterval)
 		if env.Restore && fileExist(env.StoreFile) {
-			fmt.Println("22222222222222222222222222222222222222", env)
 
 			file, err := os.ReadFile(env.StoreFile)
 			if err != nil {
@@ -114,6 +115,41 @@ func syncFile(env config.Param, ctx context.Context) {
 				}
 			}
 		}
+	}
+}
+
+func termEnvFlags() {
+	// kong.Parse(&config.FlagsServer)
+	flag.StringVar(&config.FlagsServer.ADDRESS, "a", "127.0.0.1:8080", "Address")
+	flag.StringVar(&config.FlagsServer.STORE_FILE, "f", "/tmp/devops-metrics-db.json", "File path store")
+	flag.BoolVar(&config.FlagsServer.RESTORE, "r", true, "Restire drom file")
+	flag.DurationVar(&config.FlagsServer.STORE_INTERVAL, "i", 300000000000, "Interval store file")
+	flag.Parse()
+
+	env := config.LoadConfig()
+	envADDR, _ := os.LookupEnv("ADDRESS")
+	if envADDR == "" {
+		config.ArgsM.Address = config.FlagsServer.ADDRESS
+	} else {
+		config.ArgsM.Address = env.Address
+	}
+	envRest, _ := os.LookupEnv("RESTORE")
+	if envRest == "" {
+		config.ArgsM.Restore = config.FlagsServer.RESTORE
+	} else {
+		config.ArgsM.Restore = env.Restore
+	}
+	envStoreint, _ := os.LookupEnv("STORE_INTERVAL")
+	if envStoreint == "" {
+		config.ArgsM.StoreInterval = config.FlagsServer.STORE_INTERVAL
+	} else {
+		config.ArgsM.StoreInterval = env.StoreInterval
+	}
+	envFile, _ := os.LookupEnv("STORE_FILE")
+	if envFile == "" {
+		config.ArgsM.StoreFile = config.FlagsServer.STORE_FILE
+	} else {
+		config.ArgsM.StoreFile = env.StoreFile
 	}
 }
 

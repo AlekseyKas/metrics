@@ -75,7 +75,7 @@ type StorageAgent interface {
 
 type Storage interface {
 	GetMetrics() map[string]interface{}
-	ChangeMetric(nameMet string, value interface{}, params config.Param) error
+	ChangeMetric(nameMet string, value interface{}, params config.Args) error
 	GetStructJSON() JSONMetrics
 	LoadMetricsFile(file []byte)
 	GetMetricsJSON() ([]JSONMetrics, error)
@@ -109,7 +109,6 @@ func (m *MetricsStore) LoadMetricsFile(file []byte) {
 			case "counter":
 				m.MM[jMetric[i].ID] = counter(*jMetric[i].Delta)
 			case "gauge":
-				fmt.Println("45677777777777", jMetric[i])
 				m.MM[jMetric[i].ID] = gauge(*jMetric[i].Value)
 			}
 		}
@@ -189,7 +188,7 @@ func (m *MetricsStore) ChangeMetrics(memStats runtime.MemStats) error {
 	return nil
 }
 
-func (m *MetricsStore) ChangeMetric(nameMet string, value interface{}, params config.Param) error {
+func (m *MetricsStore) ChangeMetric(nameMet string, value interface{}, params config.Args) error {
 	sl, err := m.GetMetricsJSON()
 	if err != nil {
 		logrus.Error(err)
