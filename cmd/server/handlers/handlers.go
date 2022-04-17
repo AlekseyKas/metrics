@@ -81,9 +81,7 @@ func CompressGzip(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
-		t := r.Header.Get("Accept")
-		ss, _ := ioutil.ReadAll(r.Body)
-		logrus.Info("1111111111111111111111111", t, "::::", string(ss))
+
 		gz, err := gzip.NewWriterLevel(w, gzip.BestCompression)
 		if err != nil {
 			http.Error(w, "", http.StatusInternalServerError)
