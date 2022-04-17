@@ -35,7 +35,7 @@ func Router(r chi.Router) {
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
-	// r.Use(CompressGzip)
+	r.Use(CompressGzip)
 	r.Use(DecompressGzip)
 	r.Get("/", getMetrics())
 	r.Get("/value/{typeMet}/{nameMet}", getMetric())
@@ -77,10 +77,8 @@ func DecompressGzip(next http.Handler) http.Handler {
 
 func CompressGzip(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		logrus.Info("------------------", r.Header)
 		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
 			next.ServeHTTP(w, r)
-			fmt.Println("[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[", r.Body)
 			return
 		}
 
@@ -89,7 +87,8 @@ func CompressGzip(next http.Handler) http.Handler {
 			http.Error(w, "", http.StatusInternalServerError)
 			return
 		}
-		gz.Close()
+		defer gz.Close()
+
 		w.Header().Set("Content-Encoding", "gzip")
 		// w.Header().Set("Vary", "Accept-Encoding")
 		w.Header().Del("Content-Length")
