@@ -82,7 +82,7 @@ func CompressGzip(next http.Handler) http.Handler {
 			return
 		}
 		t := r.Header.Get("Accept")
-
+		logrus.Info("1111111111111111111111111", t)
 		gz, err := gzip.NewWriterLevel(w, gzip.BestCompression)
 		if err != nil {
 			http.Error(w, "", http.StatusInternalServerError)
@@ -90,10 +90,10 @@ func CompressGzip(next http.Handler) http.Handler {
 		}
 		defer gz.Close()
 		logrus.Info("0000000000000000", r.Body, "[[[[[[[[[[[[", r.Header)
-		w.Header().Set("Accept", t)
+		// w.Header().Set("Accept", t)
 		w.Header().Set("Content-Encoding", "gzip")
 		w.Header().Set("Vary", "Accept-Encoding")
-		w.Header().Del("Content-Length")
+		// w.Header().Del("Content-Length")
 		next.ServeHTTP(gzipBodyWriter{
 			ResponseWriter: w,
 			writer:         gz,
