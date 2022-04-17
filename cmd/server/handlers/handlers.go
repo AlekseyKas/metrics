@@ -35,7 +35,7 @@ func Router(r chi.Router) {
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
-	// r.Use(CompressGzip)
+	r.Use(CompressGzip)
 	r.Use(DecompressGzip)
 	r.Get("/", getMetrics())
 	r.Get("/value/{typeMet}/{nameMet}", getMetric())
