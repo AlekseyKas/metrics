@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"os"
 	"os/signal"
 	"runtime"
@@ -32,6 +33,7 @@ func main() {
 	}
 	SetStorageAgent(s)
 	termEnvFlags()
+	fmt.Println(config.ArgsM)
 	ctx, cancel := context.WithCancel(context.Background())
 	go waitSignals(cancel)
 	go UpdateMetrics(ctx, config.FlagsAgent.PollInterval)

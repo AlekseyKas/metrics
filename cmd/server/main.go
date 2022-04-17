@@ -29,7 +29,7 @@ func main() {
 		MM: structs.Map(storage.Metrics{}),
 	}
 	termEnvFlags()
-
+	fmt.Println("")
 	handlers.SetStorage(s)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -125,12 +125,15 @@ func termEnvFlags() {
 	flag.BoolVar(&config.FlagsServer.Restore, "r", true, "Restire drom file")
 	flag.DurationVar(&config.FlagsServer.StoreInterval, "i", 300000000000, "Interval store file")
 	flag.Parse()
-
+	fmt.Println(config.FlagsServer)
 	env := config.LoadConfig()
 	envADDR, _ := os.LookupEnv("ADDRESS")
 	if envADDR == "" {
+		fmt.Println(":;;;;;;;;;;;")
 		config.ArgsM.Address = config.FlagsServer.Address
 	} else {
+		fmt.Println("sdsdsdsd")
+
 		config.ArgsM.Address = env.Address
 	}
 	envRest, _ := os.LookupEnv("RESTORE")
@@ -151,6 +154,10 @@ func termEnvFlags() {
 	} else {
 		config.ArgsM.StoreFile = env.StoreFile
 	}
+	fmt.Println("----------------", "Env address: ", env.Address, "Env Pollinterval: ", env.PollInterval, "Env ReportInterval: ", env.ReportInterval, "Env Restore: ", env.Restore, "Env Storefile: ", env.StoreFile, "Env Storeinsterval: ", env.StoreInterval)
+	fmt.Println("Env address: ", env.Address, "Env Pollinterval: ", env.PollInterval, "Env ReportInterval: ", env.ReportInterval, "Env Restore: ", env.Restore, "Env Storefile: ", env.StoreFile, "Env Storeinsterval: ", env.StoreInterval, "----------------")
+	fmt.Println("==============", "Flag address: ", config.ArgsM.Address, "Flag Pollinterval: ", config.ArgsM.PollInterval, "Flag ReportInterval: ", config.ArgsM.ReportInterval, "Flag Restore: ", config.ArgsM.Restore, "Flag Storefile: ", config.ArgsM.StoreFile, "Flag Storeinsterval: ", config.ArgsM.StoreInterval, "===================")
+
 }
 
 func fileExist(file string) bool {
