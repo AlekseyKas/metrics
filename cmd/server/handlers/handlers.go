@@ -35,7 +35,7 @@ func Router(r chi.Router) {
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
-	r.Use(CompressGzip)
+	// r.Use(CompressGzip)
 	r.Use(DecompressGzip)
 	r.Get("/", getMetrics())
 	r.Get("/value/{typeMet}/{nameMet}", getMetric())
@@ -59,7 +59,7 @@ func DecompressGzip(next http.Handler) http.Handler {
 
 		if !strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
 			next.ServeHTTP(w, r)
-			logrus.Info("ppppppppppppwwwwwwwwwwwwwwwwwwwwwwwwwwwww")
+			logrus.Info("ppppppppppppwwwwwwwwwwwwwwwwwwwwwwwwwwwww", r.Header.Get("Content-Encoding"))
 			return
 		}
 
@@ -243,9 +243,12 @@ func saveMetricsJSON() http.HandlerFunc {
 		if typeMet == "gauge" {
 			if s.Value == nil {
 				rw.WriteHeader(http.StatusInternalServerError)
+				logrus.Info("999999999999999999999999999999", nameMet, typeMet, s.Value)
+				return
 			} else {
 				if metrics[nameMet] != gauge(*s.Value) {
 					StorageM.ChangeMetric(nameMet, gauge(*s.Value), config.ArgsM)
+
 					rw.WriteHeader(http.StatusOK)
 					return
 				}
@@ -253,6 +256,7 @@ func saveMetricsJSON() http.HandlerFunc {
 		}
 		//update counter
 		if typeMet == "counter" {
+
 			if err != nil {
 				rw.WriteHeader(http.StatusBadRequest)
 				return
@@ -266,6 +270,8 @@ func saveMetricsJSON() http.HandlerFunc {
 						return
 					}
 					valueMetInt = int(*s.Delta) + i
+					logrus.Info("88888888888888888888", nameMet, typeMet, s.Value)
+
 					StorageM.ChangeMetric(nameMet, counter(valueMetInt), config.ArgsM)
 					rw.WriteHeader(http.StatusOK)
 					return
