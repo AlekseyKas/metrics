@@ -338,6 +338,7 @@ func getMetric() http.HandlerFunc {
 			if typeMet == "counter" {
 				rw.Header().Add("Content-Type", "text/plain")
 				rw.WriteHeader(http.StatusOK)
+				logrus.Info("333333333333333333333", nameMet)
 				rw.Write([]byte(fmt.Sprintf("%v", metrics[nameMet])))
 				return
 			}
@@ -350,6 +351,8 @@ func getMetric() http.HandlerFunc {
 		if typeMet == "gauge" && nameMet != "PollCount" {
 			rw.Header().Add("Content-Type", "text/plain")
 			rw.WriteHeader(http.StatusOK)
+			logrus.Info("333333333332222222222222222222", nameMet)
+
 			rw.Write([]byte(fmt.Sprintf("%v", metrics[nameMet])))
 			return
 		}
