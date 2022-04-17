@@ -47,8 +47,6 @@ func main() {
 
 func syncFile(env config.Args, ctx context.Context) {
 	if env.StoreFile == "" {
-		fmt.Println("11111111111111111111111111111111111111", env)
-
 		for {
 			<-ctx.Done()
 			logrus.Info("File syncing is down")
@@ -58,7 +56,6 @@ func syncFile(env config.Args, ctx context.Context) {
 	} else {
 		//restore data from file
 
-		fmt.Println("22222222222222222222222222222222222222", config.ArgsM.Address, config.ArgsM.Restore, config.ArgsM.StoreFile, config.ArgsM.StoreInterval)
 		if env.Restore && fileExist(env.StoreFile) {
 
 			file, err := os.ReadFile(env.StoreFile)
@@ -70,7 +67,6 @@ func syncFile(env config.Args, ctx context.Context) {
 			handlers.StorageM.LoadMetricsFile(file)
 		}
 		if env.StoreInterval == 0 {
-			fmt.Println("3333333333333333333333333333333333333333333333", env)
 
 			metrics, _ := handlers.StorageM.GetMetricsJSON()
 			file, err := os.Create(env.StoreFile)
@@ -98,8 +94,6 @@ func syncFile(env config.Args, ctx context.Context) {
 					wg.Done()
 					return
 				case <-time.After(env.StoreInterval):
-					fmt.Println("44444444444444444444444444444444444444444444", env)
-
 					metrics, _ := handlers.StorageM.GetMetricsJSON()
 					file, err := os.OpenFile(env.StoreFile, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0777)
 					if err != nil {
@@ -129,13 +123,10 @@ func termEnvFlags() {
 	env := config.LoadConfig()
 	envADDR, _ := os.LookupEnv("ADDRESS")
 	if envADDR == "" {
-		// fmt.Println(":;;;;;;;;;;;")
 		config.ArgsM.Address = config.FlagsServer.Address
 	} else {
-		// fmt.Println("sdsdsdsd")
-
 		config.ArgsM.Address = env.Address
-		// fmt.Println("]]]]]]]]]]]]]]]]]]]]]]", env.Address, envADDR)
+
 	}
 	envRest, _ := os.LookupEnv("RESTORE")
 	if envRest == "" {
@@ -155,9 +146,9 @@ func termEnvFlags() {
 	} else {
 		config.ArgsM.StoreFile = env.StoreFile
 	}
-	fmt.Println("----------------", "Env address: ", env.Address, "Env Pollinterval: ", env.PollInterval, "Env ReportInterval: ", env.ReportInterval, "Env Restore: ", env.Restore, "Env Storefile: ", env.StoreFile, "Env Storeinsterval: ", env.StoreInterval)
-	fmt.Println("Env address: ", env.Address, "Env Pollinterval: ", env.PollInterval, "Env ReportInterval: ", env.ReportInterval, "Env Restore: ", env.Restore, "Env Storefile: ", env.StoreFile, "Env Storeinsterval: ", env.StoreInterval, "----------------")
-	fmt.Println("==============", "Flag address: ", config.ArgsM.Address, "Flag Pollinterval: ", config.ArgsM.PollInterval, "Flag ReportInterval: ", config.ArgsM.ReportInterval, "Flag Restore: ", config.ArgsM.Restore, "Flag Storefile: ", config.ArgsM.StoreFile, "Flag Storeinsterval: ", config.ArgsM.StoreInterval, "===================")
+	// fmt.Println("----------------", "Env address: ", env.Address, "Env Pollinterval: ", env.PollInterval, "Env ReportInterval: ", env.ReportInterval, "Env Restore: ", env.Restore, "Env Storefile: ", env.StoreFile, "Env Storeinsterval: ", env.StoreInterval)
+	// fmt.Println("Env address: ", env.Address, "Env Pollinterval: ", env.PollInterval, "Env ReportInterval: ", env.ReportInterval, "Env Restore: ", env.Restore, "Env Storefile: ", env.StoreFile, "Env Storeinsterval: ", env.StoreInterval, "----------------")
+	// fmt.Println("==============", "Flag address: ", config.ArgsM.Address, "Flag Pollinterval: ", config.ArgsM.PollInterval, "Flag ReportInterval: ", config.ArgsM.ReportInterval, "Flag Restore: ", config.ArgsM.Restore, "Flag Storefile: ", config.ArgsM.StoreFile, "Flag Storeinsterval: ", config.ArgsM.StoreInterval, "===================")
 
 }
 
