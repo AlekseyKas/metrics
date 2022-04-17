@@ -2,8 +2,10 @@ package handlers
 
 import (
 	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"reflect"
@@ -33,12 +35,69 @@ func Router(r chi.Router) {
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+	r.Use(CompressGzip)
+	r.Use(DecompressGzip)
 	r.Get("/", getMetrics())
 	r.Get("/value/{typeMet}/{nameMet}", getMetric())
 	r.Post("/update/{typeMet}/{nameMet}/{value}", saveMetrics())
 	r.Post("/update/", saveMetricsJSON())
 	r.Post("/value/", getMetricsJSON())
 
+}
+
+type gzipBodyWriter struct {
+	http.ResponseWriter
+	writer io.Writer
+}
+
+func (gz gzipBodyWriter) Write(b []byte) (int, error) {
+	return gz.writer.Write(b)
+}
+
+func DecompressGzip(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		if !strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
+			next.ServeHTTP(w, r)
+			logrus.Info("ppppppppppppwwwwwwwwwwwwwwwwwwwwwwwwwwwww")
+			return
+		}
+
+		gz, err := gzip.NewReader(r.Body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		gz.Close()
+		r.Body = gz
+		next.ServeHTTP(w, r)
+
+	})
+}
+
+func CompressGzip(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		logrus.Info("------------------", r.Header)
+		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+			next.ServeHTTP(w, r)
+			fmt.Println("[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[", r.Body)
+			return
+		}
+
+		gz, err := gzip.NewWriterLevel(w, gzip.BestCompression)
+		if err != nil {
+			http.Error(w, "", http.StatusInternalServerError)
+			return
+		}
+		gz.Close()
+		w.Header().Set("Content-Encoding", "gzip")
+		w.Header().Set("Vary", "Accept-Encoding")
+		w.Header().Del("Content-Length")
+		next.ServeHTTP(gzipBodyWriter{
+			ResponseWriter: w,
+			writer:         gz,
+		}, r)
+	})
 }
 
 func getMetricsJSON() http.HandlerFunc {
