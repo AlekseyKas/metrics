@@ -34,15 +34,15 @@ func main() {
 	termEnvFlags()
 	ctx, cancel := context.WithCancel(context.Background())
 	go waitSignals(cancel)
-	go UpdateMetrics(ctx, config.FlagsAgent.POLL_INTERVAL)
+	go UpdateMetrics(ctx, config.FlagsAgent.PollInterval)
 
 	for {
 		select {
 		case <-ctx.Done():
 			logrus.Info("Agent is down send metrics.")
 			return
-		case <-time.After(config.FlagsAgent.REPORT_INTERVAL):
-			err := sendMetricsJSON(ctx, config.FlagsAgent.ADDRESS)
+		case <-time.After(config.FlagsAgent.ReportInterval):
+			err := sendMetricsJSON(ctx, config.FlagsAgent.Address)
 			if err != nil {
 				logrus.Error("Error sending POST: ", err)
 			}
