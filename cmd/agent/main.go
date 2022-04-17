@@ -110,8 +110,8 @@ func sendMetricsJSON(ctx context.Context, address string) error {
 			var b bytes.Buffer
 			gz, _ := gzip.NewWriterLevel(&b, gzip.BestSpeed)
 
-			// logrus.Info(buf.String())
 			gz.Write(buf.Bytes())
+			gz.Close()
 			_, err = client.R().
 				SetHeader("Content-Type", "application/json").
 				SetBody(&b).
