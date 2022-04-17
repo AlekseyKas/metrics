@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"compress/gzip"
 	"context"
 	"encoding/json"
 	"flag"
@@ -107,14 +106,14 @@ func sendMetricsJSON(ctx context.Context, address string) error {
 			if err != nil {
 				logrus.Error(err)
 			}
-			var b bytes.Buffer
-			gz, _ := gzip.NewWriterLevel(&b, gzip.BestSpeed)
+			// var b bytes.Buffer
+			// gz, _ := gzip.NewWriterLevel(&b, gzip.BestSpeed)
 
-			gz.Write(buf.Bytes())
-			gz.Close()
+			// gz.Write(buf.Bytes())
+			// gz.Close()
 			_, err = client.R().
 				SetHeader("Content-Type", "application/json").
-				SetBody(&b).
+				SetBody(&buf).
 				Post("http://" + address + "/update/")
 			if err != nil {
 				return err

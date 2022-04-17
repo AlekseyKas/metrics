@@ -92,7 +92,7 @@ func CompressGzip(next http.Handler) http.Handler {
 		// w.Header().Set("Accept", t)
 		w.Header().Set("Content-Encoding", "gzip")
 		w.Header().Set("Vary", "Accept-Encoding")
-		// w.Header().Del("Content-Length")
+		w.Header().Del("Content-Length")
 		next.ServeHTTP(gzipBodyWriter{
 			ResponseWriter: w,
 			writer:         gz,
@@ -231,6 +231,7 @@ func saveMetricsJSON() http.HandlerFunc {
 			rw.WriteHeader(http.StatusBadRequest)
 
 		}
+		// logrus.Info(s)
 		metrics := StorageM.GetMetrics()
 		typeMet := s.MType
 		nameMet := s.ID
