@@ -59,7 +59,7 @@ func TestRouter(t *testing.T) {
 			body:   []byte(`{"ID": "PollCount", "type": "gouge"}`),
 			want: want{
 				contentType: "application/json",
-				statusCode:  200,
+				statusCode:  500,
 			},
 		},
 		{
@@ -69,7 +69,7 @@ func TestRouter(t *testing.T) {
 			body:   []byte(`{"ID": "MetricName", "type": "test"}`),
 			want: want{
 				contentType: "application/json",
-				statusCode:  200,
+				statusCode:  500,
 			},
 		},
 		{
@@ -89,7 +89,7 @@ func TestRouter(t *testing.T) {
 			body:   []byte(`{"ID": "Pollcount", "type": "gauge", "delta": "12"}`),
 			want: want{
 				contentType: "application/json",
-				statusCode:  200,
+				statusCode:  400,
 			},
 		},
 		{
