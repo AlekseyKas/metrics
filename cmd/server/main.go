@@ -120,34 +120,34 @@ func syncFile(env config.Args, ctx context.Context) {
 
 func termEnvFlags() {
 	// kong.Parse(&config.FlagsServer)
-	flag.StringVar(&config.FlagsServer.ADDRESS, "a", "127.0.0.1:8080", "Address")
-	flag.StringVar(&config.FlagsServer.STORE_FILE, "f", "/tmp/devops-metrics-db.json", "File path store")
-	flag.BoolVar(&config.FlagsServer.RESTORE, "r", true, "Restire drom file")
-	flag.DurationVar(&config.FlagsServer.STORE_INTERVAL, "i", 300000000000, "Interval store file")
+	flag.StringVar(&config.FlagsServer.Address, "a", "127.0.0.1:8080", "Address")
+	flag.StringVar(&config.FlagsServer.StoreFIle, "f", "/tmp/devops-metrics-db.json", "File path store")
+	flag.BoolVar(&config.FlagsServer.Restore, "r", true, "Restire drom file")
+	flag.DurationVar(&config.FlagsServer.StoreInterval, "i", 300000000000, "Interval store file")
 	flag.Parse()
 
 	env := config.LoadConfig()
 	envADDR, _ := os.LookupEnv("ADDRESS")
 	if envADDR == "" {
-		config.ArgsM.Address = config.FlagsServer.ADDRESS
+		config.ArgsM.Address = config.FlagsServer.Address
 	} else {
 		config.ArgsM.Address = env.Address
 	}
 	envRest, _ := os.LookupEnv("RESTORE")
 	if envRest == "" {
-		config.ArgsM.Restore = config.FlagsServer.RESTORE
+		config.ArgsM.Restore = config.FlagsServer.Restore
 	} else {
 		config.ArgsM.Restore = env.Restore
 	}
 	envStoreint, _ := os.LookupEnv("STORE_INTERVAL")
 	if envStoreint == "" {
-		config.ArgsM.StoreInterval = config.FlagsServer.STORE_INTERVAL
+		config.ArgsM.StoreInterval = config.FlagsServer.StoreInterval
 	} else {
 		config.ArgsM.StoreInterval = env.StoreInterval
 	}
 	envFile, _ := os.LookupEnv("STORE_FILE")
 	if envFile == "" {
-		config.ArgsM.StoreFile = config.FlagsServer.STORE_FILE
+		config.ArgsM.StoreFile = config.FlagsServer.StoreFIle
 	} else {
 		config.ArgsM.StoreFile = env.StoreFile
 	}

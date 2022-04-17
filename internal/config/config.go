@@ -11,15 +11,15 @@ var FlagsServer FlagsServ
 var FlagsAgent FlagsAg
 
 type FlagsServ struct {
-	ADDRESS        string
-	RESTORE        bool
-	STORE_INTERVAL time.Duration
-	STORE_FILE     string
+	Address       string
+	Restore       bool
+	StoreInterval time.Duration
+	StoreFIle     string
 }
 type FlagsAg struct {
-	ADDRESS         string
-	REPORT_INTERVAL time.Duration
-	POLL_INTERVAL   time.Duration
+	Address        string
+	ReportInterval time.Duration
+	PollInterval   time.Duration
 }
 
 type Param struct {

@@ -52,28 +52,28 @@ func main() {
 }
 
 func termEnvFlags() {
-	flag.StringVar(&config.FlagsAgent.ADDRESS, "a", "127.0.0.1:8080", "Address")
-	flag.DurationVar(&config.FlagsAgent.REPORT_INTERVAL, "r", 10000000000, "Report interval")
-	flag.DurationVar(&config.FlagsAgent.POLL_INTERVAL, "p", 2000000000, "Poll interval")
+	flag.StringVar(&config.FlagsAgent.Address, "a", "127.0.0.1:8080", "Address")
+	flag.DurationVar(&config.FlagsAgent.ReportInterval, "r", 10000000000, "Report interval")
+	flag.DurationVar(&config.FlagsAgent.PollInterval, "p", 2000000000, "Poll interval")
 
 	flag.Parse()
 
 	env := config.LoadConfig()
 	envADDR, _ := os.LookupEnv("ADDRESS")
 	if envADDR == "" {
-		config.ArgsM.Address = config.FlagsAgent.ADDRESS
+		config.ArgsM.Address = config.FlagsAgent.Address
 	} else {
 		config.ArgsM.Address = env.Address
 	}
 	envRest, _ := os.LookupEnv("REPORT_INTERVAL")
 	if envRest == "" {
-		config.ArgsM.ReportInterval = config.FlagsAgent.REPORT_INTERVAL
+		config.ArgsM.ReportInterval = config.FlagsAgent.ReportInterval
 	} else {
 		config.ArgsM.ReportInterval = env.ReportInterval
 	}
 	envStoreint, _ := os.LookupEnv("POLL_INTERVAL")
 	if envStoreint == "" {
-		config.ArgsM.PollInterval = config.FlagsAgent.POLL_INTERVAL
+		config.ArgsM.PollInterval = config.FlagsAgent.PollInterval
 	} else {
 		config.ArgsM.PollInterval = env.PollInterval
 	}
