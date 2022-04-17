@@ -129,12 +129,13 @@ func termEnvFlags() {
 	env := config.LoadConfig()
 	envADDR, _ := os.LookupEnv("ADDRESS")
 	if envADDR == "" {
-		fmt.Println(":;;;;;;;;;;;")
+		// fmt.Println(":;;;;;;;;;;;")
 		config.ArgsM.Address = config.FlagsServer.Address
 	} else {
-		fmt.Println("sdsdsdsd")
+		// fmt.Println("sdsdsdsd")
 
 		config.ArgsM.Address = env.Address
+		// fmt.Println("]]]]]]]]]]]]]]]]]]]]]]", env.Address, envADDR)
 	}
 	envRest, _ := os.LookupEnv("RESTORE")
 	if envRest == "" {
