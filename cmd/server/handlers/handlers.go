@@ -300,7 +300,7 @@ func getMetrics() http.HandlerFunc {
 		if err != nil {
 			http.Error(rw, err.Error(), http.StatusBadRequest)
 		}
-		rw.Header().Add("Content-Type", "text/plain")
+		rw.Header().Add("Content-Type", "text/html")
 		rw.WriteHeader(http.StatusOK)
 		rw.Write(buf.Bytes())
 	}
