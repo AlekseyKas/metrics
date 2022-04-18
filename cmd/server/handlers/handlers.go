@@ -59,7 +59,6 @@ func DecompressGzip(next http.Handler) http.Handler {
 
 		if !strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
 			next.ServeHTTP(w, r)
-			logrus.Info("ppppppppppppwwwwwwwwwwwwwwwwwwwwwwwwwwwww", r.Header.Get("Content-Encoding"))
 			return
 		}
 
@@ -88,8 +87,7 @@ func CompressGzip(next http.Handler) http.Handler {
 			return
 		}
 		defer gz.Close()
-		logrus.Info("0000000000000000", r.Body, "[[[[[[[[[[[[", r.Header)
-		// w.Header().Set("Accept", t)
+
 		w.Header().Set("Content-Encoding", "gzip")
 		w.Header().Set("Vary", "Accept-Encoding")
 		w.Header().Del("Content-Length")
@@ -117,7 +115,6 @@ func getMetricsJSON() http.HandlerFunc {
 			logrus.Error("Error unmarshaling request: ", err)
 			http.Error(rw, err.Error(), http.StatusInternalServerError)
 		}
-		// logrus.Infof("%+v", s)
 
 		metrics := StorageM.GetMetrics()
 		typeMet := s.MType
@@ -244,7 +241,6 @@ func saveMetricsJSON() http.HandlerFunc {
 		if typeMet == "gauge" {
 			if s.Value == nil {
 				rw.WriteHeader(http.StatusInternalServerError)
-				logrus.Info("999999999999999999999999999999", nameMet, typeMet, s.Value)
 				return
 			} else {
 				if metrics[nameMet] != gauge(*s.Value) {
@@ -271,7 +267,6 @@ func saveMetricsJSON() http.HandlerFunc {
 						return
 					}
 					valueMetInt = int(*s.Delta) + i
-					logrus.Info("88888888888888888888", nameMet, typeMet, s.Value)
 
 					StorageM.ChangeMetric(nameMet, counter(valueMetInt), config.ArgsM)
 					rw.WriteHeader(http.StatusOK)
@@ -338,7 +333,6 @@ func getMetric() http.HandlerFunc {
 			if typeMet == "counter" {
 				rw.Header().Add("Content-Type", "text/plain")
 				rw.WriteHeader(http.StatusOK)
-				logrus.Info("333333333333333333333", nameMet)
 				rw.Write([]byte(fmt.Sprintf("%v", metrics[nameMet])))
 				return
 			}
@@ -351,8 +345,6 @@ func getMetric() http.HandlerFunc {
 		if typeMet == "gauge" && nameMet != "PollCount" {
 			rw.Header().Add("Content-Type", "text/plain")
 			rw.WriteHeader(http.StatusOK)
-			logrus.Info("333333333332222222222222222222", nameMet)
-
 			rw.Write([]byte(fmt.Sprintf("%v", metrics[nameMet])))
 			return
 		}
