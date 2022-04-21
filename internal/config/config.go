@@ -23,7 +23,7 @@ type FlagsServ struct {
 	Restore       bool
 	StoreInterval time.Duration
 	StoreFIle     string
-	DbUrl         string
+	DbURL         string
 }
 type FlagsAg struct {
 	Address        string
@@ -40,10 +40,10 @@ type Param struct {
 	StoreFile      string        `env:"STORE_FILE" envDefault:"/tmp/devops-metrics-db.json"`
 	Restore        bool          `env:"RESTORE" envDefault:"true"`
 	Key            string        `env:"KEY"`
-	DbUrl          string        `env:"DATABASE_DSN"`
+	DbURL          string        `env:"DATABASE_DSN"`
 }
 type Args struct {
-	DbUrl          string
+	DbURL          string
 	Address        string
 	Key            string
 	PollInterval   time.Duration

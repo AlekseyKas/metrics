@@ -406,7 +406,7 @@ func saveMetrics() http.HandlerFunc {
 		value := chi.URLParam(req, "value")
 
 		metrics := StorageM.GetMetrics()
-		//typeMertic to url
+		//typeMertic to URL
 		switch typeMet {
 		case "gauge":
 			typeMet = "gauge"
@@ -464,7 +464,7 @@ func saveMetrics() http.HandlerFunc {
 
 func checkConnection() http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
-		if config.ArgsM.DbUrl != "" {
+		if config.ArgsM.DbURL != "" {
 			err := database.Conn.Ping(context.Background())
 			if err != nil {
 				rw.WriteHeader(http.StatusInternalServerError)

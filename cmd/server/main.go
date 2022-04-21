@@ -43,7 +43,7 @@ func main() {
 	go waitSignals(cancel)
 
 	//DB connection
-	if config.ArgsM.DbUrl != "" {
+	if config.ArgsM.DbURL != "" {
 		err := database.DbConnect()
 		if err != nil {
 			logrus.Error("Connection to postrgres faild: ", err)
@@ -126,7 +126,7 @@ func syncFile(env config.Args, ctx context.Context) {
 func termEnvFlags() {
 	// kong.Parse(&config.FlagsServer)
 	flag.StringVar(&config.FlagsServer.Address, "a", "127.0.0.1:8080", "Address")
-	flag.StringVar(&config.FlagsServer.DbUrl, "d", "", "Database url")
+	flag.StringVar(&config.FlagsServer.DbURL, "d", "", "Database URL")
 	flag.StringVar(&config.FlagsServer.StoreFIle, "f", "/tmp/devops-metrics-db.json", "File path store")
 	flag.StringVar(&config.FlagsServer.Key, "k", "", "Secret key")
 	flag.BoolVar(&config.FlagsServer.Restore, "r", true, "Restire drom file")
@@ -159,19 +159,22 @@ func termEnvFlags() {
 	} else {
 		config.ArgsM.Key = env.Key
 	}
-
-	envDburl, _ := os.LookupEnv("DATABASE_DSN")
-	if envDburl == "" && config.FlagsServer.DbUrl == "" {
-		envFile, _ := os.LookupEnv("STORE_FILE")
-		if envFile == "" {
-			config.ArgsM.StoreFile = config.FlagsServer.StoreFIle
-		} else {
-			config.ArgsM.StoreFile = env.StoreFile
-		}
+	envFile, _ := os.LookupEnv("STORE_FILE")
+	if envFile == "" {
+		config.ArgsM.StoreFile = config.FlagsServer.StoreFIle
 	} else {
-		if envDburl == "" {
+		config.ArgsM.StoreFile = env.StoreFile
+	}
+
+	envDbURL, _ := os.LookupEnv("DATABASE_DSN")
+	if envDbURL == "" && config.FlagsServer.DbURL == "" {
+		config.ArgsM.Restore = true
+	} else {
+		if envDbURL == "" {
 			logrus.Info("sss")
-			config.ArgsM.DbUrl = config.FlagsServer.DbUrl
+			config.ArgsM.DbURL = config.FlagsServer.DbURL
+			config.ArgsM.Restore = false
+
 		}
 	}
 }
