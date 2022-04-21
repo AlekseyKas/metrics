@@ -116,6 +116,7 @@ func termEnvFlags() {
 	// kong.Parse(&config.FlagsServer)
 	flag.StringVar(&config.FlagsServer.Address, "a", "127.0.0.1:8080", "Address")
 	flag.StringVar(&config.FlagsServer.StoreFIle, "f", "/tmp/devops-metrics-db.json", "File path store")
+	flag.StringVar(&config.FlagsServer.Key, "k", "", "Secret key")
 	flag.BoolVar(&config.FlagsServer.Restore, "r", true, "Restire drom file")
 	flag.DurationVar(&config.FlagsServer.StoreInterval, "i", 300000000000, "Interval store file")
 	flag.Parse()
@@ -145,6 +146,12 @@ func termEnvFlags() {
 		config.ArgsM.StoreFile = config.FlagsServer.StoreFIle
 	} else {
 		config.ArgsM.StoreFile = env.StoreFile
+	}
+	envKey, _ := os.LookupEnv("KEY")
+	if envKey == "" {
+		config.ArgsM.Key = config.FlagsServer.Key
+	} else {
+		config.ArgsM.Key = env.Key
 	}
 	// fmt.Println("----------------", "Env address: ", env.Address, "Env Pollinterval: ", env.PollInterval, "Env ReportInterval: ", env.ReportInterval, "Env Restore: ", env.Restore, "Env Storefile: ", env.StoreFile, "Env Storeinsterval: ", env.StoreInterval)
 	// fmt.Println("Env address: ", env.Address, "Env Pollinterval: ", env.PollInterval, "Env ReportInterval: ", env.ReportInterval, "Env Restore: ", env.Restore, "Env Storefile: ", env.StoreFile, "Env Storeinsterval: ", env.StoreInterval, "----------------")

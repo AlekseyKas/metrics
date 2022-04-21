@@ -3,8 +3,11 @@ package handlers
 import (
 	"bytes"
 	"compress/gzip"
+	"crypto/hmac"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"hash"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -141,6 +144,12 @@ func getMetricsJSON() http.HandlerFunc {
 					a := int64(i)
 					s.Delta = &a
 					var buf bytes.Buffer
+					if config.ArgsM.Key != "" {
+						err := calculateHash(&s, []byte(config.ArgsM.Key))
+						if err != nil {
+							logrus.Error("Error calculate hash: ", err)
+						}
+					}
 					encoder := json.NewEncoder(&buf)
 					err = encoder.Encode(s)
 					if err != nil {
@@ -170,6 +179,12 @@ func getMetricsJSON() http.HandlerFunc {
 					s.Value = &float
 
 					var buf bytes.Buffer
+					if config.ArgsM.Key != "" {
+						err := calculateHash(&s, []byte(config.ArgsM.Key))
+						if err != nil {
+							logrus.Error("Error calculate hash: ", err)
+						}
+					}
 					encoder := json.NewEncoder(&buf)
 					err = encoder.Encode(s)
 					if err != nil {
@@ -211,6 +226,26 @@ func getMetricsJSON() http.HandlerFunc {
 	}
 }
 
+func calculateHash(s *storage.JSONMetrics, key []byte) error {
+	var h hash.Hash
+
+	switch s.MType {
+	case "counter":
+		data := (fmt.Sprintf("%s:counter:%d", s.ID, *s.Delta))
+		logrus.Info(data)
+		h = hmac.New(sha256.New, key)
+		h.Write([]byte(data))
+		s.Hash = fmt.Sprintf("%x", h.Sum(nil))
+	case "gauge":
+		data := (fmt.Sprintf("%s:gauge:%f", s.ID, *s.Value))
+		logrus.Info(data)
+		h = hmac.New(sha256.New, key)
+		h.Write([]byte(data))
+		s.Hash = fmt.Sprintf("%x", h.Sum(nil))
+	}
+	return nil
+}
+
 //save metrics
 func saveMetricsJSON() http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
@@ -228,10 +263,18 @@ func saveMetricsJSON() http.HandlerFunc {
 			rw.WriteHeader(http.StatusBadRequest)
 
 		}
-		// logrus.Info(s)
 		metrics := StorageM.GetMetrics()
 		typeMet := s.MType
 		nameMet := s.ID
+		if config.ArgsM.Key != "" {
+			b, err := compareHash(&s, []byte(config.ArgsM.Key))
+			if err != nil {
+				logrus.Error("Error compare hash of metrics: ", err)
+			}
+			if !b {
+				rw.WriteHeader(http.StatusBadRequest)
+			}
+		}
 
 		if typeMet != "gauge" && typeMet != "counter" {
 			rw.WriteHeader(http.StatusNotImplemented)
@@ -282,6 +325,33 @@ func saveMetricsJSON() http.HandlerFunc {
 			}
 		}
 	}
+}
+
+func compareHash(s *storage.JSONMetrics, key []byte) (b bool, err error) {
+	var h hash.Hash
+
+	switch s.MType {
+	case "counter":
+		data := (fmt.Sprintf("%s:counter:%d", s.ID, *s.Delta))
+		logrus.Info(data)
+		h = hmac.New(sha256.New, key)
+		h.Write([]byte(data))
+	case "gauge":
+		data := (fmt.Sprintf("%s:gauge:%f", s.ID, *s.Value))
+		logrus.Info(data)
+		h = hmac.New(sha256.New, key)
+		h.Write([]byte(data))
+	}
+	h.Sum(nil)
+
+	if fmt.Sprintf("%x", h.Sum(nil)) == s.Hash {
+		b = true
+	}
+	logrus.Info("1111111111111111111111     ", fmt.Sprintf("%x", h.Sum(nil)), config.ArgsM.Key)
+
+	logrus.Info("2222222222222222222222     ", s.Hash)
+	logrus.Info("============================", fmt.Sprintf("%x", h.Sum(nil)), "888888", config.ArgsM.Key, "bbbb", b)
+	return b, nil
 }
 
 //Get all metrics

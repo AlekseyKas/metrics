@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -33,7 +35,7 @@ func main() {
 	}
 	SetStorageAgent(s)
 	termEnvFlags()
-	fmt.Println(config.ArgsM)
+	fmt.Println(config.ArgsM.Key)
 	ctx, cancel := context.WithCancel(context.Background())
 	go waitSignals(cancel)
 	go UpdateMetrics(ctx, config.ArgsM.PollInterval)
@@ -44,7 +46,8 @@ func main() {
 			logrus.Info("Agent is down send metrics.")
 			return
 		case <-time.After(config.ArgsM.PollInterval):
-			err := sendMetricsJSON(ctx, config.ArgsM.Address)
+			// logrus.Info(config.ArgsM.Key)
+			err := sendMetricsJSON(ctx, config.ArgsM.Address, []byte(config.ArgsM.Key))
 			if err != nil {
 				logrus.Error("Error sending POST: ", err)
 			}
@@ -55,6 +58,7 @@ func main() {
 
 func termEnvFlags() {
 	flag.StringVar(&config.FlagsAgent.Address, "a", "127.0.0.1:8080", "Address")
+	flag.StringVar(&config.FlagsAgent.Key, "k", "", "Secret key")
 	flag.DurationVar(&config.FlagsAgent.ReportInterval, "r", 10000000000, "Report interval")
 	flag.DurationVar(&config.FlagsAgent.PollInterval, "p", 2000000000, "Poll interval")
 
@@ -79,16 +83,22 @@ func termEnvFlags() {
 	} else {
 		config.ArgsM.PollInterval = env.PollInterval
 	}
-	fmt.Println(config.ArgsM)
+	envKey, _ := os.LookupEnv("KEY")
+	if envKey == "" {
+		config.ArgsM.Key = config.FlagsAgent.Key
+	} else {
+		config.ArgsM.Key = env.Key
+	}
+
+	// fmt.Println(config.ArgsM.Key)
 }
 
-func sendMetricsJSON(ctx context.Context, address string) error {
+func sendMetricsJSON(ctx context.Context, address string, key []byte) error {
 	client := resty.New()
 	// client.
 	// 	SetRetryCount(1).
 	// 	SetRetryWaitTime(1 * time.Second).
 	// 	SetRetryMaxWaitTime(2 * time.Second)
-
 	JSONMetrics, err := storageM.GetMetricsJSON()
 	if err != nil {
 		logrus.Error("Error getting metrics json format", err)
@@ -100,9 +110,18 @@ func sendMetricsJSON(ctx context.Context, address string) error {
 			logrus.Info("Send metrics in map ending!")
 			return nil
 		default:
+			met := JSONMetrics[i]
+			if string(key) != "" {
+				err := SaveHash(&met, []byte(key))
+				if err != nil {
+					logrus.Error("Error save hash of metrics: ", err)
+				}
+
+			}
+			logrus.Info("[[[[[[[[[[[[[[[[[[[", met)
 			var buf bytes.Buffer
 			encoder := json.NewEncoder(&buf)
-			err = encoder.Encode(JSONMetrics[i])
+			err = encoder.Encode(met)
 			if err != nil {
 				logrus.Error(err)
 			}
@@ -120,6 +139,27 @@ func sendMetricsJSON(ctx context.Context, address string) error {
 			}
 		}
 	}
+	return nil
+}
+
+func SaveHash(JSONMetric *storage.JSONMetrics, key []byte) error {
+
+	switch JSONMetric.MType {
+	case "counter":
+		data := (fmt.Sprintf("%s:counter:%d", JSONMetric.ID, *JSONMetric.Delta))
+		logrus.Info(data)
+		h := hmac.New(sha256.New, key)
+		h.Write([]byte(data))
+		JSONMetric.Hash = string(h.Sum(nil))
+	case "gauge":
+		data := (fmt.Sprintf("%s:gauge:%f", JSONMetric.ID, *JSONMetric.Value))
+		logrus.Info(data)
+		h := hmac.New(sha256.New, key)
+		h.Write([]byte(data))
+		// hh := h.Sum(nil)
+		JSONMetric.Hash = fmt.Sprintf("%x", h.Sum(nil))
+	}
+
 	return nil
 }
 

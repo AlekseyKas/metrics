@@ -58,6 +58,7 @@ type JSONMetrics struct {
 	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
 	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
 	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
+	Hash  string   `json:"hash,omitempty"`  // значение хеш-функции
 }
 
 type MetricsStore struct {
@@ -69,7 +70,6 @@ type MetricsStore struct {
 type StorageAgent interface {
 	GetMetrics() map[string]interface{}
 	ChangeMetrics(metrics runtime.MemStats) error
-
 	GetMetricsJSON() ([]JSONMetrics, error)
 }
 
@@ -117,6 +117,7 @@ func (m *MetricsStore) LoadMetricsFile(file []byte) {
 
 func (m *MetricsStore) GetStructJSON() JSONMetrics {
 	s := JSONMetrics{}
+	logrus.Info(">>>>>>>>>>>", s)
 	return s
 }
 
