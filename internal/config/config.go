@@ -10,12 +10,20 @@ import (
 var FlagsServer FlagsServ
 var FlagsAgent FlagsAg
 
+type ConfigDb struct {
+	User     string
+	Adddress string
+	Password string
+	NameDb   string
+}
+
 type FlagsServ struct {
 	Address       string
 	Key           string
 	Restore       bool
 	StoreInterval time.Duration
 	StoreFIle     string
+	DbUrl         string
 }
 type FlagsAg struct {
 	Address        string
@@ -32,8 +40,10 @@ type Param struct {
 	StoreFile      string        `env:"STORE_FILE" envDefault:"/tmp/devops-metrics-db.json"`
 	Restore        bool          `env:"RESTORE" envDefault:"true"`
 	Key            string        `env:"KEY"`
+	DbUrl          string        `env:"DATABASE_DSN"`
 }
 type Args struct {
+	DbUrl          string
 	Address        string
 	Key            string
 	PollInterval   time.Duration

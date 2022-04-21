@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/AlekseyKas/metrics/cmd/server/database"
 	"github.com/AlekseyKas/metrics/cmd/server/handlers"
 	"github.com/AlekseyKas/metrics/internal/config"
 	"github.com/AlekseyKas/metrics/internal/storage"
@@ -23,13 +24,16 @@ import (
 var wg sync.WaitGroup
 
 func main() {
-
+	// pool, err := pgxpool.Connect(context.Background(), dbURL)
+	// if err != nil {
+	// 	log.Fatalf("Unable to connection to database: %v\n", err)
+	// }
+	// defer pool.Close()
 	//инициализация хранилища метрик
 	s := &storage.MetricsStore{
 		MM: structs.Map(storage.Metrics{}),
 	}
 	termEnvFlags()
-	fmt.Println("")
 	handlers.SetStorage(s)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -38,6 +42,13 @@ func main() {
 	wg.Add(1)
 	go waitSignals(cancel)
 
+	//DB connection
+	if config.ArgsM.DbUrl != "" {
+		err := database.DbConnect()
+		if err != nil {
+			logrus.Error("Connection to postrgres faild: ", err)
+		}
+	}
 	r := chi.NewRouter()
 	r.Route("/", handlers.Router)
 	go http.ListenAndServe(config.ArgsM.Address, r)
@@ -115,6 +126,7 @@ func syncFile(env config.Args, ctx context.Context) {
 func termEnvFlags() {
 	// kong.Parse(&config.FlagsServer)
 	flag.StringVar(&config.FlagsServer.Address, "a", "127.0.0.1:8080", "Address")
+	flag.StringVar(&config.FlagsServer.DbUrl, "d", "", "Database url")
 	flag.StringVar(&config.FlagsServer.StoreFIle, "f", "/tmp/devops-metrics-db.json", "File path store")
 	flag.StringVar(&config.FlagsServer.Key, "k", "", "Secret key")
 	flag.BoolVar(&config.FlagsServer.Restore, "r", true, "Restire drom file")
@@ -141,17 +153,26 @@ func termEnvFlags() {
 	} else {
 		config.ArgsM.StoreInterval = env.StoreInterval
 	}
-	envFile, _ := os.LookupEnv("STORE_FILE")
-	if envFile == "" {
-		config.ArgsM.StoreFile = config.FlagsServer.StoreFIle
-	} else {
-		config.ArgsM.StoreFile = env.StoreFile
-	}
 	envKey, _ := os.LookupEnv("KEY")
 	if envKey == "" {
 		config.ArgsM.Key = config.FlagsServer.Key
 	} else {
 		config.ArgsM.Key = env.Key
+	}
+
+	envDburl, _ := os.LookupEnv("DATABASE_DSN")
+	if envDburl == "" && config.FlagsServer.DbUrl == "" {
+		envFile, _ := os.LookupEnv("STORE_FILE")
+		if envFile == "" {
+			config.ArgsM.StoreFile = config.FlagsServer.StoreFIle
+		} else {
+			config.ArgsM.StoreFile = env.StoreFile
+		}
+	} else {
+		if envDburl == "" {
+			logrus.Info("sss")
+			config.ArgsM.DbUrl = config.FlagsServer.DbUrl
+		}
 	}
 }
 

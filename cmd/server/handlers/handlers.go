@@ -3,6 +3,7 @@ package handlers
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/json"
@@ -15,6 +16,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/AlekseyKas/metrics/cmd/server/database"
 	"github.com/AlekseyKas/metrics/internal/config"
 	"github.com/AlekseyKas/metrics/internal/storage"
 	"github.com/go-chi/chi"
@@ -42,6 +44,7 @@ func Router(r chi.Router) {
 	r.Use(DecompressGzip)
 	r.Get("/", getMetrics())
 	r.Get("/value/{typeMet}/{nameMet}", getMetric())
+	r.Get("/ping", checkConnection())
 	r.Post("/update/{typeMet}/{nameMet}/{value}", saveMetrics())
 	r.Post("/update/", saveMetricsJSON())
 	r.Post("/value/", getMetricsJSON())
@@ -455,6 +458,21 @@ func saveMetrics() http.HandlerFunc {
 					StorageM.ChangeMetric(nameMet, counter(valueMetInt), config.ArgsM)
 				}
 			}
+		}
+	}
+}
+
+func checkConnection() http.HandlerFunc {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		if config.ArgsM.DbUrl != "" {
+			err := database.Conn.Ping(context.Background())
+			if err != nil {
+				rw.WriteHeader(http.StatusInternalServerError)
+			} else {
+				rw.WriteHeader(http.StatusOK)
+			}
+		} else {
+			rw.WriteHeader(http.StatusInternalServerError)
 		}
 	}
 }
