@@ -1,100 +1,50 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"flag"
 	"fmt"
-	"math/rand"
 	"os"
 	"os/signal"
-	"reflect"
 	"runtime"
-	"strings"
-	"sync"
 	"syscall"
 	"time"
 
+	"github.com/AlekseyKas/metrics/internal/config"
+	"github.com/AlekseyKas/metrics/internal/storage"
+	"github.com/fatih/structs"
 	"github.com/go-resty/resty/v2"
 	"github.com/sirupsen/logrus"
 )
 
-//init typs
-type gauge float64
-type counter int64
+var storageM storage.StorageAgent
 
-//delay
-const pollInterval = 2 * time.Second
-const reportInterval = 10 * time.Second
-
-//Struct for metrics
-type Metrics struct {
-	mux       sync.Mutex
-	MM        map[string]interface{}
-	PollCount int
-}
-
-var M Metrics = Metrics{MM: make(map[string]interface{})}
-
-func (ptr *Metrics) Get() (values map[string]interface{}) {
-	ptr.mux.Lock()
-	defer ptr.mux.Unlock()
-	values = make(map[string]interface{}, (len(ptr.MM)))
-	for k, v := range ptr.MM {
-		values[k] = v
-	}
-	return
-}
-
-func (ptr *Metrics) Update() {
-	var memStats runtime.MemStats
-	runtime.ReadMemStats(&memStats)
-	ptr.mux.Lock()
-	defer ptr.mux.Unlock()
-	ptr.PollCount++
-	ptr.MM["Alloc"] = gauge((memStats.Alloc))
-	ptr.MM["BuckHashSys"] = gauge(memStats.BuckHashSys)
-	ptr.MM["Frees"] = gauge(memStats.Frees)
-	ptr.MM["GCCPUFraction"] = gauge(memStats.GCCPUFraction)
-	ptr.MM["GCSys"] = gauge(memStats.GCSys)
-	ptr.MM["HeapAlloc"] = gauge(memStats.HeapAlloc)
-	ptr.MM["HeapIdle"] = gauge(memStats.HeapIdle)
-	ptr.MM["HeapInuse"] = gauge(memStats.HeapInuse)
-	ptr.MM["HeapObjects"] = gauge(memStats.HeapObjects)
-	ptr.MM["HeapReleased"] = gauge(memStats.HeapReleased)
-	ptr.MM["HeapSys"] = gauge(memStats.HeapSys)
-	ptr.MM["LastGC"] = gauge(memStats.LastGC)
-	ptr.MM["Lookups"] = gauge(memStats.Lookups)
-	ptr.MM["MCacheInuse"] = gauge(memStats.MCacheInuse)
-	ptr.MM["MCacheSys"] = gauge(memStats.MCacheSys)
-	ptr.MM["MSpanInuse"] = gauge(memStats.MSpanInuse)
-	ptr.MM["MSpanSys"] = gauge(memStats.MSpanSys)
-	ptr.MM["Mallocs"] = gauge(memStats.Mallocs)
-	ptr.MM["NextGC"] = gauge(memStats.NextGC)
-	ptr.MM["NumForcedGC"] = gauge(memStats.NumForcedGC)
-	ptr.MM["NumGC"] = gauge(memStats.NumGC)
-	ptr.MM["OtherSys"] = gauge(memStats.OtherSys)
-	ptr.MM["PauseTotalNs"] = gauge(memStats.PauseTotalNs)
-	ptr.MM["StackInuse"] = gauge(memStats.StackInuse)
-	ptr.MM["StackSys"] = gauge(memStats.StackSys)
-	ptr.MM["Sys"] = gauge(memStats.Sys)
-	ptr.MM["TotalAlloc"] = gauge(memStats.TotalAlloc)
-	ptr.MM["RandomValue"] = gauge(rand.Float64())
-	ptr.MM["PollCount"] = counter(ptr.PollCount)
+func SetStorageAgent(s storage.StorageAgent) {
+	storageM = s
 }
 
 func main() {
-	M.Update()
-
+	var MapMetrics map[string]interface{} = structs.Map(storage.Metrics{})
+	//инициализация хранилища метрик
+	s := &storage.MetricsStore{
+		MM: MapMetrics,
+	}
+	SetStorageAgent(s)
+	termEnvFlags()
+	fmt.Println(config.ArgsM)
 	ctx, cancel := context.WithCancel(context.Background())
 	go waitSignals(cancel)
-	go UpdateMetrics(ctx, pollInterval)
+	go UpdateMetrics(ctx, config.ArgsM.PollInterval)
 
 	for {
 		select {
 		case <-ctx.Done():
 			logrus.Info("Agent is down send metrics.")
 			return
-		case <-time.After(reportInterval):
-			err := saveMetrics(ctx)
+		case <-time.After(config.ArgsM.PollInterval):
+			err := sendMetricsJSON(ctx, config.ArgsM.Address)
 			if err != nil {
 				logrus.Error("Error sending POST: ", err)
 			}
@@ -103,25 +53,68 @@ func main() {
 
 }
 
-//sending metrics to server
-func saveMetrics(ctx context.Context) error {
-	client := resty.New()
-	client.
-		SetRetryCount(1).
-		SetRetryWaitTime(1 * time.Second).
-		SetRetryMaxWaitTime(2 * time.Second)
+func termEnvFlags() {
+	flag.StringVar(&config.FlagsAgent.Address, "a", "127.0.0.1:8080", "Address")
+	flag.DurationVar(&config.FlagsAgent.ReportInterval, "r", 10000000000, "Report interval")
+	flag.DurationVar(&config.FlagsAgent.PollInterval, "p", 2000000000, "Poll interval")
 
-	for k, v := range M.Get() {
+	flag.Parse()
+
+	env := config.LoadConfig()
+	envADDR, _ := os.LookupEnv("ADDRESS")
+	if envADDR == "" {
+		config.ArgsM.Address = config.FlagsAgent.Address
+	} else {
+		config.ArgsM.Address = env.Address
+	}
+	envRest, _ := os.LookupEnv("REPORT_INTERVAL")
+	if envRest == "" {
+		config.ArgsM.ReportInterval = config.FlagsAgent.ReportInterval
+	} else {
+		config.ArgsM.ReportInterval = env.ReportInterval
+	}
+	envStoreint, _ := os.LookupEnv("POLL_INTERVAL")
+	if envStoreint == "" {
+		config.ArgsM.PollInterval = config.FlagsAgent.PollInterval
+	} else {
+		config.ArgsM.PollInterval = env.PollInterval
+	}
+	fmt.Println(config.ArgsM)
+}
+
+func sendMetricsJSON(ctx context.Context, address string) error {
+	client := resty.New()
+	// client.
+	// 	SetRetryCount(1).
+	// 	SetRetryWaitTime(1 * time.Second).
+	// 	SetRetryMaxWaitTime(2 * time.Second)
+
+	JSONMetrics, err := storageM.GetMetricsJSON()
+	if err != nil {
+		logrus.Error("Error getting metrics json format", err)
+	}
+
+	for i := 0; i < len(JSONMetrics); i++ {
 		select {
 		case <-ctx.Done():
 			logrus.Info("Send metrics in map ending!")
 			return nil
 		default:
-			typeMet := strings.Split(reflect.ValueOf(v).Type().String(), ".")[1]
-			value := fmt.Sprintf("%v", v)
-			_, err := client.R().SetPathParams(map[string]string{
-				"type": typeMet, "value": value, "name": k,
-			}).Post("http://127.0.0.1:8080/update/{type}/{name}/{value}")
+			var buf bytes.Buffer
+			encoder := json.NewEncoder(&buf)
+			err = encoder.Encode(JSONMetrics[i])
+			if err != nil {
+				logrus.Error(err)
+			}
+			// var b bytes.Buffer
+			// gz, _ := gzip.NewWriterLevel(&b, gzip.BestSpeed)
+
+			// gz.Write(buf.Bytes())
+			// gz.Close()
+			_, err = client.R().
+				SetHeader("Content-Type", "application/json").
+				SetBody(&buf).
+				Post("http://" + address + "/update/")
 			if err != nil {
 				return err
 			}
@@ -129,6 +122,35 @@ func saveMetrics(ctx context.Context) error {
 	}
 	return nil
 }
+
+//sending metrics to server
+// func sendMetrics(ctx context.Context, address string) error {
+// 	client := resty.New()
+// 	// client.
+// 	// SetRetryCount(1).
+// 	// SetRetryWaitTime(1 * time.Second).
+// 	// SetRetryMaxWaitTime(2 * time.Second)
+
+// 	metrics := storageM.GetMetrics()
+// 	for k, v := range metrics {
+// 		select {
+// 		case <-ctx.Done():
+// 			logrus.Info("Send metrics in map ending!")
+// 			return nil
+// 		default:
+// 			typeMet := strings.Split(reflect.ValueOf(v).Type().String(), ".")[1]
+// 			value := fmt.Sprintf("%v", v)
+// 			_, err := client.R().SetPathParams(map[string]string{
+// 				"type": typeMet, "value": value, "name": k,
+// 			}).Post("http://" + address + "/update/{type}/{name}/{value}")
+// 			if err != nil {
+// 				logrus.Error(err)
+// 				return err
+// 			}
+// 		}
+// 	}
+// 	return nil
+// }
 
 //wating signals
 func waitSignals(cancel context.CancelFunc) {
@@ -153,8 +175,11 @@ func UpdateMetrics(ctx context.Context, pollInterval time.Duration) {
 		case <-ctx.Done():
 			logrus.Info("Agent is down update metrics!")
 			return
-		case <-time.After(time.Second * pollInterval):
-			M.Update()
+		case <-time.After(pollInterval):
+			var memStats runtime.MemStats
+			runtime.ReadMemStats(&memStats)
+			// sendMetrics(ctx)
+			storageM.ChangeMetrics(memStats)
 		}
 	}
 }
