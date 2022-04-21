@@ -14,7 +14,7 @@ var Conn *pgxpool.Pool
 var err error
 
 //Connect to DB
-func DbConnect() error {
+func DBConnect() error {
 	conf := config.ConfigDb{
 		Adddress: config.ArgsM.DBURL,
 		User:     "user",

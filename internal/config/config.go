@@ -40,7 +40,7 @@ type Param struct {
 	StoreFile      string        `env:"STORE_FILE" envDefault:"/tmp/devops-metrics-db.json"`
 	Restore        bool          `env:"RESTORE" envDefault:"true"`
 	Key            string        `env:"KEY"`
-	DBURL          string        `env:"DATABASE_DSN"`
+	DBURL          string        `env:"DATABASE_DSN" envDefault:"127.0.0.1:5432"`
 }
 type Args struct {
 	DBURL          string

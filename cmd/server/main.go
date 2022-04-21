@@ -42,10 +42,11 @@ func main() {
 	wg.Add(1)
 	go waitSignals(cancel)
 	logrus.Info(";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;", config.ArgsM.DBURL, "sss", config.ArgsM)
+	// msg = ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;sss{ localhost:37753 /tmp/OaUjPOc 0s 0s 5m0s /tmp/devops-metrics-db.json true}"
 	//DB connection
 	if config.ArgsM.DBURL != "" {
 
-		err := database.DbConnect()
+		err := database.DBConnect()
 		if err != nil {
 			logrus.Error("Connection to postrgres faild: ", err)
 		}
@@ -128,7 +129,7 @@ func termEnvFlags() {
 	// kong.Parse(&config.FlagsServer)
 	flag.StringVar(&config.FlagsServer.Address, "a", "127.0.0.1:8080", "Address")
 	flag.StringVar(&config.FlagsServer.DBURL, "d", "", "Database URL")
-	flag.StringVar(&config.FlagsServer.StoreFIle, "f", "/tmp/devops-metrics-db.json", "File path store")
+	flag.StringVar(&config.FlagsServer.StoreFIle, "f", "", "File path store")
 	flag.StringVar(&config.FlagsServer.Key, "k", "", "Secret key")
 	flag.BoolVar(&config.FlagsServer.Restore, "r", true, "Restire drom file")
 	flag.DurationVar(&config.FlagsServer.StoreInterval, "i", 300000000000, "Interval store file")
@@ -160,22 +161,25 @@ func termEnvFlags() {
 	} else {
 		config.ArgsM.Key = env.Key
 	}
-	envFile, _ := os.LookupEnv("STORE_FILE")
-	if envFile == "" {
-		config.ArgsM.StoreFile = config.FlagsServer.StoreFIle
-	} else {
-		config.ArgsM.StoreFile = env.StoreFile
-	}
+	// if envFile == "" {
+	// 	config.ArgsM.StoreFile = config.FlagsServer.StoreFIle
+	// } else {
+	// 	config.ArgsM.StoreFile = env.StoreFile
+	// }
 
+	envFile, _ := os.LookupEnv("STORE_FILE")
 	envDBURL, _ := os.LookupEnv("DATABASE_DSN")
 	if envDBURL == "" && config.FlagsServer.DBURL == "" {
-		config.ArgsM.Restore = true
-	} else {
-		if envDBURL == "" {
-			logrus.Info("sss")
-			config.ArgsM.DBURL = config.FlagsServer.DBURL
+		if envFile == "" && config.FlagsServer.StoreFIle == "" {
+			config.ArgsM.DBURL = env.DBURL
+			config.ArgsM.StoreFile = ""
 			config.ArgsM.Restore = false
-
+		} else {
+			if envFile == "" {
+				config.ArgsM.StoreFile = config.FlagsServer.StoreFIle
+			} else {
+				config.ArgsM.StoreFile = env.StoreFile
+			}
 		}
 	}
 }
