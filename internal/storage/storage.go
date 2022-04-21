@@ -117,7 +117,6 @@ func (m *MetricsStore) LoadMetricsFile(file []byte) {
 
 func (m *MetricsStore) GetStructJSON() JSONMetrics {
 	s := JSONMetrics{}
-	logrus.Info(">>>>>>>>>>>", s)
 	return s
 }
 

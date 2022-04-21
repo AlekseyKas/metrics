@@ -46,7 +46,6 @@ func main() {
 			logrus.Info("Agent is down send metrics.")
 			return
 		case <-time.After(config.ArgsM.PollInterval):
-			// logrus.Info(config.ArgsM.Key)
 			err := sendMetricsJSON(ctx, config.ArgsM.Address, []byte(config.ArgsM.Key))
 			if err != nil {
 				logrus.Error("Error sending POST: ", err)
@@ -95,10 +94,6 @@ func termEnvFlags() {
 
 func sendMetricsJSON(ctx context.Context, address string, key []byte) error {
 	client := resty.New()
-	// client.
-	// 	SetRetryCount(1).
-	// 	SetRetryWaitTime(1 * time.Second).
-	// 	SetRetryMaxWaitTime(2 * time.Second)
 	JSONMetrics, err := storageM.GetMetricsJSON()
 	if err != nil {
 		logrus.Error("Error getting metrics json format", err)
@@ -112,24 +107,18 @@ func sendMetricsJSON(ctx context.Context, address string, key []byte) error {
 		default:
 			met := JSONMetrics[i]
 			if string(key) != "" {
-				err := SaveHash(&met, []byte(key))
+				_, err := SaveHash(&met, []byte(key))
 				if err != nil {
 					logrus.Error("Error save hash of metrics: ", err)
 				}
 
 			}
-			logrus.Info("[[[[[[[[[[[[[[[[[[[", met)
 			var buf bytes.Buffer
 			encoder := json.NewEncoder(&buf)
 			err = encoder.Encode(met)
 			if err != nil {
 				logrus.Error(err)
 			}
-			// var b bytes.Buffer
-			// gz, _ := gzip.NewWriterLevel(&b, gzip.BestSpeed)
-
-			// gz.Write(buf.Bytes())
-			// gz.Close()
 			_, err = client.R().
 				SetHeader("Content-Type", "application/json").
 				SetBody(&buf).
@@ -142,8 +131,8 @@ func sendMetricsJSON(ctx context.Context, address string, key []byte) error {
 	return nil
 }
 
-func SaveHash(JSONMetric *storage.JSONMetrics, key []byte) error {
-
+func SaveHash(JSONMetric *storage.JSONMetrics, key []byte) (hash string, err error) {
+	var hh string
 	switch JSONMetric.MType {
 	case "counter":
 		data := (fmt.Sprintf("%s:counter:%d", JSONMetric.ID, *JSONMetric.Delta))
@@ -156,41 +145,11 @@ func SaveHash(JSONMetric *storage.JSONMetrics, key []byte) error {
 		logrus.Info(data)
 		h := hmac.New(sha256.New, key)
 		h.Write([]byte(data))
-		// hh := h.Sum(nil)
 		JSONMetric.Hash = fmt.Sprintf("%x", h.Sum(nil))
+		hh = fmt.Sprintf("%x", h.Sum(nil))
 	}
-
-	return nil
+	return hh, nil
 }
-
-//sending metrics to server
-// func sendMetrics(ctx context.Context, address string) error {
-// 	client := resty.New()
-// 	// client.
-// 	// SetRetryCount(1).
-// 	// SetRetryWaitTime(1 * time.Second).
-// 	// SetRetryMaxWaitTime(2 * time.Second)
-
-// 	metrics := storageM.GetMetrics()
-// 	for k, v := range metrics {
-// 		select {
-// 		case <-ctx.Done():
-// 			logrus.Info("Send metrics in map ending!")
-// 			return nil
-// 		default:
-// 			typeMet := strings.Split(reflect.ValueOf(v).Type().String(), ".")[1]
-// 			value := fmt.Sprintf("%v", v)
-// 			_, err := client.R().SetPathParams(map[string]string{
-// 				"type": typeMet, "value": value, "name": k,
-// 			}).Post("http://" + address + "/update/{type}/{name}/{value}")
-// 			if err != nil {
-// 				logrus.Error(err)
-// 				return err
-// 			}
-// 		}
-// 	}
-// 	return nil
-// }
 
 //wating signals
 func waitSignals(cancel context.CancelFunc) {

@@ -121,17 +121,63 @@ func TestRouter(t *testing.T) {
 			require.Equal(t, tt.want.statusCode, resp.StatusCode)
 			require.NoError(t, errr)
 
-			// respb, err := ioutil.ReadAll(resp.Body)
-			// require.NoError(t, err)
-			// assert.Equal(t, string(respb), string(tt.body))
 			defer resp.Body.Close()
 
 		})
 	}
 }
 
-// func testRequest(t *testing.T, ts *httptest.Server, method, path string) (*http.Response, string) {
+func Test_compareHash(t *testing.T) {
+	f := float64(99.1)
 
-// 	// assert.NoError(t, err)
+	jm := storage.JSONMetrics{
+		ID:    "Alloc",
+		MType: "gauge",
+		Value: &f,
+		Hash:  "6521182e1b27f1efe5d43f7e1a438eeaaff4e89bf656d28a801d0d16e6b28557",
+	}
+	jm2 := storage.JSONMetrics{
+		ID:    "Alloc",
+		MType: "gauge",
+		Value: &f,
+		Hash:  "7c1ce04447600a7ede550e33a9133102e8706755d86205774fa5e8ca2fe5e352",
+	}
+	key := []byte("key")
 
-// }
+	type args struct {
+		s   *storage.JSONMetrics
+		key []byte
+	}
+	tests := []struct {
+		name     string
+		args     args
+		wantBool bool
+	}{
+		{
+			name: "first",
+			args: args{
+				s:   &jm,
+				key: key,
+			},
+			wantBool: false,
+		},
+		{
+			name: "second",
+			args: args{
+				s:   &jm2,
+				key: key,
+			},
+			wantBool: true,
+		},
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotB, err := compareHash(tt.args.s, tt.args.key)
+			require.NoError(t, err)
+			if gotB != tt.wantBool {
+				t.Errorf("compareHash() = %v, want %v", gotB, tt.wantBool)
+			}
+		})
+	}
+}

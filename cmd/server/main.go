@@ -153,10 +153,6 @@ func termEnvFlags() {
 	} else {
 		config.ArgsM.Key = env.Key
 	}
-	// fmt.Println("----------------", "Env address: ", env.Address, "Env Pollinterval: ", env.PollInterval, "Env ReportInterval: ", env.ReportInterval, "Env Restore: ", env.Restore, "Env Storefile: ", env.StoreFile, "Env Storeinsterval: ", env.StoreInterval)
-	// fmt.Println("Env address: ", env.Address, "Env Pollinterval: ", env.PollInterval, "Env ReportInterval: ", env.ReportInterval, "Env Restore: ", env.Restore, "Env Storefile: ", env.StoreFile, "Env Storeinsterval: ", env.StoreInterval, "----------------")
-	// fmt.Println("==============", "Flag address: ", config.ArgsM.Address, "Flag Pollinterval: ", config.ArgsM.PollInterval, "Flag ReportInterval: ", config.ArgsM.ReportInterval, "Flag Restore: ", config.ArgsM.Restore, "Flag Storefile: ", config.ArgsM.StoreFile, "Flag Storeinsterval: ", config.ArgsM.StoreInterval, "===================")
-
 }
 
 func fileExist(file string) bool {

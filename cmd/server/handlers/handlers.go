@@ -202,27 +202,6 @@ func getMetricsJSON() http.HandlerFunc {
 			}
 
 		}
-
-		// if typeMet == "gauge" && nameMet != "PollCount" {
-		// 	float, err := strconv.ParseFloat(fmt.Sprintf("%v", metrics[nameMet]), 64)
-		// 	if err != nil {
-		// 		rw.WriteHeader(http.StatusBadRequest)
-		// 	}
-		// 	s.Value = &float
-
-		// 	var buf bytes.Buffer
-		// 	encoder := json.NewEncoder(&buf)
-		// 	err = encoder.Encode(s)
-		// 	if err != nil {
-		// 		logrus.Info(err)
-		// 		http.Error(rw, err.Error(), http.StatusBadRequest)
-		// 	}
-		// 	rw.Write(buf.Bytes())
-		// 	rw.WriteHeader(http.StatusOK)
-		// 	return
-		// } else {
-		// 	rw.WriteHeader(http.StatusNotFound)
-		// }
 	}
 }
 
@@ -347,10 +326,6 @@ func compareHash(s *storage.JSONMetrics, key []byte) (b bool, err error) {
 	if fmt.Sprintf("%x", h.Sum(nil)) == s.Hash {
 		b = true
 	}
-	logrus.Info("1111111111111111111111     ", fmt.Sprintf("%x", h.Sum(nil)), config.ArgsM.Key)
-
-	logrus.Info("2222222222222222222222     ", s.Hash)
-	logrus.Info("============================", fmt.Sprintf("%x", h.Sum(nil)), "888888", config.ArgsM.Key, "bbbb", b)
 	return b, nil
 }
 
