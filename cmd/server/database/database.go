@@ -16,14 +16,14 @@ var err error
 //Connect to DB
 func DbConnect() error {
 	conf := config.ConfigDb{
-		Adddress: config.ArgsM.DbURL,
+		Adddress: config.ArgsM.DBURL,
 		User:     "user",
 		Password: "user",
 		NameDb:   "db",
 	}
 
-	dbURL := "postgres://" + conf.User + ":" + conf.Password + "@" + config.ArgsM.DbURL + "/db"
-	Conn, err = pgxpool.Connect(context.Background(), dbURL)
+	DBURL := "postgres://" + conf.User + ":" + conf.Password + "@" + config.ArgsM.DBURL + "/db"
+	Conn, err = pgxpool.Connect(context.Background(), DBURL)
 
 	if err != nil {
 		logrus.Error("Error connection to DB: ", err)

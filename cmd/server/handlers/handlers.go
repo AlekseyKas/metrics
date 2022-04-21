@@ -464,7 +464,7 @@ func saveMetrics() http.HandlerFunc {
 
 func checkConnection() http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
-		if config.ArgsM.DbURL != "" {
+		if config.ArgsM.DBURL != "" {
 			err := database.Conn.Ping(context.Background())
 			if err != nil {
 				rw.WriteHeader(http.StatusInternalServerError)

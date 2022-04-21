@@ -24,7 +24,7 @@ import (
 var wg sync.WaitGroup
 
 func main() {
-	// pool, err := pgxpool.Connect(context.Background(), dbURL)
+	// pool, err := pgxpool.Connect(context.Background(), DBURL)
 	// if err != nil {
 	// 	log.Fatalf("Unable to connection to database: %v\n", err)
 	// }
@@ -41,9 +41,10 @@ func main() {
 	go syncFile(config.ArgsM, ctx)
 	wg.Add(1)
 	go waitSignals(cancel)
-
+	logrus.Info(";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;", config.ArgsM.DBURL, "sss", config.ArgsM)
 	//DB connection
-	if config.ArgsM.DbURL != "" {
+	if config.ArgsM.DBURL != "" {
+
 		err := database.DbConnect()
 		if err != nil {
 			logrus.Error("Connection to postrgres faild: ", err)
@@ -126,7 +127,7 @@ func syncFile(env config.Args, ctx context.Context) {
 func termEnvFlags() {
 	// kong.Parse(&config.FlagsServer)
 	flag.StringVar(&config.FlagsServer.Address, "a", "127.0.0.1:8080", "Address")
-	flag.StringVar(&config.FlagsServer.DbURL, "d", "", "Database URL")
+	flag.StringVar(&config.FlagsServer.DBURL, "d", "", "Database URL")
 	flag.StringVar(&config.FlagsServer.StoreFIle, "f", "/tmp/devops-metrics-db.json", "File path store")
 	flag.StringVar(&config.FlagsServer.Key, "k", "", "Secret key")
 	flag.BoolVar(&config.FlagsServer.Restore, "r", true, "Restire drom file")
@@ -166,13 +167,13 @@ func termEnvFlags() {
 		config.ArgsM.StoreFile = env.StoreFile
 	}
 
-	envDbURL, _ := os.LookupEnv("DATABASE_DSN")
-	if envDbURL == "" && config.FlagsServer.DbURL == "" {
+	envDBURL, _ := os.LookupEnv("DATABASE_DSN")
+	if envDBURL == "" && config.FlagsServer.DBURL == "" {
 		config.ArgsM.Restore = true
 	} else {
-		if envDbURL == "" {
+		if envDBURL == "" {
 			logrus.Info("sss")
-			config.ArgsM.DbURL = config.FlagsServer.DbURL
+			config.ArgsM.DBURL = config.FlagsServer.DBURL
 			config.ArgsM.Restore = false
 
 		}
