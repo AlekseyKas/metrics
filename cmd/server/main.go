@@ -34,7 +34,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	wg.Add(1)
 	go waitSignals(cancel)
-	logrus.Info(";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;", config.ArgsM.DBURL, "!!!!!!!!!!!!!!!!!", config.ArgsM)
+	logrus.Info(";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;", os.Getenv("DATABASE_DSN"), "!!!!!!!!!!!!!!!!!", config.ArgsM)
 	//DB connection
 	wg.Add(1)
 	if config.ArgsM.DBURL != "" {

@@ -24,7 +24,6 @@ func DBConnect() error {
 
 	DBURL := "postgres://" + conf.User + ":" + conf.Password + "@" + conf.Adddress + "/" + conf.NameDB
 	Conn, err = pgxpool.Connect(context.Background(), DBURL)
-
 	if err != nil {
 		logrus.Error("Error connection to DB: ", err)
 		os.Exit(1)
