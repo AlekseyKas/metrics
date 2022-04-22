@@ -198,9 +198,7 @@ func termEnvFlags() {
 
 				config.ArgsM.DBURL = env.DBURL
 			}
-		}
-		if config.FlagsServer.DBURL != "" {
-
+		} else {
 			_, err := pgx.ParseConnectionString(config.FlagsServer.DBURL)
 			if err != nil {
 				logrus.Info("222222222222222222222222222", config.FlagsServer.DBURL)
