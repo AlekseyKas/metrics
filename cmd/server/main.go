@@ -185,6 +185,7 @@ func termEnvFlags() {
 		if envDBURL != "" {
 			_, err := pgx.ParseConnectionString(env.DBURL)
 			if err != nil {
+				logrus.Info("1111111111111111111111111", envDBURL)
 				if envFile == "" {
 					config.ArgsM.StoreFile = config.FlagsServer.StoreFile
 					config.ArgsM.DBURL = ""
@@ -193,6 +194,8 @@ func termEnvFlags() {
 					config.ArgsM.DBURL = ""
 				}
 			} else {
+				logrus.Info("1111111111122222222222222222222222", envDBURL)
+
 				config.ArgsM.DBURL = env.DBURL
 			}
 		}
@@ -200,6 +203,7 @@ func termEnvFlags() {
 
 			_, err := pgx.ParseConnectionString(config.FlagsServer.DBURL)
 			if err != nil {
+				logrus.Info("222222222222222222222222222", config.FlagsServer.DBURL)
 				if envFile == "" {
 					config.ArgsM.StoreFile = config.FlagsServer.StoreFile
 					config.ArgsM.DBURL = ""
@@ -208,6 +212,8 @@ func termEnvFlags() {
 					config.ArgsM.DBURL = ""
 				}
 			} else {
+				logrus.Info("222222222221111111111111111111111", config.FlagsServer.DBURL)
+
 				config.ArgsM.DBURL = config.FlagsServer.DBURL
 			}
 		}
