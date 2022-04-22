@@ -14,7 +14,7 @@ type ConfigDb struct {
 	User     string
 	Adddress string
 	Password string
-	NameDb   string
+	NameDB   string
 }
 
 type FlagsServ struct {
