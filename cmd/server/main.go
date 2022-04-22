@@ -158,34 +158,34 @@ func termEnvFlags() {
 		config.ArgsM.Key = env.Key
 	}
 	envFile, _ := os.LookupEnv("STORE_FILE")
-	if envFile == "" {
-		config.ArgsM.StoreFile = config.FlagsServer.StoreFIle
-		// config.ArgsM.DBURL = ""
-	} else {
-		config.ArgsM.StoreFile = env.StoreFile
+	// if envFile == "" {
+	// 	config.ArgsM.StoreFile = config.FlagsServer.StoreFIle
+	// 	// config.ArgsM.DBURL = ""
+	// } else {
+	// 	config.ArgsM.StoreFile = env.StoreFile
+	// }
+
+	envDBURL, _ := os.LookupEnv("DATABASE_DSN")
+
+	if envDBURL == "" && config.FlagsServer.DBURL == "" {
+		//load from file
+		if envFile == "" {
+			config.ArgsM.StoreFile = config.FlagsServer.StoreFIle
+			config.ArgsM.DBURL = ""
+		} else {
+			config.ArgsM.StoreFile = env.StoreFile
+			config.ArgsM.DBURL = ""
+
+		}
 	}
-
-	// envDBURL, _ := os.LookupEnv("DATABASE_DSN")
-
-	// if envDBURL == "" && config.FlagsServer.DBURL == "" {
-	// 	//load from file
-	// 	if envFile == "" {
-	// 		config.ArgsM.StoreFile = config.FlagsServer.StoreFIle
-	// 		config.ArgsM.DBURL = ""
-	// 	} else {
-	// 		config.ArgsM.StoreFile = env.StoreFile
-	// 		config.ArgsM.DBURL = ""
-
-	// 	}
-	// }
-	// if envDBURL != "" || config.FlagsServer.DBURL != "" {
-	// 	if envDBURL != "" {
-	// 		config.ArgsM.DBURL = env.DBURL
-	// 	}
-	// 	if config.FlagsServer.DBURL != "" {
-	// 		config.ArgsM.DBURL = config.FlagsServer.DBURL
-	// 	}
-	// }
+	if envDBURL != "" || config.FlagsServer.DBURL != "" {
+		if envDBURL != "" {
+			config.ArgsM.DBURL = env.DBURL
+		}
+		if config.FlagsServer.DBURL != "" {
+			config.ArgsM.DBURL = config.FlagsServer.DBURL
+		}
+	}
 
 	fmt.Println("...............................database url: ", config.ArgsM.DBURL, "File storage: ", config.ArgsM.StoreFile, config.ArgsM)
 }
