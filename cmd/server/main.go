@@ -18,6 +18,7 @@ import (
 	"github.com/AlekseyKas/metrics/internal/storage"
 	"github.com/fatih/structs"
 	"github.com/go-chi/chi"
+	"github.com/jackc/pgx"
 	"github.com/sirupsen/logrus"
 )
 
@@ -34,6 +35,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	wg.Add(1)
 	go waitSignals(cancel)
+
 	logrus.Info(";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;", os.Getenv("DATABASE_DSN"), "----", config.FlagsServer.DBURL, "!!!!!!!!!!!!!!!!!", os.Getenv("STORE_FILE"), config.FlagsServer.DBURL)
 	//DB connection
 	wg.Add(1)
@@ -179,11 +181,35 @@ func termEnvFlags() {
 		}
 	}
 	if envDBURL != "" || config.FlagsServer.DBURL != "" {
+
 		if envDBURL != "" {
-			config.ArgsM.DBURL = env.DBURL
+			_, err := pgx.ParseConnectionString(env.DBURL)
+			if err != nil {
+				if envFile == "" {
+					config.ArgsM.StoreFile = config.FlagsServer.StoreFile
+					config.ArgsM.DBURL = ""
+				} else {
+					config.ArgsM.StoreFile = env.StoreFile
+					config.ArgsM.DBURL = ""
+				}
+			} else {
+				config.ArgsM.DBURL = env.DBURL
+			}
 		}
 		if config.FlagsServer.DBURL != "" {
-			config.ArgsM.DBURL = config.FlagsServer.DBURL
+
+			_, err := pgx.ParseConnectionString(config.FlagsServer.DBURL)
+			if err != nil {
+				if envFile == "" {
+					config.ArgsM.StoreFile = config.FlagsServer.StoreFile
+					config.ArgsM.DBURL = ""
+				} else {
+					config.ArgsM.StoreFile = env.StoreFile
+					config.ArgsM.DBURL = ""
+				}
+			} else {
+				config.ArgsM.DBURL = config.FlagsServer.DBURL
+			}
 		}
 	}
 
