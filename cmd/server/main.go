@@ -24,11 +24,6 @@ import (
 var wg sync.WaitGroup
 
 func main() {
-	// pool, err := pgxpool.Connect(context.Background(), DBURL)
-	// if err != nil {
-	// 	log.Fatalf("Unable to connection to database: %v\n", err)
-	// }
-	// defer pool.Close()
 	//инициализация хранилища метрик
 	s := &storage.MetricsStore{
 		MM: structs.Map(storage.Metrics{}),
@@ -38,19 +33,17 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	wg.Add(1)
-	go syncFile(config.ArgsM, ctx)
-	wg.Add(1)
 	go waitSignals(cancel)
 	logrus.Info(";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;", config.ArgsM.DBURL, "!!!!!!!!!!!!!!!!!", config.ArgsM)
-	// msg = ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;sss{ localhost:37753 /tmp/OaUjPOc 0s 0s 5m0s /tmp/devops-metrics-db.json true}"
 	//DB connection
+	wg.Add(1)
 	if config.ArgsM.DBURL != "" {
-
 		err := database.DBConnect()
 		if err != nil {
 			logrus.Error("Connection to postrgres faild: ", err)
 		}
 	}
+	go syncFile(config.ArgsM, ctx)
 	r := chi.NewRouter()
 	r.Route("/", handlers.Router)
 	go http.ListenAndServe(config.ArgsM.Address, r)
@@ -60,6 +53,8 @@ func main() {
 
 func syncFile(env config.Args, ctx context.Context) {
 	if env.StoreFile == "" {
+		fmt.Println(";;nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn")
+
 		for {
 			<-ctx.Done()
 			logrus.Info("File syncing is down")
@@ -70,6 +65,7 @@ func syncFile(env config.Args, ctx context.Context) {
 		//restore data from file
 
 		if env.Restore && fileExist(env.StoreFile) {
+			fmt.Println(";;ssssssssssssssssssssssssss")
 
 			file, err := os.ReadFile(env.StoreFile)
 			if err != nil {
@@ -168,19 +164,39 @@ func termEnvFlags() {
 		//load from file
 		if envFile == "" {
 			config.ArgsM.StoreFile = config.FlagsServer.StoreFIle
+			config.ArgsM.DBURL = ""
 		} else {
 			config.ArgsM.StoreFile = env.StoreFile
-		}
-	} else {
-		if envDBURL == "" {
-			config.ArgsM.DBURL = config.FlagsServer.DBURL
-			config.ArgsM.StoreFile = ""
-		} else {
-			config.ArgsM.DBURL = env.DBURL
-			config.ArgsM.StoreFile = ""
+			config.ArgsM.DBURL = ""
+
 		}
 	}
-	fmt.Println("...............................database url: ", config.ArgsM.DBURL, "File storage: ", config.ArgsM.StoreFile)
+	if envDBURL != "" || config.FlagsServer.DBURL != "" {
+		if envDBURL != "" {
+			config.ArgsM.DBURL = env.DBURL
+		}
+		if config.FlagsServer.DBURL != "" {
+			config.ArgsM.DBURL = config.FlagsServer.DBURL
+		}
+	}
+
+	// if envDBURL == "" && config.FlagsServer.DBURL == "" {
+	// 	//load from file
+	// 	if envFile == "" {
+	// 		config.ArgsM.StoreFile = config.FlagsServer.StoreFIle
+	// 	} else {
+	// 		config.ArgsM.StoreFile = env.StoreFile
+	// 	}
+	// } else {
+	// 	if envDBURL == "" {
+	// 		config.ArgsM.DBURL = config.FlagsServer.DBURL
+	// 		config.ArgsM.StoreFile = ""
+	// 	} else {
+	// 		config.ArgsM.DBURL = env.DBURL
+	// 		config.ArgsM.StoreFile = ""
+	// 	}
+	// }
+	fmt.Println("...............................database url: ", config.ArgsM.DBURL, "File storage: ", config.ArgsM.StoreFile, config.ArgsM)
 }
 
 // envFile, _ := os.LookupEnv("STORE_FILE")
