@@ -22,7 +22,7 @@ type FlagsServ struct {
 	Key           string
 	Restore       bool
 	StoreInterval time.Duration
-	StoreFIle     string
+	StoreFile     string
 	DBURL         string
 }
 type FlagsAg struct {

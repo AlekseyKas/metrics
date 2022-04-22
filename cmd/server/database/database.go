@@ -11,7 +11,6 @@ import (
 )
 
 var Conn *pgx.Conn
-var err error
 
 //Connect to DB
 func DBConnect() error {
@@ -29,7 +28,7 @@ func DBConnect() error {
 	cfgURL, err := pgx.ParseConnectionString(DBURL)
 	if err != nil {
 		logrus.Error("Error parsing URL: ", err)
-		return nil
+		return err
 	}
 	Conn, err = pgx.Connect(cfgURL)
 	if err != nil {

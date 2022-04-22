@@ -34,7 +34,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	wg.Add(1)
 	go waitSignals(cancel)
-	logrus.Info(";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;", os.Getenv("DATABASE_DSN"), "----", config.FlagsServer.DBURL, "!!!!!!!!!!!!!!!!!")
+	logrus.Info(";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;", os.Getenv("DATABASE_DSN"), "----", config.FlagsServer.DBURL, "!!!!!!!!!!!!!!!!!", os.Getenv("STORE_FILE"), config.FlagsServer.DBURL)
 	//DB connection
 	wg.Add(1)
 	if config.ArgsM.DBURL != "" {
@@ -125,7 +125,7 @@ func termEnvFlags() {
 	// kong.Parse(&config.FlagsServer)
 	flag.StringVar(&config.FlagsServer.Address, "a", "127.0.0.1:8080", "Address")
 	flag.StringVar(&config.FlagsServer.DBURL, "d", "", "Database URL")
-	flag.StringVar(&config.FlagsServer.StoreFIle, "f", "/tmp/devops-metrics-db.json", "File path store")
+	flag.StringVar(&config.FlagsServer.StoreFile, "f", "", "File path store")
 	flag.StringVar(&config.FlagsServer.Key, "k", "", "Secret key")
 	flag.BoolVar(&config.FlagsServer.Restore, "r", true, "Restire drom file")
 	flag.DurationVar(&config.FlagsServer.StoreInterval, "i", 300000000000, "Interval store file")
@@ -170,7 +170,7 @@ func termEnvFlags() {
 	if envDBURL == "" && config.FlagsServer.DBURL == "" {
 		//load from file
 		if envFile == "" {
-			config.ArgsM.StoreFile = config.FlagsServer.StoreFIle
+			config.ArgsM.StoreFile = config.FlagsServer.StoreFile
 			config.ArgsM.DBURL = ""
 		} else {
 			config.ArgsM.StoreFile = env.StoreFile
