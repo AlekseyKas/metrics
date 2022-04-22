@@ -6,11 +6,11 @@ import (
 	"os"
 
 	"github.com/AlekseyKas/metrics/internal/config"
-	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/jackc/pgx"
 	"github.com/sirupsen/logrus"
 )
 
-var Conn *pgxpool.Pool
+var Conn *pgx.Conn
 var err error
 
 //Connect to DB
@@ -26,7 +26,12 @@ func DBConnect() error {
 	// DBURL := "postgres://" + conf.User + ":" + conf.Password + "@" + conf.Adddress + "/" + conf.NameDB
 	DBURL := config.ArgsM.DBURL
 	// DBURL := "***postgres:5432/praktikum?sslmode=disable"
-	Conn, err = pgxpool.Connect(context.Background(), DBURL)
+	cfgURL, err := pgx.ParseConnectionString(DBURL)
+	if err != nil {
+		logrus.Error("Error parsing URL: ", err)
+		return nil
+	}
+	Conn, err = pgx.Connect(cfgURL)
 	if err != nil {
 		logrus.Error("Error connection to DB: ", err)
 		os.Exit(1)
