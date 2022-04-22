@@ -10,7 +10,7 @@ import (
 var FlagsServer FlagsServ
 var FlagsAgent FlagsAg
 
-type ConfigDb struct {
+type ConfigDB struct {
 	User     string
 	Adddress string
 	Password string
@@ -40,7 +40,7 @@ type Param struct {
 	StoreFile      string        `env:"STORE_FILE" envDefault:"/tmp/devops-metrics-db.json"`
 	Restore        bool          `env:"RESTORE" envDefault:"true"`
 	Key            string        `env:"KEY"`
-	DBURL          string        `env:"DATABASE_DSN" envDefault:"127.0.0.1:5432"`
+	DBURL          string        `env:"DATABASE_DSN"`
 }
 type Args struct {
 	DBURL          string

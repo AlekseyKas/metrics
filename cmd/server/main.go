@@ -41,7 +41,7 @@ func main() {
 	go syncFile(config.ArgsM, ctx)
 	wg.Add(1)
 	go waitSignals(cancel)
-	// logrus.Info(";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;", config.ArgsM.DBURL, "sss", config.ArgsM)
+	logrus.Info(";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;", config.ArgsM.DBURL, "!!!!!!!!!!!!!!!!!", config.ArgsM)
 	// msg = ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;sss{ localhost:37753 /tmp/OaUjPOc 0s 0s 5m0s /tmp/devops-metrics-db.json true}"
 	//DB connection
 	if config.ArgsM.DBURL != "" {
@@ -161,46 +161,61 @@ func termEnvFlags() {
 	} else {
 		config.ArgsM.Key = env.Key
 	}
-	// if envFile == "" {
-	// 	config.ArgsM.StoreFile = config.FlagsServer.StoreFIle
-	// } else {
-	// 	config.ArgsM.StoreFile = env.StoreFile
-	// }
-	// fmt.Println(env.DBURL)
 	envFile, _ := os.LookupEnv("STORE_FILE")
 	envDBURL, _ := os.LookupEnv("DATABASE_DSN")
-	if envDBURL == "" {
-		if config.FlagsServer.DBURL == "" {
-			//file not set
-			// logrus.Info("[[[[[[[[[[[[")
-			if envFile == "" && config.FlagsServer.StoreFIle == "" {
-				config.ArgsM.DBURL = env.DBURL
-				config.ArgsM.Restore = false
-				config.ArgsM.StoreFile = ""
-				logrus.Info("5555555", env.DBURL)
-				//file set
-			} else {
-				config.ArgsM.DBURL = ""
-				if envFile == "" {
-					config.ArgsM.StoreFile = config.FlagsServer.StoreFIle
-				} else {
-					config.ArgsM.StoreFile = env.StoreFile
-				}
-			}
-			//flag dburl exist
+
+	if envDBURL == "" && config.FlagsServer.DBURL == "" {
+		//load from file
+		if envFile == "" {
+			config.ArgsM.StoreFile = config.FlagsServer.StoreFIle
 		} else {
+			config.ArgsM.StoreFile = env.StoreFile
+		}
+	} else {
+		if envDBURL == "" {
 			config.ArgsM.DBURL = config.FlagsServer.DBURL
-			config.ArgsM.Restore = false
+			config.ArgsM.StoreFile = ""
+		} else {
+			config.ArgsM.DBURL = env.DBURL
 			config.ArgsM.StoreFile = ""
 		}
-		//dburl env exist
-	} else {
-		config.ArgsM.DBURL = env.DBURL
-		config.ArgsM.Restore = false
-		config.ArgsM.StoreFile = ""
 	}
 	fmt.Println("...............................database url: ", config.ArgsM.DBURL, "File storage: ", config.ArgsM.StoreFile)
 }
+
+// envFile, _ := os.LookupEnv("STORE_FILE")
+// envDBURL, _ := os.LookupEnv("DATABASE_DSN")
+// if envDBURL == "" {
+// 	if config.FlagsServer.DBURL == "" {
+// 		//file not set
+// 		// logrus.Info("[[[[[[[[[[[[")
+// 		if envFile == "" && config.FlagsServer.StoreFIle == "" {
+// 			config.ArgsM.DBURL = env.DBURL
+// 			config.ArgsM.Restore = false
+// 			config.ArgsM.StoreFile = ""
+// 			logrus.Info("5555555", env.DBURL)
+// 			//file set
+// 		} else {
+// 			config.ArgsM.DBURL = ""
+// 			if envFile == "" {
+// 				config.ArgsM.StoreFile = config.FlagsServer.StoreFIle
+// 			} else {
+// 				config.ArgsM.StoreFile = env.StoreFile
+// 			}
+// 		}
+// 		//flag dburl exist
+// 	} else {
+// 		config.ArgsM.DBURL = config.FlagsServer.DBURL
+// 		config.ArgsM.Restore = false
+// 		config.ArgsM.StoreFile = ""
+// 	}
+// 	//dburl env exist
+// } else {
+// 	config.ArgsM.DBURL = env.DBURL
+// 	config.ArgsM.Restore = false
+// 	config.ArgsM.StoreFile = ""
+// }
+// }
 
 func fileExist(file string) bool {
 	var b bool

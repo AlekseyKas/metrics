@@ -15,7 +15,7 @@ var err error
 
 //Connect to DB
 func DBConnect() error {
-	conf := config.ConfigDb{
+	conf := config.ConfigDB{
 		Adddress: config.ArgsM.DBURL,
 		User:     "user",
 		Password: "user",
