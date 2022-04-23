@@ -18,7 +18,6 @@ import (
 	"github.com/AlekseyKas/metrics/internal/storage"
 	"github.com/fatih/structs"
 	"github.com/go-chi/chi"
-	"github.com/jackc/pgx"
 	"github.com/sirupsen/logrus"
 )
 
@@ -45,12 +44,35 @@ func main() {
 			logrus.Error("Connection to postrgres faild: ", err)
 		}
 	}
+	//load metrics from file
+	if config.ArgsM.StoreFile != "" {
+		err := loadFromFile(config.ArgsM)
+		if err != nil {
+			logrus.Error("Error load from file: ", err)
+		}
+	}
+	//sync metrics with file
 	go syncFile(config.ArgsM, ctx)
 	r := chi.NewRouter()
 	r.Route("/", handlers.Router)
 	go http.ListenAndServe(config.ArgsM.Address, r)
 
 	wg.Wait()
+}
+
+func loadFromFile(env config.Args) error {
+	if env.Restore && fileExist(env.StoreFile) {
+		fmt.Println(";;ssssssssssssssssssssssssss")
+
+		file, err := os.ReadFile(env.StoreFile)
+		if err != nil {
+			logrus.Error("Error open file for writing: ", err)
+			wg.Done()
+			return err
+		}
+		handlers.StorageM.LoadMetricsFile(file)
+	}
+	return nil
 }
 
 func syncFile(env config.Args, ctx context.Context) {
@@ -64,19 +86,7 @@ func syncFile(env config.Args, ctx context.Context) {
 			return
 		}
 	} else {
-		//restore data from file
 
-		if env.Restore && fileExist(env.StoreFile) {
-			fmt.Println(";;ssssssssssssssssssssssssss")
-
-			file, err := os.ReadFile(env.StoreFile)
-			if err != nil {
-				logrus.Error("Error open file for writing: ", err)
-				wg.Done()
-				return
-			}
-			handlers.StorageM.LoadMetricsFile(file)
-		}
 		if env.StoreInterval == 0 {
 
 			metrics, _ := handlers.StorageM.GetMetricsJSON()
@@ -127,7 +137,7 @@ func termEnvFlags() {
 	// kong.Parse(&config.FlagsServer)
 	flag.StringVar(&config.FlagsServer.Address, "a", "127.0.0.1:8080", "Address")
 	flag.StringVar(&config.FlagsServer.DBURL, "d", "", "Database URL")
-	flag.StringVar(&config.FlagsServer.StoreFile, "f", "", "File path store")
+	flag.StringVar(&config.FlagsServer.StoreFile, "f", "/tmp/devops-metrics-db.json", "File path store")
 	flag.StringVar(&config.FlagsServer.Key, "k", "", "Secret key")
 	flag.BoolVar(&config.FlagsServer.Restore, "r", true, "Restire drom file")
 	flag.DurationVar(&config.FlagsServer.StoreInterval, "i", 300000000000, "Interval store file")
@@ -160,62 +170,70 @@ func termEnvFlags() {
 		config.ArgsM.Key = env.Key
 	}
 	envFile, _ := os.LookupEnv("STORE_FILE")
-	// if envFile == "" {
-	// 	config.ArgsM.StoreFile = config.FlagsServer.StoreFIle
-	// 	// config.ArgsM.DBURL = ""
-	// } else {
-	// 	config.ArgsM.StoreFile = env.StoreFile
-	// }
+	if envFile == "" {
+		config.ArgsM.StoreFile = config.FlagsServer.StoreFile
+	} else {
+		config.ArgsM.StoreFile = env.StoreFile
+	}
 
 	envDBURL, _ := os.LookupEnv("DATABASE_DSN")
 
 	if envDBURL == "" && config.FlagsServer.DBURL == "" {
-		//load from file
-		if envFile == "" {
-			config.ArgsM.StoreFile = config.FlagsServer.StoreFile
-			config.ArgsM.DBURL = ""
-		} else {
-			config.ArgsM.StoreFile = env.StoreFile
-			config.ArgsM.DBURL = ""
-
-		}
-	}
-	if envDBURL != "" || config.FlagsServer.DBURL != "" {
-
+		config.ArgsM.DBURL = ""
+	} else {
 		if envDBURL != "" {
-			_, err := pgx.ParseConnectionString(env.DBURL)
-			if err != nil {
-				logrus.Info("1111111111111111111111111", envDBURL)
-				if envFile == "" {
-					config.ArgsM.StoreFile = config.FlagsServer.StoreFile
-					config.ArgsM.DBURL = ""
-				} else {
-					config.ArgsM.StoreFile = env.StoreFile
-					config.ArgsM.DBURL = ""
-				}
-			} else {
-				logrus.Info("1111111111122222222222222222222222", envDBURL)
-
-				config.ArgsM.DBURL = env.DBURL
-			}
+			config.ArgsM.DBURL = envDBURL
 		} else {
-			_, err := pgx.ParseConnectionString(config.FlagsServer.DBURL)
-			if err != nil {
-				logrus.Info("222222222222222222222222222", config.FlagsServer.DBURL)
-				if envFile == "" {
-					config.ArgsM.StoreFile = config.FlagsServer.StoreFile
-					config.ArgsM.DBURL = ""
-				} else {
-					config.ArgsM.StoreFile = env.StoreFile
-					config.ArgsM.DBURL = ""
-				}
-			} else {
-				logrus.Info("222222222221111111111111111111111", config.FlagsServer.DBURL)
-
-				config.ArgsM.DBURL = config.FlagsServer.DBURL
-			}
+			config.ArgsM.DBURL = config.FlagsServer.DBURL
 		}
 	}
+
+	// if envDBURL != "" || config.FlagsServer.DBURL != "" {
+
+	// 	if envDBURL != "" {
+	// 		_, err := pgx.ParseDSN(envDBURL)
+	// 		if err != nil {
+	// 			logrus.Info("1111111111111111111111111", envDBURL)
+	// 			if envFile == "" {
+	// 				config.ArgsM.StoreFile = config.FlagsServer.StoreFile
+	// 				config.ArgsM.DBURL = ""
+	// 			} else {
+	// 				config.ArgsM.StoreFile = env.StoreFile
+	// 				config.ArgsM.DBURL = ""
+	// 			}
+	// 		} else {
+	// 			logrus.Info("1111111111122222222222222222222222", envDBURL)
+	// 			if envFile != "" {
+	// 				config.ArgsM.StoreFile = envFile
+	// 			} else {
+	// 				config.ArgsM.StoreFile = ""
+	// 			}
+	// 			if config.FlagsServer.StoreFile != "" {
+	// 				config.ArgsM.StoreFile = config.FlagsServer.StoreFile
+	// 			} else {
+	// 				config.ArgsM.StoreFile = ""
+	// 			}
+
+	// 			config.ArgsM.DBURL = env.DBURL
+	// 		}
+	// 	} else {
+	// 		_, err := pgx.ParseConnectionString(config.FlagsServer.DBURL)
+	// 		if err != nil {
+	// 			logrus.Info("222222222222222222222222222", config.FlagsServer.DBURL)
+	// 			if envFile == "" {
+	// 				config.ArgsM.StoreFile = config.FlagsServer.StoreFile
+	// 				config.ArgsM.DBURL = ""
+	// 			} else {
+	// 				config.ArgsM.StoreFile = env.StoreFile
+	// 				config.ArgsM.DBURL = ""
+	// 			}
+	// 		} else {
+	// 			logrus.Info("222222222221111111111111111111111", config.FlagsServer.DBURL)
+
+	// 			config.ArgsM.DBURL = config.FlagsServer.DBURL
+	// 		}
+	// 	}
+	// }
 
 	fmt.Println("...............................database url: ", config.ArgsM.DBURL, "File storage: ", config.ArgsM.StoreFile, config.ArgsM)
 }
