@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/AlekseyKas/metrics/cmd/server/database"
 	"github.com/AlekseyKas/metrics/internal/config"
 	"github.com/sirupsen/logrus"
 )
@@ -74,11 +75,43 @@ type StorageAgent interface {
 }
 
 type Storage interface {
+	InitDB(jm []JSONMetrics) error
 	GetMetrics() map[string]interface{}
 	ChangeMetric(nameMet string, value interface{}, params config.Args) error
 	GetStructJSON() JSONMetrics
 	LoadMetricsFile(file []byte)
 	GetMetricsJSON() ([]JSONMetrics, error)
+}
+
+//init database if don't exist table
+func (m *MetricsStore) InitDB(jm []JSONMetrics) error {
+
+	database.Conn.Exec("CREATE TABLE metrics (id VARCHAR NOT NULL UNIQUE, metric_type VARCHAR NOT NULL, delta BIGINT, value DOUBLE PRECISION)")
+	// var count int
+	// row := database.Conn.QueryRow("SELECT COUNT(*) FROM metrics")
+	// err := row.Scan(&count)
+	// if err != nil {
+	// 	logrus.Error(err)
+	// }
+
+	// if count == 0 {
+	for i := 0; i < len(jm); i++ {
+		switch jm[i].MType {
+		case "gauge":
+			_, err := database.Conn.Exec("INSERT INTO metrics (id, metric_type, value) VALUES($1,$2,$3) ON CONFLICT (id) DO UPDATE SET value = $3, metric_type = $2", jm[i].ID, jm[i].MType, *jm[i].Value)
+			if err != nil {
+				logrus.Error("Error insert metric to database: ", err)
+			}
+		case "counter":
+			_, err := database.Conn.Exec("INSERT INTO metrics (id,metric_type, value) VALUES($1,$2,$3) ON CONFLICT (id) DO UPDATE SET value = $3, metric_type = $2", jm[i].ID, jm[i].MType, *jm[i].Delta)
+			if err != nil {
+				logrus.Error("Error insert metric to database: ", err)
+			}
+		}
+
+		// }
+	}
+	return nil
 }
 
 func (m *MetricsStore) LoadMetricsFile(file []byte) {

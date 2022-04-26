@@ -35,14 +35,6 @@ func main() {
 	wg.Add(1)
 	go waitSignals(cancel)
 
-	//DB connection
-	wg.Add(1)
-	if config.ArgsM.DBURL != "" {
-		err := database.DBConnect()
-		if err != nil {
-			logrus.Error("Connection to postrgres faild: ", err)
-		}
-	}
 	//load metrics from file
 	if config.ArgsM.StoreFile != "" {
 		err := loadFromFile(config.ArgsM)
@@ -50,6 +42,20 @@ func main() {
 			logrus.Error("Error load from file: ", err)
 		}
 	}
+	//DB connection
+	wg.Add(1)
+	if config.ArgsM.DBURL != "" {
+		err := database.DBConnect()
+		if err != nil {
+			logrus.Error("Connection to postrgres faild: ", err)
+		}
+		jm, err := handlers.StorageM.GetMetricsJSON()
+		if err != nil {
+			logrus.Error("Error getting metricsJSON for database: ", err)
+		}
+		handlers.StorageM.InitDB(jm)
+	}
+
 	//sync metrics with file
 	go syncFile(config.ArgsM, ctx)
 	r := chi.NewRouter()
@@ -182,6 +188,7 @@ func termEnvFlags() {
 			config.ArgsM.DBURL = config.FlagsServer.DBURL
 		}
 	}
+	logrus.Info("ooooooooooooooo", config.ArgsM.StoreFile)
 }
 
 func fileExist(file string) bool {
