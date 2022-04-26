@@ -43,7 +43,6 @@ func main() {
 		}
 	}
 	//DB connection
-	wg.Add(1)
 	if config.ArgsM.DBURL != "" {
 		err := database.DBConnect()
 		if err != nil {
@@ -59,7 +58,9 @@ func main() {
 		//sync metrics with database
 		wg.Add(1)
 		go syncDB(config.ArgsM, ctx)
-	} else {
+	}
+
+	if config.ArgsM.DBURL == "" {
 		//sync metrics with file
 		wg.Add(1)
 		go syncFile(config.ArgsM, ctx)
@@ -274,7 +275,10 @@ func waitSignals(cancel context.CancelFunc) {
 		sig := <-terminate
 		switch sig {
 		case os.Interrupt:
-			logrus.Info("File syncing is terminate!")
+			logrus.Info("Terminate OS signal!")
+			if config.ArgsM.DBURL != "" {
+				database.DBClose()
+			}
 			cancel()
 			wg.Done()
 			return
