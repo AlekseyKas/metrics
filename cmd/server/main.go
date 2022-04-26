@@ -54,11 +54,11 @@ func main() {
 		}
 		handlers.StorageM.InitDB(jm)
 	}
-	if config.ArgsM.DBURL != "" {
-		//sync metrics with database
-		wg.Add(1)
-		go syncDB(config.ArgsM, ctx)
-	}
+	// if config.ArgsM.DBURL != "" {
+	// 	//sync metrics with database
+	// 	wg.Add(1)
+	// 	go syncDB(config.ArgsM, ctx)
+	// }
 
 	if config.ArgsM.DBURL == "" {
 		//sync metrics with file
