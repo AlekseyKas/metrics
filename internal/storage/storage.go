@@ -76,11 +76,32 @@ type StorageAgent interface {
 
 type Storage interface {
 	InitDB(jm []JSONMetrics) error
+	ChangeMetricDB(nameMet string, value interface{}, typeMet string, params config.Args) error
 	GetMetrics() map[string]interface{}
 	ChangeMetric(nameMet string, value interface{}, params config.Args) error
 	GetStructJSON() JSONMetrics
 	LoadMetricsFile(file []byte)
 	GetMetricsJSON() ([]JSONMetrics, error)
+}
+
+//update metric in database
+func (m *MetricsStore) ChangeMetricDB(nameMet string, value interface{}, typeMet string, params config.Args) error {
+
+	if params.StoreInterval == 0 && params.DBURL != "" {
+		switch typeMet {
+		case "gauge":
+			_, err := database.Conn.Exec("INSERT INTO metrics (id, metric_type, value) VALUES($1,$2,$3) ON CONFLICT (id) DO UPDATE SET value = $3", nameMet, typeMet, value)
+			if err != nil {
+				logrus.Error("Error insert metric gauge in database: ", err)
+			}
+		case "counter":
+			_, err := database.Conn.Exec("INSERT INTO metrics (id, metric_type, delta) VALUES($1,$2,$3) ON CONFLICT (id) DO UPDATE SET delta = $3", nameMet, typeMet, value)
+			if err != nil {
+				logrus.Error("Error insert metric counter in database: ", err)
+			}
+		}
+	}
+	return nil
 }
 
 //init database if don't exist table
@@ -103,7 +124,7 @@ func (m *MetricsStore) InitDB(jm []JSONMetrics) error {
 				logrus.Error("Error insert metric to database: ", err)
 			}
 		case "counter":
-			_, err := database.Conn.Exec("INSERT INTO metrics (id,metric_type, value) VALUES($1,$2,$3) ON CONFLICT (id) DO UPDATE SET value = $3, metric_type = $2", jm[i].ID, jm[i].MType, *jm[i].Delta)
+			_, err := database.Conn.Exec("INSERT INTO metrics (id,metric_type, delta) VALUES($1,$2,$3) ON CONFLICT (id) DO UPDATE SET delta = $3, metric_type = $2", jm[i].ID, jm[i].MType, *jm[i].Delta)
 			if err != nil {
 				logrus.Error("Error insert metric to database: ", err)
 			}
