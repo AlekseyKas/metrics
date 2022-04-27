@@ -201,7 +201,7 @@ func termEnvFlags() {
 	flag.BoolVar(&config.FlagsServer.Restore, "r", true, "Restire drom file")
 	flag.DurationVar(&config.FlagsServer.StoreInterval, "i", 300000000000, "Interval store file")
 	flag.Parse()
-	fmt.Println(config.FlagsServer)
+	fmt.Println(".....................", config.FlagsServer)
 	env := config.LoadConfig()
 	envADDR, _ := os.LookupEnv("ADDRESS")
 	if envADDR == "" {
