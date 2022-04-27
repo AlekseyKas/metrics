@@ -272,7 +272,7 @@ func saveMetricsJSON() http.HandlerFunc {
 					// f := *s.Value
 					StorageM.ChangeMetric(nameMet, gauge(*s.Value), config.ArgsM)
 					StorageM.ChangeMetricDB(nameMet, *s.Value, typeMet, config.ArgsM)
-					// logrus.Info("iiiiiiiiiiiiiiiiiiiiii", *s.Value, "iiiiiiiiiii", reflect.ValueOf(*s.Value).Type())
+					logrus.Info("iiiiiiiiiiiiiiiiiiiiii", *s.Value, "iiiiiiiiiii", reflect.ValueOf(*s.Value).Type())
 					rw.WriteHeader(http.StatusOK)
 					return
 				}

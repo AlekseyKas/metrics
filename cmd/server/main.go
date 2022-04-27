@@ -53,15 +53,15 @@ func main() {
 			logrus.Error("Error getting metricsJSON for database: ", err)
 		}
 		handlers.StorageM.InitDB(jm)
+		//restore from DB
+		if !config.ArgsM.Restore && config.ArgsM.DBURL != "" {
+			handlers.StorageM.LoadMetricsDB()
+		}
 	}
-	//restore from DB
-	if !config.ArgsM.Restore && config.ArgsM.DBURL != "" {
-		handlers.StorageM.LoadMetricsDB()
-	}
-	if config.ArgsM.DBURL != "" {
-		wg.Add(1)
-		go syncDB(config.ArgsM, ctx)
-	}
+	// if config.ArgsM.DBURL != "" {
+	// 	wg.Add(1)
+	// 	go syncDB(config.ArgsM, ctx)
+	// }
 	wg.Add(1)
 	//sync metrics with file
 	go syncFile(config.ArgsM, ctx)
@@ -72,62 +72,62 @@ func main() {
 	wg.Wait()
 }
 
-func syncDB(env config.Args, ctx context.Context) {
-	//sync life
-	if env.StoreInterval == 0 {
-		for {
-			<-ctx.Done()
-			logrus.Info("Database syncing is down")
-			wg.Done()
-			return
-		}
-	} else {
-		//sync with interval
-		for {
-			select {
-			case <-ctx.Done():
-				logrus.Info("Database syncing is down")
-				wg.Done()
-				return
-			case <-time.After(env.StoreInterval):
-				jm, err := handlers.StorageM.GetMetricsJSON()
-				if err != nil {
-					logrus.Error("Error getting metrics from database: ", err)
-				}
-				// tx, _ := database.Conn.Begin()
-				_, err = database.Conn.Exec("DELETE FROM metrics")
-				if err != nil {
-					logrus.Error("Error flushing rows in table metrics: ", err)
-				}
+// func syncDB(env config.Args, ctx context.Context) {
+// 	//sync life
+// 	if env.StoreInterval == 0 {
+// 		for {
+// 			<-ctx.Done()
+// 			logrus.Info("Database syncing is down")
+// 			wg.Done()
+// 			return
+// 		}
+// 	} else {
+// 		//sync with interval
+// 		for {
+// 			select {
+// 			case <-ctx.Done():
+// 				logrus.Info("Database syncing is down")
+// 				wg.Done()
+// 				return
+// 			case <-time.After(env.StoreInterval):
+// 				jm, err := handlers.StorageM.GetMetricsJSON()
+// 				if err != nil {
+// 					logrus.Error("Error getting metrics from database: ", err)
+// 				}
+// 				// tx, _ := database.Conn.Begin()
+// 				_, err = database.Conn.Exec("DELETE FROM metrics")
+// 				if err != nil {
+// 					logrus.Error("Error flushing rows in table metrics: ", err)
+// 				}
 
-				for i := 0; i < len(jm); i++ {
-					err := database.Conn.Ping(context.Background())
-					if err != nil {
-						logrus.Error(err)
-						break
-					}
-					switch jm[i].MType {
-					case "gauge":
-						logrus.Info("2222222222222222222222222222222", jm[i].ID, jm[i].MType, *jm[i].Value, i)
-						_, err := database.Conn.Exec("INSERT INTO metrics (id,metric_type, value) VALUES($1,$2,$3) ON CONFLICT (id) DO UPDATE SET value = $3, metric_type = $2", jm[i].ID, jm[i].MType, *jm[i].Value)
-						if err != nil {
-							logrus.Error("Error insert metric to database: ", err)
-						}
-					case "counter":
-						logrus.Info("3333333333333333333333333333333333", jm[i].ID, jm[i].MType, *jm[i].Delta, i)
+// 				for i := 0; i < len(jm); i++ {
+// 					err := database.Conn.Ping(context.Background())
+// 					if err != nil {
+// 						logrus.Error(err)
+// 						break
+// 					}
+// 					switch jm[i].MType {
+// 					case "gauge":
+// 						logrus.Info("2222222222222222222222222222222", jm[i].ID, jm[i].MType, *jm[i].Value, i)
+// 						_, err := database.Conn.Exec("INSERT INTO metrics (id,metric_type, value) VALUES($1,$2,$3) ON CONFLICT (id) DO UPDATE SET value = $3, metric_type = $2", jm[i].ID, jm[i].MType, *jm[i].Value)
+// 						if err != nil {
+// 							logrus.Error("Error insert metric to database: ", err)
+// 						}
+// 					case "counter":
+// 						logrus.Info("3333333333333333333333333333333333", jm[i].ID, jm[i].MType, *jm[i].Delta, i)
 
-						_, err := database.Conn.Exec("INSERT INTO metrics (id,metric_type, delta) VALUES($1,$2,$3) ON CONFLICT (id) DO UPDATE SET delta = $3, metric_type = $2", jm[i].ID, jm[i].MType, *jm[i].Delta)
-						if err != nil {
-							logrus.Error("Error insert metric to database: ", err)
-						}
-					}
-				}
-				logrus.Info("uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu")
-				// tx.Commit()
-			}
-		}
-	}
-}
+// 						_, err := database.Conn.Exec("INSERT INTO metrics (id,metric_type, delta) VALUES($1,$2,$3) ON CONFLICT (id) DO UPDATE SET delta = $3, metric_type = $2", jm[i].ID, jm[i].MType, *jm[i].Delta)
+// 						if err != nil {
+// 							logrus.Error("Error insert metric to database: ", err)
+// 						}
+// 					}
+// 				}
+// 				logrus.Info("uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu")
+// 				// tx.Commit()
+// 			}
+// 		}
+// 	}
+// }
 
 func loadFromFile(env config.Args) error {
 	if env.Restore && fileExist(env.StoreFile) {
