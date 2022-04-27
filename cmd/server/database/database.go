@@ -21,6 +21,7 @@ func DBConnect() error {
 		return err
 	}
 	Conn, err = pgx.Connect(cfgURL)
+
 	if err != nil {
 		logrus.Error("Error connection to DB: ", err)
 		os.Exit(1)

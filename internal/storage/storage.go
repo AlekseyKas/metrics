@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"math/rand"
@@ -86,18 +87,36 @@ type Storage interface {
 }
 
 func (m *MetricsStore) LoadMetricsDB() error {
-	dm := make(map[string]interface{})
-	row, err := database.Conn.Query("SELECT * FROM metrics", dm)
+	dm := []JSONMetrics{}
+	var id string
+	var metricType string
+	var value *float64
+	var delta *int64
+	row, err := database.Conn.Query("SELECT id, metric_type, value, delta FROM metrics")
 	if err != nil {
 		logrus.Error("Error select all from table metrics: ", err)
 	}
-	if row.Next() {
-		err = row.Scan(&dm)
+	for row.Next() {
+		err = row.Scan(&id, &metricType, &value, &delta)
 		if err != nil {
 			logrus.Error("Error scan row in select all: ", err)
 		}
-		logrus.Info(">>>>>>>>>>>>>>>>>>>>>", dm)
+		dm = append(dm, JSONMetrics{
+			ID:    id,
+			MType: metricType,
+			Delta: delta,
+			Value: value,
+		})
 	}
+
+	logrus.Info("pppp", *dm[1].Value)
+	// if row.Next() {
+	// 	err = row.Scan(&dm[])
+	// 	if err != nil {
+	// 		logrus.Error("Error scan row in select all: ", err)
+	// 	}
+	// 	logrus.Info(">>>>>>>>>>>>>>>>>>>>>", dm)
+	// }
 	return nil
 }
 
@@ -107,11 +126,19 @@ func (m *MetricsStore) ChangeMetricDB(nameMet string, value interface{}, typeMet
 	if params.StoreInterval == 0 && params.DBURL != "" {
 		switch typeMet {
 		case "gauge":
+			// f, err := strconv.ParseFloat(fmt.Sprintf("%v", value), 64)
+			// if err != nil {
+			// 	logrus.Info("Error pars float from interface: ", err)
+			// }
 			_, err := database.Conn.Exec("INSERT INTO metrics (id, metric_type, value) VALUES($1,$2,$3) ON CONFLICT (id) DO UPDATE SET value = $3", nameMet, typeMet, value)
 			if err != nil {
 				logrus.Error("Error insert metric gauge in database: ", err)
 			}
 		case "counter":
+			// i, err := strconv.ParseInt(fmt.Sprintf("%v", value), 2, 64)
+			// if err != nil {
+			// 	logrus.Info("Error pars float from interface: ", err)
+			// }
 			_, err := database.Conn.Exec("INSERT INTO metrics (id, metric_type, delta) VALUES($1,$2,$3) ON CONFLICT (id) DO UPDATE SET delta = $3", nameMet, typeMet, value)
 			if err != nil {
 				logrus.Error("Error insert metric counter in database: ", err)
@@ -136,11 +163,19 @@ func (m *MetricsStore) InitDB(jm []JSONMetrics) error {
 	for i := 0; i < len(jm); i++ {
 		switch jm[i].MType {
 		case "gauge":
+			// f, err := strconv.ParseFloat(fmt.Sprintf("%v", *jm[i].Value), 64)
+			// if err != nil {
+			// 	logrus.Info("Error pars float from interface: ", err)
+			// }
 			_, err := database.Conn.Exec("INSERT INTO metrics (id, metric_type, value) VALUES($1,$2,$3) ON CONFLICT (id) DO UPDATE SET value = $3, metric_type = $2", jm[i].ID, jm[i].MType, *jm[i].Value)
 			if err != nil {
 				logrus.Error("Error insert metric to database: ", err)
 			}
 		case "counter":
+			// i, err := strconv.ParseInt(fmt.Sprintf("%v", *jm[i].Delta), 2, 64)
+			// if err != nil {
+			// 	logrus.Info("Error pars float from interface: ", err)
+			// }
 			_, err := database.Conn.Exec("INSERT INTO metrics (id,metric_type, delta) VALUES($1,$2,$3) ON CONFLICT (id) DO UPDATE SET delta = $3, metric_type = $2", jm[i].ID, jm[i].MType, *jm[i].Delta)
 			if err != nil {
 				logrus.Error("Error insert metric to database: ", err)
