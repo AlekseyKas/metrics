@@ -196,7 +196,7 @@ func termEnvFlags() {
 	// kong.Parse(&config.FlagsServer)
 	flag.StringVar(&config.FlagsServer.Address, "a", "127.0.0.1:8080", "Address")
 	flag.StringVar(&config.FlagsServer.DBURL, "d", "", "Database URL")
-	flag.StringVar(&config.FlagsServer.StoreFile, "f", "/tmp/devops-metrics-db.json", "File path store")
+	flag.StringVar(&config.FlagsServer.StoreFile, "f", "", "File path store")
 	flag.StringVar(&config.FlagsServer.Key, "k", "", "Secret key")
 	flag.BoolVar(&config.FlagsServer.Restore, "r", true, "Restire drom file")
 	flag.DurationVar(&config.FlagsServer.StoreInterval, "i", 300000000000, "Interval store file")
