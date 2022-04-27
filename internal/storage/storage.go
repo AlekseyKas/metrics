@@ -99,32 +99,17 @@ func (m *MetricsStore) LoadMetricsDB() error {
 		if err != nil {
 			logrus.Error("Error scan row in select all: ", err)
 		}
-		// dm = append(dm, JSONMetrics{
-		// 	ID:    id,
-		// 	MType: metricType,
-		// 	Delta: delta,
-		// 	Value: value,
-		// })
-		// if value.Valid {
-		// 	fmt.Println("pppppp", value.Float64)
-		// 	m.MM[id] = value.Float64
-		// }
-		// if delta.Valid {
-		// 	m.MM[id] = delta.Int64
-		// }
 		if metricType == "gauge" {
 			m.MM[id] = value
 		} else {
 			m.MM[id] = delta
 		}
 	}
-	fmt.Println("ssssssssssssssss", m.MM)
 	return nil
 }
 
 //update metric in database
 func (m *MetricsStore) ChangeMetricDB(nameMet string, value interface{}, typeMet string, params config.Args) error {
-	logrus.Info("]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]")
 	if params.DBURL != "" {
 		switch typeMet {
 		case "gauge":
@@ -149,38 +134,6 @@ func (m *MetricsStore) InitDB(jm []JSONMetrics) error {
 	if err != nil {
 		logrus.Error("Error create table: ", err)
 	}
-	// var count int
-	// row := database.Conn.QueryRow("SELECT COUNT(*) FROM metrics")
-	// err := row.Scan(&count)
-	// if err != nil {
-	// 	logrus.Error(err)
-	// }
-
-	// // if count == 0 {
-	// for i := 0; i < len(jm); i++ {
-	// 	switch jm[i].MType {
-	// 	case "gauge":
-	// 		// f, err := strconv.ParseFloat(fmt.Sprintf("%v", *jm[i].Value), 64)
-	// 		// if err != nil {
-	// 		// 	logrus.Info("Error pars float from interface: ", err)
-	// 		// }
-	// 		_, err := database.Conn.Exec("INSERT INTO metrics (id, metric_type, value) VALUES($1,$2,$3) ON CONFLICT (id) DO UPDATE SET value = $3, metric_type = $2", jm[i].ID, jm[i].MType, *jm[i].Value)
-	// 		if err != nil {
-	// 			logrus.Error("Error insert metric to database: ", err)
-	// 		}
-	// 	case "counter":
-	// 		// i, err := strconv.ParseInt(fmt.Sprintf("%v", *jm[i].Delta), 2, 64)
-	// 		// if err != nil {
-	// 		// 	logrus.Info("Error pars float from interface: ", err)
-	// 		// }
-	// 		_, err := database.Conn.Exec("INSERT INTO metrics (id,metric_type, delta) VALUES($1,$2,$3) ON CONFLICT (id) DO UPDATE SET delta = $3, metric_type = $2", jm[i].ID, jm[i].MType, *jm[i].Delta)
-	// 		if err != nil {
-	// 			logrus.Error("Error insert metric to database: ", err)
-	// 		}
-	// 	}
-
-	// }
-	// }
 	return nil
 }
 

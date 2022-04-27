@@ -269,10 +269,8 @@ func saveMetricsJSON() http.HandlerFunc {
 				return
 			} else {
 				if metrics[nameMet] != gauge(*s.Value) {
-					// f := *s.Value
 					StorageM.ChangeMetric(nameMet, gauge(*s.Value), config.ArgsM)
 					StorageM.ChangeMetricDB(nameMet, *s.Value, typeMet, config.ArgsM)
-					logrus.Info("iiiiiiiiiiiiiiiiiiiiii", *s.Value, "iiiiiiiiiii", reflect.ValueOf(*s.Value).Type())
 					rw.WriteHeader(http.StatusOK)
 					return
 				}
