@@ -54,8 +54,14 @@ func main() {
 		}
 		handlers.StorageM.InitDB(jm)
 	}
-	wg.Add(1)
-	go syncDB(config.ArgsM, ctx)
+	//restore from DB
+	if !config.ArgsM.Restore && config.ArgsM.DBURL != "" {
+		handlers.StorageM.LoadMetricsDB()
+	}
+	if config.ArgsM.DBURL != "" {
+		wg.Add(1)
+		go syncDB(config.ArgsM, ctx)
+	}
 	wg.Add(1)
 	//sync metrics with file
 	go syncFile(config.ArgsM, ctx)
