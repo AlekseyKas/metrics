@@ -228,11 +228,24 @@ func termEnvFlags() {
 	} else {
 		config.ArgsM.Key = env.Key
 	}
-	envFile, _ := os.LookupEnv("STORE_FILE")
-	if envFile == "" {
-		config.ArgsM.StoreFile = config.FlagsServer.StoreFile
-	} else {
-		config.ArgsM.StoreFile = env.StoreFile
+	// envFile, _ := os.LookupEnv("STORE_FILE")
+	// if envFile == ""  {
+	// 	config.ArgsM.StoreFile = config.FlagsServer.StoreFile
+	// } else {
+	// 	config.ArgsM.StoreFile = env.StoreFile
+	// }
+
+	envFile, b := os.LookupEnv("STORE_FILE")
+
+	switch envFile == "" && b {
+	case true:
+		config.ArgsM.StoreFile = ""
+	case false:
+		if envFile == "" {
+			config.ArgsM.StoreFile = config.FlagsServer.StoreFile
+		} else {
+			config.ArgsM.StoreFile = env.StoreFile
+		}
 	}
 
 	envDBURL, _ := os.LookupEnv("DATABASE_DSN")
