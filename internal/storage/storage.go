@@ -76,12 +76,29 @@ type StorageAgent interface {
 
 type Storage interface {
 	InitDB(jm []JSONMetrics) error
+	LoadMetricsDB() error
 	ChangeMetricDB(nameMet string, value interface{}, typeMet string, params config.Args) error
 	GetMetrics() map[string]interface{}
 	ChangeMetric(nameMet string, value interface{}, params config.Args) error
 	GetStructJSON() JSONMetrics
 	LoadMetricsFile(file []byte)
 	GetMetricsJSON() ([]JSONMetrics, error)
+}
+
+func (m *MetricsStore) LoadMetricsDB() error {
+	dm := make(map[string]interface{})
+	row, err := database.Conn.Query("SELECT * FROM metrics", dm)
+	if err != nil {
+		logrus.Error("Error select all from table metrics: ", err)
+	}
+	if row.Next() {
+		err = row.Scan(&dm)
+		if err != nil {
+			logrus.Error("Error scan row in select all: ", err)
+		}
+		logrus.Info(">>>>>>>>>>>>>>>>>>>>>", dm)
+	}
+	return nil
 }
 
 //update metric in database
