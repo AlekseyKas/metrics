@@ -24,7 +24,7 @@ func TestClient(t *testing.T) {
 	t.Run(name, func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		p := config.LoadConfig()
-		err := sendMetricsJSON(ctx, p.Address, []byte(p.Key))
+		err := sendMetricsSlice(ctx, p.Address, []byte(p.Key))
 		require.Error(t, err)
 		time.AfterFunc(4*time.Second, cancel)
 	})
