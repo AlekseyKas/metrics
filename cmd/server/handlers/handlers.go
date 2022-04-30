@@ -126,7 +126,7 @@ func saveMetricsSlice() http.HandlerFunc {
 		for i := 0; i < len(s); i++ {
 			typeMet = s[i].MType
 			nameMet = s[i].ID
-
+			// logrus.Info("aaaaaaaaaaaaaaa", s)
 			if config.ArgsM.Key != "" {
 				b, err := compareHash(&s[i], []byte(config.ArgsM.Key))
 				if err != nil {
@@ -145,6 +145,7 @@ func saveMetricsSlice() http.HandlerFunc {
 							}
 						}
 					}
+					logrus.Info(nameMet, ": ", metrics[nameMet], ": ", typeMet)
 					//update counter
 					if typeMet == "counter" {
 						var valueMetInt int

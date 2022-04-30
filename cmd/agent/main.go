@@ -114,9 +114,12 @@ func sendMetricsSlice(ctx context.Context, address string, key []byte) error {
 					logrus.Error("Error save hash of metrics: ", err)
 				}
 			}
+			if JSONMetrics[i].ID == "PollCount" {
+				logrus.Info("oooooooo", *JSONMetrics[i].Delta, ": ", JSONMetrics[i].Hash)
+
+			}
 		}
 	}
-	// logrus.Info("oooooooo", JSONMetrics[0].Hash)
 
 	var buf bytes.Buffer
 	var b bytes.Buffer
@@ -186,13 +189,15 @@ func SaveHash(JSONMetric *storage.JSONMetrics, key []byte) (hash string, err err
 	switch JSONMetric.MType {
 	case "counter":
 		data := (fmt.Sprintf("%s:counter:%d", JSONMetric.ID, *JSONMetric.Delta))
-		logrus.Info(data)
+
+		logrus.Info("kkkkkkkssssssssssssssss", data)
 		h := hmac.New(sha256.New, key)
 		h.Write([]byte(data))
-		JSONMetric.Hash = string(h.Sum(nil))
+		JSONMetric.Hash = fmt.Sprintf("%x", h.Sum(nil))
+		hh = fmt.Sprintf("%x", h.Sum(nil))
 	case "gauge":
 		data := (fmt.Sprintf("%s:gauge:%f", JSONMetric.ID, *JSONMetric.Value))
-		logrus.Info(data)
+		// logrus.Info(data)
 		h := hmac.New(sha256.New, key)
 		h.Write([]byte(data))
 		JSONMetric.Hash = fmt.Sprintf("%x", h.Sum(nil))
