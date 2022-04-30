@@ -147,7 +147,6 @@ func saveMetricsSlice() http.HandlerFunc {
 					}
 					//update counter
 					if typeMet == "counter" {
-						logrus.Info(">>>>>>>>>>>>>>>>>>>>>>>>>>>>eeeeeeeeeeeeeeeee", *s[i].Delta)
 						var valueMetInt int
 						if s[i].Delta != nil {
 							if _, ok := metrics[nameMet]; ok {
@@ -157,6 +156,7 @@ func saveMetricsSlice() http.HandlerFunc {
 									// return
 								}
 								valueMetInt = int(*s[i].Delta) + ii
+								logrus.Info(">>>>>>>>>>>>>>>>>>>>>>>>>>>>eeeeeeeeeeeeeeeee", *s[i].Delta)
 
 								StorageM.ChangeMetric(nameMet, counter(valueMetInt), config.ArgsM)
 								StorageM.ChangeMetricDB(nameMet, valueMetInt, typeMet, config.ArgsM)
