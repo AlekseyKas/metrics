@@ -1,7 +1,6 @@
 package database
 
 import (
-	"context"
 	"fmt"
 	"os"
 
@@ -28,7 +27,6 @@ func DBConnect() error {
 	} else {
 		fmt.Printf("Connected to the DB: true [" + os.Getenv("DATABASE_URL") + "] \n")
 	}
-	fmt.Println("44444", Conn.Ping(context.Background()))
 	return nil
 }
 func DBClose() {

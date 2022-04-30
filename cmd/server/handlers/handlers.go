@@ -127,7 +127,6 @@ func saveMetricsSlice() http.HandlerFunc {
 			nameMet = s[i].ID
 			metrics := StorageM.GetMetrics()
 
-			// logrus.Info("aaaaaaaaaaaaaaa", s)
 			if config.ArgsM.Key != "" {
 				b, err := compareHash(&s[i], []byte(config.ArgsM.Key))
 				if err != nil {
@@ -146,7 +145,6 @@ func saveMetricsSlice() http.HandlerFunc {
 							}
 						}
 					}
-					logrus.Info(nameMet, ": ", metrics[nameMet], ": ", typeMet)
 					//update counter
 					if typeMet == "counter" {
 						var valueMetInt int
@@ -159,16 +157,12 @@ func saveMetricsSlice() http.HandlerFunc {
 									// return
 								}
 								valueMetInt = int(*s[i].Delta) + ii
-								logrus.Info(">>>>>>>>>>>>>>>>>>>>>>>>>>>>eeeeeeeeeeeeeeeee", nameMet, ": ", *s[i].Delta)
-
 								StorageM.ChangeMetric(nameMet, counter(valueMetInt), config.ArgsM)
-								logrus.Info(metrics[nameMet])
 								StorageM.ChangeMetricDB(nameMet, valueMetInt, typeMet, config.ArgsM)
 								rw.WriteHeader(http.StatusOK)
 								// return
 							} else {
 								valueMetInt = int(*s[i].Delta)
-								logrus.Info(">>>>>>>>>>>>>>>>>>>>>>>>>>>>000000000----", nameMet, ": ", *s[i].Delta)
 								StorageM.ChangeMetric(nameMet, counter(valueMetInt), config.ArgsM)
 								StorageM.ChangeMetricDB(nameMet, valueMetInt, typeMet, config.ArgsM)
 								rw.WriteHeader(http.StatusOK)
@@ -197,24 +191,18 @@ func saveMetricsSlice() http.HandlerFunc {
 						if _, ok := metrics[nameMet]; ok {
 							ii, err := strconv.Atoi(fmt.Sprintf("%v", metrics[nameMet]))
 							if err != nil {
-
 								logrus.Error("Error convert metric: ", err)
-								// return
 							}
-							logrus.Info("mmmmmmmmmmmmmmm1", *s[i].Delta, metrics[nameMet])
 							valueMetInt = int(*s[i].Delta) + ii
 
 							StorageM.ChangeMetric(nameMet, counter(valueMetInt), config.ArgsM)
 							StorageM.ChangeMetricDB(nameMet, valueMetInt, typeMet, config.ArgsM)
 							rw.WriteHeader(http.StatusOK)
-							// return
 						} else {
 							valueMetInt = int(*s[i].Delta)
-							logrus.Info("mmmmmmmmmmmmmmm2", *s[i].Delta, metrics[nameMet])
 							StorageM.ChangeMetric(nameMet, counter(valueMetInt), config.ArgsM)
 							StorageM.ChangeMetricDB(nameMet, valueMetInt, typeMet, config.ArgsM)
 							rw.WriteHeader(http.StatusOK)
-							// return
 						}
 					}
 				}
@@ -386,7 +374,6 @@ func saveMetricsJSON() http.HandlerFunc {
 			} else {
 
 				if metrics[nameMet] != gauge(*s.Value) {
-					logrus.Info("llllllllllllllllllllllllll", s)
 					StorageM.ChangeMetric(nameMet, gauge(*s.Value), config.ArgsM)
 					StorageM.ChangeMetricDB(nameMet, *s.Value, typeMet, config.ArgsM)
 					rw.WriteHeader(http.StatusOK)
