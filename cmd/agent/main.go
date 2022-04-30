@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
@@ -46,7 +47,7 @@ func main() {
 			logrus.Info("Agent is down send metrics.")
 			return
 		case <-time.After(config.ArgsM.PollInterval):
-			err := sendMetricsJSON(ctx, config.ArgsM.Address, []byte(config.ArgsM.Key))
+			err := sendMetricsSlice(ctx, config.ArgsM.Address, []byte(config.ArgsM.Key))
 			if err != nil {
 				logrus.Error("Error sending POST: ", err)
 			}
@@ -91,9 +92,9 @@ func termEnvFlags() {
 
 	// fmt.Println(config.ArgsM.Key)
 }
-
-func sendMetricsJSON(ctx context.Context, address string, key []byte) error {
+func sendMetricsSlice(ctx context.Context, address string, key []byte) error {
 	client := resty.New()
+
 	JSONMetrics, err := storageM.GetMetricsJSON()
 	if err != nil {
 		logrus.Error("Error getting metrics json format", err)
@@ -111,25 +112,71 @@ func sendMetricsJSON(ctx context.Context, address string, key []byte) error {
 				if err != nil {
 					logrus.Error("Error save hash of metrics: ", err)
 				}
-
-			}
-			var buf bytes.Buffer
-			encoder := json.NewEncoder(&buf)
-			err = encoder.Encode(met)
-			if err != nil {
-				logrus.Error(err)
-			}
-			_, err = client.R().
-				SetHeader("Content-Type", "application/json").
-				SetBody(&buf).
-				Post("http://" + address + "/update/")
-			if err != nil {
-				return err
 			}
 		}
 	}
+	var buf bytes.Buffer
+	var b bytes.Buffer
+
+	encoder := json.NewEncoder(&buf)
+	err = encoder.Encode(&JSONMetrics)
+	if err != nil {
+		logrus.Error(err)
+	}
+
+	gz, _ := gzip.NewWriterLevel(&b, gzip.BestSpeed)
+
+	gz.Write(buf.Bytes())
+	gz.Close()
+	_, err = client.R().
+		SetHeader("Content-Encoding", "gzip").
+		SetHeader("Content-Type", "application/json").
+		SetBody(&b).
+		Post("http://" + address + "/updates/")
+	if err != nil {
+		return err
+	}
 	return nil
 }
+
+// func sendMetricsJSON(ctx context.Context, address string, key []byte) error {
+// 	client := resty.New()
+// 	JSONMetrics, err := storageM.GetMetricsJSON()
+// 	if err != nil {
+// 		logrus.Error("Error getting metrics json format", err)
+// 	}
+
+// 	for i := 0; i < len(JSONMetrics); i++ {
+// 		select {
+// 		case <-ctx.Done():
+// 			logrus.Info("Send metrics in map ending!")
+// 			return nil
+// 		default:
+// 			met := JSONMetrics[i]
+// 			if string(key) != "" {
+// 				_, err := SaveHash(&met, []byte(key))
+// 				if err != nil {
+// 					logrus.Error("Error save hash of metrics: ", err)
+// 				}
+
+// 			}
+// 			var buf bytes.Buffer
+// 			encoder := json.NewEncoder(&buf)
+// 			err = encoder.Encode(met)
+// 			if err != nil {
+// 				logrus.Error(err)
+// 			}
+// 			_, err = client.R().
+// 				SetHeader("Content-Type", "application/json").
+// 				SetBody(&buf).
+// 				Post("http://" + address + "/update/")
+// 			if err != nil {
+// 				return err
+// 			}
+// 		}
+// 	}
+// 	return nil
+// }
 
 func SaveHash(JSONMetric *storage.JSONMetrics, key []byte) (hash string, err error) {
 	var hh string
