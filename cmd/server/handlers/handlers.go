@@ -110,7 +110,6 @@ func saveMetricsSlice() http.HandlerFunc {
 		defer r.Body.Close()
 
 		s := StorageM.GetSliceStruct()
-		metrics := StorageM.GetMetrics()
 
 		out, err := ioutil.ReadAll(r.Body)
 		if err != nil {
@@ -126,6 +125,8 @@ func saveMetricsSlice() http.HandlerFunc {
 		for i := 0; i < len(s); i++ {
 			typeMet = s[i].MType
 			nameMet = s[i].ID
+			metrics := StorageM.GetMetrics()
+
 			// logrus.Info("aaaaaaaaaaaaaaa", s)
 			if config.ArgsM.Key != "" {
 				b, err := compareHash(&s[i], []byte(config.ArgsM.Key))
@@ -150,6 +151,7 @@ func saveMetricsSlice() http.HandlerFunc {
 					if typeMet == "counter" {
 						var valueMetInt int
 						if s[i].Delta != nil {
+							// if nameMet
 							if _, ok := metrics[nameMet]; ok {
 								ii, err := strconv.Atoi(fmt.Sprintf("%v", metrics[nameMet]))
 								if err != nil {
@@ -160,6 +162,7 @@ func saveMetricsSlice() http.HandlerFunc {
 								logrus.Info(">>>>>>>>>>>>>>>>>>>>>>>>>>>>eeeeeeeeeeeeeeeee", nameMet, ": ", *s[i].Delta)
 
 								StorageM.ChangeMetric(nameMet, counter(valueMetInt), config.ArgsM)
+								logrus.Info(metrics[nameMet])
 								StorageM.ChangeMetricDB(nameMet, valueMetInt, typeMet, config.ArgsM)
 								rw.WriteHeader(http.StatusOK)
 								// return
