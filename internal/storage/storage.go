@@ -83,6 +83,7 @@ type Storage interface {
 	GetStructJSON() JSONMetrics
 	LoadMetricsFile(file []byte)
 	GetMetricsJSON() ([]JSONMetrics, error)
+	GetSliceStruct() []JSONMetrics
 }
 
 func (m *MetricsStore) LoadMetricsDB() error {
@@ -94,6 +95,8 @@ func (m *MetricsStore) LoadMetricsDB() error {
 	if err != nil {
 		logrus.Error("Error select all from table metrics: ", err)
 	}
+	m.mux.Lock()
+	defer m.mux.Unlock()
 	for row.Next() {
 		err = row.Scan(&id, &metricType, &value, &delta)
 		if err != nil {
@@ -176,11 +179,18 @@ func (m *MetricsStore) GetStructJSON() JSONMetrics {
 	return s
 }
 
+func (m *MetricsStore) GetSliceStruct() []JSONMetrics {
+	s := []JSONMetrics{}
+	return s
+}
+
 func (m *MetricsStore) GetMetricsJSON() ([]JSONMetrics, error) {
 	m.mux.Lock()
 	defer m.mux.Unlock()
 	var j []JSONMetrics
+
 	for k, v := range m.MM {
+		// logrus.Info("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkk", strings.Split(reflect.ValueOf(v).Type().String(), "."))
 		if strings.Split(reflect.ValueOf(v).Type().String(), ".")[1] == "gauge" {
 
 			a, err := strconv.ParseFloat(fmt.Sprintf("%v", v), 64)

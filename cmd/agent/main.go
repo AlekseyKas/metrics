@@ -106,15 +106,18 @@ func sendMetricsSlice(ctx context.Context, address string, key []byte) error {
 			logrus.Info("Send metrics in map ending!")
 			return nil
 		default:
-			met := JSONMetrics[i]
+			// met := JSONMetrics[i]
+			logrus.Info(string(key))
 			if string(key) != "" {
-				_, err := SaveHash(&met, []byte(key))
+				_, err := SaveHash(&JSONMetrics[i], []byte(key))
 				if err != nil {
 					logrus.Error("Error save hash of metrics: ", err)
 				}
 			}
 		}
 	}
+	// logrus.Info("oooooooo", JSONMetrics[0].Hash)
+
 	var buf bytes.Buffer
 	var b bytes.Buffer
 

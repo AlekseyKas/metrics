@@ -47,6 +47,7 @@ func Router(r chi.Router) {
 	r.Get("/ping", checkConnection())
 	r.Post("/update/{typeMet}/{nameMet}/{value}", saveMetrics())
 	r.Post("/update/", saveMetricsJSON())
+	r.Post("/updates/", saveMetricsSlice())
 	r.Post("/value/", getMetricsJSON())
 
 }
@@ -101,6 +102,117 @@ func CompressGzip(next http.Handler) http.Handler {
 			ResponseWriter: w,
 			writer:         gz,
 		}, r)
+	})
+}
+
+func saveMetricsSlice() http.HandlerFunc {
+	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		defer r.Body.Close()
+
+		s := StorageM.GetSliceStruct()
+		metrics := StorageM.GetMetrics()
+
+		out, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			logrus.Error("Error read body: ", err)
+		}
+
+		err = json.Unmarshal(out, &s)
+		if err != nil {
+			logrus.Error("Error unmarshaling request: ", err)
+		}
+		var typeMet string
+		var nameMet string
+		for i := 0; i < len(s); i++ {
+			typeMet = s[i].MType
+			nameMet = s[i].ID
+			logrus.Info(">>>>>>>>>>>>>>>>>>>>>>>>>>>>", s[i].Hash)
+			if config.ArgsM.Key != "" {
+				b, err := compareHash(&s[i], []byte(config.ArgsM.Key))
+				if err != nil {
+					logrus.Error("Error compare hash of metrics: ", err)
+				}
+				if b {
+
+					//update gauge
+					if typeMet == "gauge" {
+						if s[i].Value != nil {
+							if metrics[nameMet] != gauge(*s[i].Value) {
+								StorageM.ChangeMetric(nameMet, gauge(*s[i].Value), config.ArgsM)
+								StorageM.ChangeMetricDB(nameMet, *s[i].Value, typeMet, config.ArgsM)
+								rw.WriteHeader(http.StatusOK)
+								// return
+							}
+						}
+					}
+					//update counter
+					if typeMet == "counter" {
+						var valueMetInt int
+						if s[i].Delta != nil {
+							if _, ok := metrics[nameMet]; ok {
+								ii, err := strconv.Atoi(fmt.Sprintf("%v", metrics[nameMet]))
+								if err != nil {
+									rw.WriteHeader(http.StatusBadRequest)
+									// return
+								}
+								valueMetInt = int(*s[i].Delta) + ii
+
+								StorageM.ChangeMetric(nameMet, counter(valueMetInt), config.ArgsM)
+								StorageM.ChangeMetricDB(nameMet, valueMetInt, typeMet, config.ArgsM)
+								rw.WriteHeader(http.StatusOK)
+								// return
+							} else {
+								valueMetInt = int(*s[i].Delta)
+								StorageM.ChangeMetric(nameMet, counter(valueMetInt), config.ArgsM)
+								StorageM.ChangeMetricDB(nameMet, valueMetInt, typeMet, config.ArgsM)
+								rw.WriteHeader(http.StatusOK)
+								// return
+							}
+						}
+					}
+				}
+
+			} else {
+				if typeMet == "gauge" {
+					if s[i].Value != nil {
+						if metrics[nameMet] != gauge(*s[i].Value) {
+							StorageM.ChangeMetric(nameMet, gauge(*s[i].Value), config.ArgsM)
+							StorageM.ChangeMetricDB(nameMet, *s[i].Value, typeMet, config.ArgsM)
+							rw.WriteHeader(http.StatusOK)
+							// return
+						}
+					}
+				}
+				//update counter
+				if typeMet == "counter" {
+					var valueMetInt int
+
+					if s[i].Delta != nil {
+						if _, ok := metrics[nameMet]; ok {
+							ii, err := strconv.Atoi(fmt.Sprintf("%v", metrics[nameMet]))
+							if err != nil {
+
+								logrus.Error("Error convert metric: ", err)
+								// return
+							}
+							logrus.Info("mmmmmmmmmmmmmmm", s[i].Delta, metrics[nameMet])
+							valueMetInt = int(*s[i].Delta) + ii
+
+							StorageM.ChangeMetric(nameMet, counter(valueMetInt), config.ArgsM)
+							StorageM.ChangeMetricDB(nameMet, valueMetInt, typeMet, config.ArgsM)
+							rw.WriteHeader(http.StatusOK)
+							// return
+						} else {
+							valueMetInt = int(*s[i].Delta)
+							StorageM.ChangeMetric(nameMet, counter(valueMetInt), config.ArgsM)
+							StorageM.ChangeMetricDB(nameMet, valueMetInt, typeMet, config.ArgsM)
+							rw.WriteHeader(http.StatusOK)
+							// return
+						}
+					}
+				}
+			}
+		}
 	})
 }
 
@@ -191,7 +303,6 @@ func getMetricsJSON() http.HandlerFunc {
 					encoder := json.NewEncoder(&buf)
 					err = encoder.Encode(s)
 					if err != nil {
-						logrus.Info(err)
 						http.Error(rw, err.Error(), http.StatusBadRequest)
 					}
 					rw.Write(buf.Bytes())
@@ -214,13 +325,11 @@ func calculateHash(s *storage.JSONMetrics, key []byte) error {
 	switch s.MType {
 	case "counter":
 		data := (fmt.Sprintf("%s:counter:%d", s.ID, *s.Delta))
-		logrus.Info(data)
 		h = hmac.New(sha256.New, key)
 		h.Write([]byte(data))
 		s.Hash = fmt.Sprintf("%x", h.Sum(nil))
 	case "gauge":
 		data := (fmt.Sprintf("%s:gauge:%f", s.ID, *s.Value))
-		logrus.Info(data)
 		h = hmac.New(sha256.New, key)
 		h.Write([]byte(data))
 		s.Hash = fmt.Sprintf("%x", h.Sum(nil))
@@ -268,7 +377,9 @@ func saveMetricsJSON() http.HandlerFunc {
 				rw.WriteHeader(http.StatusInternalServerError)
 				return
 			} else {
+
 				if metrics[nameMet] != gauge(*s.Value) {
+					logrus.Info("llllllllllllllllllllllllll", s)
 					StorageM.ChangeMetric(nameMet, gauge(*s.Value), config.ArgsM)
 					StorageM.ChangeMetricDB(nameMet, *s.Value, typeMet, config.ArgsM)
 					rw.WriteHeader(http.StatusOK)
@@ -317,12 +428,10 @@ func compareHash(s *storage.JSONMetrics, key []byte) (b bool, err error) {
 	switch s.MType {
 	case "counter":
 		data := (fmt.Sprintf("%s:counter:%d", s.ID, *s.Delta))
-		logrus.Info(data)
 		h = hmac.New(sha256.New, key)
 		h.Write([]byte(data))
 	case "gauge":
 		data := (fmt.Sprintf("%s:gauge:%f", s.ID, *s.Value))
-		logrus.Info(data)
 		h = hmac.New(sha256.New, key)
 		h.Write([]byte(data))
 	}
