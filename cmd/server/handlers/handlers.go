@@ -156,7 +156,7 @@ func saveMetricsSlice() http.HandlerFunc {
 									// return
 								}
 								valueMetInt = int(*s[i].Delta) + ii
-								logrus.Info(">>>>>>>>>>>>>>>>>>>>>>>>>>>>eeeeeeeeeeeeeeeee", *s[i].Delta)
+								logrus.Info(">>>>>>>>>>>>>>>>>>>>>>>>>>>>eeeeeeeeeeeeeeeee", nameMet, ": ", *s[i].Delta)
 
 								StorageM.ChangeMetric(nameMet, counter(valueMetInt), config.ArgsM)
 								StorageM.ChangeMetricDB(nameMet, valueMetInt, typeMet, config.ArgsM)
@@ -164,7 +164,7 @@ func saveMetricsSlice() http.HandlerFunc {
 								// return
 							} else {
 								valueMetInt = int(*s[i].Delta)
-								logrus.Info(">>>>>>>>>>>>>>>>>>>>>>>>>>>>000000000", *s[i].Delta)
+								logrus.Info(">>>>>>>>>>>>>>>>>>>>>>>>>>>>000000000----", nameMet, ": ", *s[i].Delta)
 								StorageM.ChangeMetric(nameMet, counter(valueMetInt), config.ArgsM)
 								StorageM.ChangeMetricDB(nameMet, valueMetInt, typeMet, config.ArgsM)
 								rw.WriteHeader(http.StatusOK)

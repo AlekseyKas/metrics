@@ -36,7 +36,7 @@ func main() {
 	}
 	SetStorageAgent(s)
 	termEnvFlags()
-	fmt.Println(config.ArgsM.Key)
+	// fmt.Println(config.ArgsM.Key)
 	ctx, cancel := context.WithCancel(context.Background())
 	go waitSignals(cancel)
 	go UpdateMetrics(ctx, config.ArgsM.PollInterval)
@@ -107,7 +107,7 @@ func sendMetricsSlice(ctx context.Context, address string, key []byte) error {
 			return nil
 		default:
 			// met := JSONMetrics[i]
-			logrus.Info(string(key))
+			// logrus.Info(string(key))
 			if string(key) != "" {
 				_, err := SaveHash(&JSONMetrics[i], []byte(key))
 				if err != nil {
