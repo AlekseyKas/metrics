@@ -15,11 +15,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/AlekseyKas/metrics/internal/config"
-	"github.com/AlekseyKas/metrics/internal/storage"
 	"github.com/fatih/structs"
 	"github.com/go-resty/resty/v2"
 	"github.com/sirupsen/logrus"
+
+	"github.com/AlekseyKas/metrics/internal/config"
+	"github.com/AlekseyKas/metrics/internal/storage"
 )
 
 var storageM storage.StorageAgent
@@ -89,8 +90,6 @@ func termEnvFlags() {
 	} else {
 		config.ArgsM.Key = env.Key
 	}
-
-	// fmt.Println(config.ArgsM.Key)
 }
 func sendMetricsSlice(ctx context.Context, address string, key []byte) error {
 	client := resty.New()
@@ -106,8 +105,6 @@ func sendMetricsSlice(ctx context.Context, address string, key []byte) error {
 			logrus.Info("Send metrics in map ending!")
 			return nil
 		default:
-			// met := JSONMetrics[i]
-			// logrus.Info(string(key))
 			if string(key) != "" {
 				_, err := SaveHash(&JSONMetrics[i], []byte(key))
 				if err != nil {
@@ -145,45 +142,6 @@ func sendMetricsSlice(ctx context.Context, address string, key []byte) error {
 	return nil
 }
 
-// func sendMetricsJSON(ctx context.Context, address string, key []byte) error {
-// 	client := resty.New()
-// 	JSONMetrics, err := storageM.GetMetricsJSON()
-// 	if err != nil {
-// 		logrus.Error("Error getting metrics json format", err)
-// 	}
-
-// 	for i := 0; i < len(JSONMetrics); i++ {
-// 		select {
-// 		case <-ctx.Done():
-// 			logrus.Info("Send metrics in map ending!")
-// 			return nil
-// 		default:
-// 			met := JSONMetrics[i]
-// 			if string(key) != "" {
-// 				_, err := SaveHash(&met, []byte(key))
-// 				if err != nil {
-// 					logrus.Error("Error save hash of metrics: ", err)
-// 				}
-
-// 			}
-// 			var buf bytes.Buffer
-// 			encoder := json.NewEncoder(&buf)
-// 			err = encoder.Encode(met)
-// 			if err != nil {
-// 				logrus.Error(err)
-// 			}
-// 			_, err = client.R().
-// 				SetHeader("Content-Type", "application/json").
-// 				SetBody(&buf).
-// 				Post("http://" + address + "/update/")
-// 			if err != nil {
-// 				return err
-// 			}
-// 		}
-// 	}
-// 	return nil
-// }
-
 func SaveHash(JSONMetric *storage.JSONMetrics, key []byte) (hash string, err error) {
 	var hh string
 	switch JSONMetric.MType {
@@ -195,7 +153,6 @@ func SaveHash(JSONMetric *storage.JSONMetrics, key []byte) (hash string, err err
 		hh = fmt.Sprintf("%x", h.Sum(nil))
 	case "gauge":
 		data := (fmt.Sprintf("%s:gauge:%f", JSONMetric.ID, *JSONMetric.Value))
-		// logrus.Info(data)
 		h := hmac.New(sha256.New, key)
 		h.Write([]byte(data))
 		JSONMetric.Hash = fmt.Sprintf("%x", h.Sum(nil))
@@ -230,7 +187,6 @@ func UpdateMetrics(ctx context.Context, pollInterval time.Duration) {
 		case <-time.After(pollInterval):
 			var memStats runtime.MemStats
 			runtime.ReadMemStats(&memStats)
-			// sendMetrics(ctx)
 			storageM.ChangeMetrics(memStats)
 		}
 	}

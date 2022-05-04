@@ -10,13 +10,6 @@ import (
 var FlagsServer FlagsServ
 var FlagsAgent FlagsAg
 
-// type ConfigDB struct {
-// 	User     string
-// 	Adddress string
-// 	Password string
-// 	NameDB   string
-// }
-
 type FlagsServ struct {
 	Address       string
 	Key           string

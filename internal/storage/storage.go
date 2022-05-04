@@ -11,9 +11,10 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/AlekseyKas/metrics/cmd/server/database"
 	"github.com/AlekseyKas/metrics/internal/config"
-	"github.com/sirupsen/logrus"
 )
 
 //init typs
@@ -190,7 +191,6 @@ func (m *MetricsStore) GetMetricsJSON() ([]JSONMetrics, error) {
 	var j []JSONMetrics
 
 	for k, v := range m.MM {
-		// logrus.Info("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkk", strings.Split(reflect.ValueOf(v).Type().String(), "."))
 		if strings.Split(reflect.ValueOf(v).Type().String(), ".")[1] == "gauge" {
 
 			a, err := strconv.ParseFloat(fmt.Sprintf("%v", v), 64)
@@ -275,8 +275,6 @@ func (m *MetricsStore) ChangeMetric(nameMet string, value interface{}, params co
 		}
 		file.Write(data)
 	} else {
-		// m.mux.Lock()
-		// defer m.mux.Unlock()
 		m.MM[nameMet] = value
 	}
 

@@ -16,12 +16,13 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/AlekseyKas/metrics/cmd/server/database"
-	"github.com/AlekseyKas/metrics/internal/config"
-	"github.com/AlekseyKas/metrics/internal/storage"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/sirupsen/logrus"
+
+	"github.com/AlekseyKas/metrics/cmd/server/database"
+	"github.com/AlekseyKas/metrics/internal/config"
+	"github.com/AlekseyKas/metrics/internal/storage"
 )
 
 //init typs
@@ -141,7 +142,6 @@ func saveMetricsSlice() http.HandlerFunc {
 								StorageM.ChangeMetric(nameMet, gauge(*s[i].Value), config.ArgsM)
 								StorageM.ChangeMetricDB(nameMet, *s[i].Value, typeMet, config.ArgsM)
 								rw.WriteHeader(http.StatusOK)
-								// return
 							}
 						}
 					}

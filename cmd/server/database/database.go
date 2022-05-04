@@ -3,9 +3,10 @@ package database
 import (
 	"os"
 
-	"github.com/AlekseyKas/metrics/internal/config"
 	"github.com/jackc/pgx"
 	"github.com/sirupsen/logrus"
+
+	"github.com/AlekseyKas/metrics/internal/config"
 )
 
 var Conn *pgx.Conn

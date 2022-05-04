@@ -5,11 +5,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/AlekseyKas/metrics/internal/config"
-	"github.com/AlekseyKas/metrics/internal/storage"
 	"github.com/fatih/structs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/AlekseyKas/metrics/internal/config"
+	"github.com/AlekseyKas/metrics/internal/storage"
 )
 
 var Hash string
@@ -25,7 +26,7 @@ func TestClient(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		p := config.LoadConfig()
 		err := sendMetricsSlice(ctx, p.Address, []byte(p.Key))
-		require.Error(t, err)
+		require.NoError(t, err)
 		time.AfterFunc(4*time.Second, cancel)
 	})
 }

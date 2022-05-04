@@ -11,13 +11,14 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/fatih/structs"
+	"github.com/go-chi/chi"
+	"github.com/sirupsen/logrus"
+
 	"github.com/AlekseyKas/metrics/cmd/server/database"
 	"github.com/AlekseyKas/metrics/cmd/server/handlers"
 	"github.com/AlekseyKas/metrics/internal/config"
 	"github.com/AlekseyKas/metrics/internal/storage"
-	"github.com/fatih/structs"
-	"github.com/go-chi/chi"
-	"github.com/sirupsen/logrus"
 )
 
 var wg sync.WaitGroup
