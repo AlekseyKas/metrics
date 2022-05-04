@@ -26,7 +26,7 @@ func TestClient(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		p := config.LoadConfig()
 		err := sendMetricsSlice(ctx, p.Address, []byte(p.Key))
-		require.NoError(t, err)
+		require.Error(t, err)
 		time.AfterFunc(4*time.Second, cancel)
 	})
 }
