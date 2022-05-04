@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -90,9 +89,7 @@ func syncFile(env config.Args, ctx context.Context) {
 			return
 		}
 	} else {
-
 		if env.StoreInterval == 0 {
-
 			metrics, _ := handlers.StorageM.GetMetricsJSON()
 			file, err := os.Create(env.StoreFile)
 			if err != nil {
@@ -146,7 +143,6 @@ func termEnvFlags() {
 	flag.BoolVar(&config.FlagsServer.Restore, "r", true, "Restire drom file")
 	flag.DurationVar(&config.FlagsServer.StoreInterval, "i", 300000000000, "Interval store file")
 	flag.Parse()
-	fmt.Println(".....................", config.FlagsServer)
 	env := config.LoadConfig()
 	envADDR, _ := os.LookupEnv("ADDRESS")
 	if envADDR == "" {

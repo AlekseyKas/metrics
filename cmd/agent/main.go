@@ -189,8 +189,6 @@ func SaveHash(JSONMetric *storage.JSONMetrics, key []byte) (hash string, err err
 	switch JSONMetric.MType {
 	case "counter":
 		data := (fmt.Sprintf("%s:counter:%d", JSONMetric.ID, *JSONMetric.Delta))
-
-		logrus.Info("kkkkkkkssssssssssssssss", data)
 		h := hmac.New(sha256.New, key)
 		h.Write([]byte(data))
 		JSONMetric.Hash = fmt.Sprintf("%x", h.Sum(nil))

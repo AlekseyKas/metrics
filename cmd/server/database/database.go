@@ -1,7 +1,6 @@
 package database
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/AlekseyKas/metrics/internal/config"
@@ -25,7 +24,7 @@ func DBConnect() error {
 		logrus.Error("Error connection to DB: ", err)
 		os.Exit(1)
 	} else {
-		fmt.Printf("Connected to the DB: true [" + os.Getenv("DATABASE_URL") + "] \n")
+		logrus.Info("Connected to the DB: true [" + os.Getenv("DATABASE_DSN") + "] \n")
 	}
 	return nil
 }
