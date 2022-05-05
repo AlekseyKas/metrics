@@ -12,12 +12,15 @@ var FlagsAgent FlagsAg
 
 type FlagsServ struct {
 	Address       string
+	Key           string
 	Restore       bool
 	StoreInterval time.Duration
-	StoreFIle     string
+	StoreFile     string
+	DBURL         string
 }
 type FlagsAg struct {
 	Address        string
+	Key            string
 	ReportInterval time.Duration
 	PollInterval   time.Duration
 }
@@ -29,9 +32,13 @@ type Param struct {
 	StoreInterval  time.Duration `env:"STORE_INTERVAL" envDefault:"300s"`
 	StoreFile      string        `env:"STORE_FILE" envDefault:"/tmp/devops-metrics-db.json"`
 	Restore        bool          `env:"RESTORE" envDefault:"true"`
+	Key            string        `env:"KEY"`
+	DBURL          string        `env:"DATABASE_DSN"`
 }
 type Args struct {
+	DBURL          string
 	Address        string
+	Key            string
 	PollInterval   time.Duration
 	ReportInterval time.Duration
 	StoreInterval  time.Duration

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -12,37 +11,74 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/AlekseyKas/metrics/cmd/server/handlers"
-	"github.com/AlekseyKas/metrics/internal/config"
-	"github.com/AlekseyKas/metrics/internal/storage"
 	"github.com/fatih/structs"
 	"github.com/go-chi/chi"
 	"github.com/sirupsen/logrus"
+
+	"github.com/AlekseyKas/metrics/cmd/server/database"
+	"github.com/AlekseyKas/metrics/cmd/server/handlers"
+	"github.com/AlekseyKas/metrics/internal/config"
+	"github.com/AlekseyKas/metrics/internal/storage"
 )
 
 var wg sync.WaitGroup
 
 func main() {
-
 	//инициализация хранилища метрик
 	s := &storage.MetricsStore{
 		MM: structs.Map(storage.Metrics{}),
 	}
 	termEnvFlags()
-	fmt.Println("")
 	handlers.SetStorage(s)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	wg.Add(1)
-	go syncFile(config.ArgsM, ctx)
-	wg.Add(1)
 	go waitSignals(cancel)
 
+	//load metrics from file
+	if config.ArgsM.StoreFile != "" {
+		err := loadFromFile(config.ArgsM)
+		if err != nil {
+			logrus.Error("Error load from file: ", err)
+		}
+	}
+	//DB connection
+	if config.ArgsM.DBURL != "" {
+		err := database.DBConnect()
+		if err != nil {
+			logrus.Error("Connection to postrgres faild: ", err)
+		}
+		jm, err := handlers.StorageM.GetMetricsJSON()
+		if err != nil {
+			logrus.Error("Error getting metricsJSON for database: ", err)
+		}
+		handlers.StorageM.InitDB(jm)
+		//restore from DB
+		if !config.ArgsM.Restore && config.ArgsM.DBURL != "" {
+			handlers.StorageM.LoadMetricsDB()
+		}
+	}
+	wg.Add(1)
+	//sync metrics with file
+	go syncFile(config.ArgsM, ctx)
 	r := chi.NewRouter()
 	r.Route("/", handlers.Router)
 	go http.ListenAndServe(config.ArgsM.Address, r)
 
 	wg.Wait()
+}
+
+func loadFromFile(env config.Args) error {
+	if env.Restore && fileExist(env.StoreFile) {
+		file, err := os.ReadFile(env.StoreFile)
+		if err != nil {
+			logrus.Error("Error open file for writing: ", err)
+			wg.Done()
+			return err
+		}
+		handlers.StorageM.LoadMetricsFile(file)
+	}
+	return nil
 }
 
 func syncFile(env config.Args, ctx context.Context) {
@@ -54,20 +90,7 @@ func syncFile(env config.Args, ctx context.Context) {
 			return
 		}
 	} else {
-		//restore data from file
-
-		if env.Restore && fileExist(env.StoreFile) {
-
-			file, err := os.ReadFile(env.StoreFile)
-			if err != nil {
-				logrus.Error("Error open file for writing: ", err)
-				wg.Done()
-				return
-			}
-			handlers.StorageM.LoadMetricsFile(file)
-		}
 		if env.StoreInterval == 0 {
-
 			metrics, _ := handlers.StorageM.GetMetricsJSON()
 			file, err := os.Create(env.StoreFile)
 			if err != nil {
@@ -115,11 +138,12 @@ func syncFile(env config.Args, ctx context.Context) {
 func termEnvFlags() {
 	// kong.Parse(&config.FlagsServer)
 	flag.StringVar(&config.FlagsServer.Address, "a", "127.0.0.1:8080", "Address")
-	flag.StringVar(&config.FlagsServer.StoreFIle, "f", "/tmp/devops-metrics-db.json", "File path store")
+	flag.StringVar(&config.FlagsServer.DBURL, "d", "", "Database URL")
+	flag.StringVar(&config.FlagsServer.StoreFile, "f", "", "File path store")
+	flag.StringVar(&config.FlagsServer.Key, "k", "", "Secret key")
 	flag.BoolVar(&config.FlagsServer.Restore, "r", true, "Restire drom file")
 	flag.DurationVar(&config.FlagsServer.StoreInterval, "i", 300000000000, "Interval store file")
 	flag.Parse()
-	fmt.Println(config.FlagsServer)
 	env := config.LoadConfig()
 	envADDR, _ := os.LookupEnv("ADDRESS")
 	if envADDR == "" {
@@ -140,16 +164,37 @@ func termEnvFlags() {
 	} else {
 		config.ArgsM.StoreInterval = env.StoreInterval
 	}
-	envFile, _ := os.LookupEnv("STORE_FILE")
-	if envFile == "" {
-		config.ArgsM.StoreFile = config.FlagsServer.StoreFIle
+	envKey, _ := os.LookupEnv("KEY")
+	if envKey == "" {
+		config.ArgsM.Key = config.FlagsServer.Key
 	} else {
-		config.ArgsM.StoreFile = env.StoreFile
+		config.ArgsM.Key = env.Key
 	}
-	// fmt.Println("----------------", "Env address: ", env.Address, "Env Pollinterval: ", env.PollInterval, "Env ReportInterval: ", env.ReportInterval, "Env Restore: ", env.Restore, "Env Storefile: ", env.StoreFile, "Env Storeinsterval: ", env.StoreInterval)
-	// fmt.Println("Env address: ", env.Address, "Env Pollinterval: ", env.PollInterval, "Env ReportInterval: ", env.ReportInterval, "Env Restore: ", env.Restore, "Env Storefile: ", env.StoreFile, "Env Storeinsterval: ", env.StoreInterval, "----------------")
-	// fmt.Println("==============", "Flag address: ", config.ArgsM.Address, "Flag Pollinterval: ", config.ArgsM.PollInterval, "Flag ReportInterval: ", config.ArgsM.ReportInterval, "Flag Restore: ", config.ArgsM.Restore, "Flag Storefile: ", config.ArgsM.StoreFile, "Flag Storeinsterval: ", config.ArgsM.StoreInterval, "===================")
 
+	envFile, b := os.LookupEnv("STORE_FILE")
+
+	switch envFile == "" && b {
+	case true:
+		config.ArgsM.StoreFile = ""
+	case false:
+		if envFile == "" {
+			config.ArgsM.StoreFile = config.FlagsServer.StoreFile
+		} else {
+			config.ArgsM.StoreFile = env.StoreFile
+		}
+	}
+
+	envDBURL, _ := os.LookupEnv("DATABASE_DSN")
+
+	if envDBURL == "" && config.FlagsServer.DBURL == "" {
+		config.ArgsM.DBURL = ""
+	} else {
+		if envDBURL != "" {
+			config.ArgsM.DBURL = envDBURL
+		} else {
+			config.ArgsM.DBURL = config.FlagsServer.DBURL
+		}
+	}
 }
 
 func fileExist(file string) bool {
@@ -170,9 +215,12 @@ func waitSignals(cancel context.CancelFunc) {
 		sig := <-terminate
 		switch sig {
 		case os.Interrupt:
-			logrus.Info("File syncing is terminate!")
+			if config.ArgsM.DBURL != "" {
+				database.DBClose()
+			}
 			cancel()
 			wg.Done()
+			logrus.Info("Terminate signal OS!")
 			return
 		}
 	}

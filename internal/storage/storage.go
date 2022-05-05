@@ -11,8 +11,10 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/AlekseyKas/metrics/internal/config"
 	"github.com/sirupsen/logrus"
+
+	"github.com/AlekseyKas/metrics/cmd/server/database"
+	"github.com/AlekseyKas/metrics/internal/config"
 )
 
 //init typs
@@ -58,6 +60,7 @@ type JSONMetrics struct {
 	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
 	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
 	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
+	Hash  string   `json:"hash,omitempty"`  // значение хеш-функции
 }
 
 type MetricsStore struct {
@@ -69,16 +72,73 @@ type MetricsStore struct {
 type StorageAgent interface {
 	GetMetrics() map[string]interface{}
 	ChangeMetrics(metrics runtime.MemStats) error
-
 	GetMetricsJSON() ([]JSONMetrics, error)
 }
 
 type Storage interface {
+	InitDB(jm []JSONMetrics) error
+	LoadMetricsDB() error
+	ChangeMetricDB(nameMet string, value interface{}, typeMet string, params config.Args) error
 	GetMetrics() map[string]interface{}
 	ChangeMetric(nameMet string, value interface{}, params config.Args) error
 	GetStructJSON() JSONMetrics
 	LoadMetricsFile(file []byte)
 	GetMetricsJSON() ([]JSONMetrics, error)
+	GetSliceStruct() []JSONMetrics
+}
+
+func (m *MetricsStore) LoadMetricsDB() error {
+	var id string
+	var metricType string
+	var value *float64
+	var delta *int64
+	row, err := database.Conn.Query("SELECT id, metric_type, value, delta FROM metrics")
+	if err != nil {
+		logrus.Error("Error select all from table metrics: ", err)
+	}
+	m.mux.Lock()
+	defer m.mux.Unlock()
+	for row.Next() {
+		err = row.Scan(&id, &metricType, &value, &delta)
+		if err != nil {
+			logrus.Error("Error scan row in select all: ", err)
+		}
+		if metricType == "gauge" {
+			m.MM[id] = value
+		} else {
+			m.MM[id] = delta
+		}
+	}
+	return nil
+}
+
+//update metric in database
+func (m *MetricsStore) ChangeMetricDB(nameMet string, value interface{}, typeMet string, params config.Args) error {
+	if params.DBURL != "" {
+		switch typeMet {
+		case "gauge":
+			_, err := database.Conn.Exec("INSERT INTO metrics (id, metric_type, value) VALUES($1,$2,$3) ON CONFLICT (id) DO UPDATE SET value = $3", nameMet, typeMet, value)
+			if err != nil {
+				logrus.Error("Error insert metric gauge in database: ", err)
+			}
+		case "counter":
+			_, err := database.Conn.Exec("INSERT INTO metrics (id, metric_type, delta) VALUES($1,$2,$3) ON CONFLICT (id) DO UPDATE SET delta = $3", nameMet, typeMet, value)
+			if err != nil {
+				logrus.Error("Error insert metric counter in database: ", err)
+			}
+		}
+	}
+	return nil
+}
+
+//init database if don't exist table
+func (m *MetricsStore) InitDB(jm []JSONMetrics) error {
+
+	_, err := database.Conn.Exec("CREATE TABLE IF NOT EXISTS metrics (id VARCHAR NOT NULL UNIQUE, metric_type VARCHAR NOT NULL, delta BIGINT, value DOUBLE PRECISION)")
+	if err != nil {
+		logrus.Error("Error create table: ", err)
+	}
+	return nil
 }
 
 func (m *MetricsStore) LoadMetricsFile(file []byte) {
@@ -120,10 +180,16 @@ func (m *MetricsStore) GetStructJSON() JSONMetrics {
 	return s
 }
 
+func (m *MetricsStore) GetSliceStruct() []JSONMetrics {
+	s := []JSONMetrics{}
+	return s
+}
+
 func (m *MetricsStore) GetMetricsJSON() ([]JSONMetrics, error) {
 	m.mux.Lock()
 	defer m.mux.Unlock()
 	var j []JSONMetrics
+
 	for k, v := range m.MM {
 		if strings.Split(reflect.ValueOf(v).Type().String(), ".")[1] == "gauge" {
 
@@ -209,8 +275,6 @@ func (m *MetricsStore) ChangeMetric(nameMet string, value interface{}, params co
 		}
 		file.Write(data)
 	} else {
-		// m.mux.Lock()
-		// defer m.mux.Unlock()
 		m.MM[nameMet] = value
 	}
 
