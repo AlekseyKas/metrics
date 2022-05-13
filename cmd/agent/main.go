@@ -210,7 +210,7 @@ func UpdateMetricsNew(ctx context.Context, pollInterval time.Duration) {
 		select {
 		//send command to ending
 		case <-ctx.Done():
-			logrus.Info("Agent is down update metrics!")
+			logrus.Info("Agent is down update metrics mem & cpu!")
 			wg.Done()
 			return
 		case <-time.After(pollInterval):
@@ -223,9 +223,6 @@ func UpdateMetricsNew(ctx context.Context, pollInterval time.Duration) {
 				logrus.Error(err)
 			}
 			storageM.ChangeMetricsNew(mem, cpu)
-			// logrus.Info("=======================", mem)
-			// logrus.Info("-----------------------", cpu[0])
-
 		}
 	}
 }
