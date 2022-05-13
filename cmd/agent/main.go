@@ -18,6 +18,9 @@ import (
 
 	"github.com/fatih/structs"
 	"github.com/go-resty/resty/v2"
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/mem"
+
 	"github.com/sirupsen/logrus"
 
 	"github.com/AlekseyKas/metrics/internal/config"
@@ -39,26 +42,15 @@ func main() {
 	}
 	SetStorageAgent(s)
 	termEnvFlags()
-	// fmt.Println(config.ArgsM.Key)
 	ctx, cancel := context.WithCancel(context.Background())
 	wg.Add(1)
 	go waitSignals(cancel)
 	wg.Add(1)
 	go UpdateMetrics(ctx, config.ArgsM.PollInterval)
+	go UpdateMetricsNew(ctx, config.ArgsM.PollInterval)
 	wg.Add(1)
 	go SendMetrics(ctx)
-	// for {
-	// 	select {
-	// 	case <-ctx.Done():
-	// 		logrus.Info("Agent is down send metrics.")
-	// 		return
-	// 	case <-time.After(config.ArgsM.PollInterval):
-	// 		err := sendMetricsSlice(ctx, config.ArgsM.Address, []byte(config.ArgsM.Key))
-	// 		if err != nil {
-	// 			logrus.Error("Error sending POST: ", err)
-	// 		}
-	// 	}
-	// }
+
 	wg.Wait()
 
 }
@@ -133,10 +125,6 @@ func sendMetricsSlice(ctx context.Context, address string, key []byte) error {
 					logrus.Error("Error save hash of metrics: ", err)
 				}
 			}
-			// if JSONMetrics[i].ID == "PollCount" {
-			// 	logrus.Info("oooooooo", *JSONMetrics[i].Delta, ": ", JSONMetrics[i].Hash)
-
-			// }
 		}
 	}
 
@@ -212,6 +200,32 @@ func UpdateMetrics(ctx context.Context, pollInterval time.Duration) {
 			var memStats runtime.MemStats
 			runtime.ReadMemStats(&memStats)
 			storageM.ChangeMetrics(memStats)
+		}
+	}
+}
+
+//Update metrics
+func UpdateMetricsNew(ctx context.Context, pollInterval time.Duration) {
+	for {
+		select {
+		//send command to ending
+		case <-ctx.Done():
+			logrus.Info("Agent is down update metrics!")
+			wg.Done()
+			return
+		case <-time.After(pollInterval):
+			mem, err := mem.VirtualMemory()
+			if err != nil {
+				logrus.Error(err)
+			}
+			cpu, err := cpu.Percent(time.Second, false)
+			if err != nil {
+				logrus.Error(err)
+			}
+			storageM.ChangeMetricsNew(mem, cpu)
+			// logrus.Info("=======================", mem)
+			// logrus.Info("-----------------------", cpu[0])
+
 		}
 	}
 }
