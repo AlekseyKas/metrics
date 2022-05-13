@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"sync"
 	"syscall"
 	"time"
 
@@ -24,6 +25,7 @@ import (
 )
 
 var storageM storage.StorageAgent
+var wg sync.WaitGroup
 
 func SetStorageAgent(s storage.StorageAgent) {
 	storageM = s
@@ -39,13 +41,34 @@ func main() {
 	termEnvFlags()
 	// fmt.Println(config.ArgsM.Key)
 	ctx, cancel := context.WithCancel(context.Background())
+	wg.Add(1)
 	go waitSignals(cancel)
+	wg.Add(1)
 	go UpdateMetrics(ctx, config.ArgsM.PollInterval)
+	wg.Add(1)
+	go SendMetrics(ctx)
+	// for {
+	// 	select {
+	// 	case <-ctx.Done():
+	// 		logrus.Info("Agent is down send metrics.")
+	// 		return
+	// 	case <-time.After(config.ArgsM.PollInterval):
+	// 		err := sendMetricsSlice(ctx, config.ArgsM.Address, []byte(config.ArgsM.Key))
+	// 		if err != nil {
+	// 			logrus.Error("Error sending POST: ", err)
+	// 		}
+	// 	}
+	// }
+	wg.Wait()
 
+}
+
+func SendMetrics(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
 			logrus.Info("Agent is down send metrics.")
+			wg.Done()
 			return
 		case <-time.After(config.ArgsM.PollInterval):
 			err := sendMetricsSlice(ctx, config.ArgsM.Address, []byte(config.ArgsM.Key))
@@ -54,7 +77,6 @@ func main() {
 			}
 		}
 	}
-
 }
 
 func termEnvFlags() {
@@ -111,10 +133,10 @@ func sendMetricsSlice(ctx context.Context, address string, key []byte) error {
 					logrus.Error("Error save hash of metrics: ", err)
 				}
 			}
-			if JSONMetrics[i].ID == "PollCount" {
-				logrus.Info("oooooooo", *JSONMetrics[i].Delta, ": ", JSONMetrics[i].Hash)
+			// if JSONMetrics[i].ID == "PollCount" {
+			// 	logrus.Info("oooooooo", *JSONMetrics[i].Delta, ": ", JSONMetrics[i].Hash)
 
-			}
+			// }
 		}
 	}
 
@@ -171,6 +193,7 @@ func waitSignals(cancel context.CancelFunc) {
 		case os.Interrupt:
 			logrus.Info("Agent is down terminate!")
 			cancel()
+			wg.Done()
 			return
 		}
 	}
@@ -183,6 +206,7 @@ func UpdateMetrics(ctx context.Context, pollInterval time.Duration) {
 		//send command to ending
 		case <-ctx.Done():
 			logrus.Info("Agent is down update metrics!")
+			wg.Done()
 			return
 		case <-time.After(pollInterval):
 			var memStats runtime.MemStats
