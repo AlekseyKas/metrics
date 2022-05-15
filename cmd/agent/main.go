@@ -20,7 +20,6 @@ import (
 	"github.com/go-resty/resty/v2"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/mem"
-
 	"github.com/sirupsen/logrus"
 
 	"github.com/AlekseyKas/metrics/internal/config"
@@ -28,13 +27,13 @@ import (
 )
 
 var storageM storage.StorageAgent
-var wg sync.WaitGroup
 
 func SetStorageAgent(s storage.StorageAgent) {
 	storageM = s
 }
 
 func main() {
+	var wg = &sync.WaitGroup{}
 	var MapMetrics map[string]interface{} = structs.Map(storage.Metrics{})
 	//инициализация хранилища метрик
 	s := &storage.MetricsStore{
@@ -43,24 +42,22 @@ func main() {
 	SetStorageAgent(s)
 	termEnvFlags()
 	ctx, cancel := context.WithCancel(context.Background())
-	wg.Add(1)
-	go waitSignals(cancel)
-	wg.Add(1)
-	go UpdateMetrics(ctx, config.ArgsM.PollInterval)
-	go UpdateMetricsNew(ctx, config.ArgsM.PollInterval)
-	wg.Add(1)
-	go SendMetrics(ctx)
+	wg.Add(4)
+	go waitSignals(cancel, wg)
+	go UpdateMetrics(ctx, config.ArgsM.PollInterval, wg)
+	go UpdateMetricsNew(ctx, config.ArgsM.PollInterval, wg)
+	go SendMetrics(ctx, wg)
 
 	wg.Wait()
 
 }
 
-func SendMetrics(ctx context.Context) {
+func SendMetrics(ctx context.Context, wg *sync.WaitGroup) {
+	defer wg.Done()
 	for {
 		select {
 		case <-ctx.Done():
 			logrus.Info("Agent is down send metrics.")
-			wg.Done()
 			return
 		case <-time.After(config.ArgsM.PollInterval):
 			err := sendMetricsSlice(ctx, config.ArgsM.Address, []byte(config.ArgsM.Key))
@@ -127,7 +124,6 @@ func sendMetricsSlice(ctx context.Context, address string, key []byte) error {
 			}
 		}
 	}
-
 	var buf bytes.Buffer
 	var b bytes.Buffer
 
@@ -172,29 +168,23 @@ func SaveHash(JSONMetric *storage.JSONMetrics, key []byte) (hash string, err err
 }
 
 //wating signals
-func waitSignals(cancel context.CancelFunc) {
+func waitSignals(cancel context.CancelFunc, wg *sync.WaitGroup) {
+	defer wg.Done()
 	terminate := make(chan os.Signal, 1)
 	signal.Notify(terminate, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
-	for {
-		sig := <-terminate
-		switch sig {
-		case os.Interrupt:
-			logrus.Info("Agent is down terminate!")
-			cancel()
-			wg.Done()
-			return
-		}
-	}
+	<-terminate
+	logrus.Info("Agent is down terminate!")
+	cancel()
 }
 
 //Update metrics
-func UpdateMetrics(ctx context.Context, pollInterval time.Duration) {
+func UpdateMetrics(ctx context.Context, pollInterval time.Duration, wg *sync.WaitGroup) {
+	defer wg.Done()
 	for {
 		select {
 		//send command to ending
 		case <-ctx.Done():
 			logrus.Info("Agent is down update metrics!")
-			wg.Done()
 			return
 		case <-time.After(pollInterval):
 			var memStats runtime.MemStats
@@ -205,13 +195,13 @@ func UpdateMetrics(ctx context.Context, pollInterval time.Duration) {
 }
 
 //Update metrics
-func UpdateMetricsNew(ctx context.Context, pollInterval time.Duration) {
+func UpdateMetricsNew(ctx context.Context, pollInterval time.Duration, wg *sync.WaitGroup) {
+	defer wg.Done()
 	for {
 		select {
 		//send command to ending
 		case <-ctx.Done():
 			logrus.Info("Agent is down update metrics mem & cpu!")
-			wg.Done()
 			return
 		case <-time.After(pollInterval):
 			mem, err := mem.VirtualMemory()

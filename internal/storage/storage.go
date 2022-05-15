@@ -259,7 +259,6 @@ func (m *MetricsStore) ChangeMetrics(memStats runtime.MemStats) error {
 func (m *MetricsStore) ChangeMetricsNew(mem *mem.VirtualMemoryStat, cpu []float64) error {
 	m.mux.Lock()
 	defer m.mux.Unlock()
-	logrus.Info("mem: ", mem, "cpu: ", cpu)
 	m.MM["TotalMemory"] = gauge(float64(mem.Total))
 	m.MM["FreeMemory"] = gauge(float64(mem.Free))
 	m.MM["CPUutilization1"] = gauge(cpu[0])
