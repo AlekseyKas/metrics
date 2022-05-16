@@ -26,33 +26,35 @@ import (
 	"github.com/AlekseyKas/metrics/internal/storage"
 )
 
-var storageM storage.StorageAgent
+// func SetStorageAgent(s storage.StorageAgent) {
+// 	storageM = s
+// }
 
-func SetStorageAgent(s storage.StorageAgent) {
-	storageM = s
-}
+// var storageM storage.StorageAgent
 
 func main() {
 	var wg = &sync.WaitGroup{}
+	var storageM storage.StorageAgent
+
 	var MapMetrics map[string]interface{} = structs.Map(storage.Metrics{})
-	//инициализация хранилища метрик
 	s := &storage.MetricsStore{
 		MM: MapMetrics,
 	}
-	SetStorageAgent(s)
+	// SetStorageAgent(s)
+	storageM = s
 	termEnvFlags()
 	ctx, cancel := context.WithCancel(context.Background())
 	wg.Add(4)
 	go waitSignals(cancel, wg)
-	go UpdateMetrics(ctx, config.ArgsM.PollInterval, wg)
-	go UpdateMetricsNew(ctx, config.ArgsM.PollInterval, wg)
-	go SendMetrics(ctx, wg)
+	go UpdateMetrics(ctx, config.ArgsM.PollInterval, wg, storageM)
+	go UpdateMetricsNew(ctx, config.ArgsM.PollInterval, wg, storageM)
+	go SendMetrics(ctx, wg, storageM)
 
 	wg.Wait()
 
 }
 
-func SendMetrics(ctx context.Context, wg *sync.WaitGroup) {
+func SendMetrics(ctx context.Context, wg *sync.WaitGroup, storageM storage.StorageAgent) {
 	defer wg.Done()
 	for {
 		select {
@@ -60,7 +62,7 @@ func SendMetrics(ctx context.Context, wg *sync.WaitGroup) {
 			logrus.Info("Agent is down send metrics.")
 			return
 		case <-time.After(config.ArgsM.PollInterval):
-			err := sendMetricsSlice(ctx, config.ArgsM.Address, []byte(config.ArgsM.Key))
+			err := sendMetricsSlice(ctx, config.ArgsM.Address, []byte(config.ArgsM.Key), storageM)
 			if err != nil {
 				logrus.Error("Error sending POST: ", err)
 			}
@@ -102,7 +104,7 @@ func termEnvFlags() {
 		config.ArgsM.Key = env.Key
 	}
 }
-func sendMetricsSlice(ctx context.Context, address string, key []byte) error {
+func sendMetricsSlice(ctx context.Context, address string, key []byte, storageM storage.StorageAgent) error {
 	client := resty.New()
 
 	JSONMetrics, err := storageM.GetMetricsJSON()
@@ -178,7 +180,7 @@ func waitSignals(cancel context.CancelFunc, wg *sync.WaitGroup) {
 }
 
 //Update metrics
-func UpdateMetrics(ctx context.Context, pollInterval time.Duration, wg *sync.WaitGroup) {
+func UpdateMetrics(ctx context.Context, pollInterval time.Duration, wg *sync.WaitGroup, storageM storage.StorageAgent) {
 	defer wg.Done()
 	for {
 		select {
@@ -195,7 +197,7 @@ func UpdateMetrics(ctx context.Context, pollInterval time.Duration, wg *sync.Wai
 }
 
 //Update metrics
-func UpdateMetricsNew(ctx context.Context, pollInterval time.Duration, wg *sync.WaitGroup) {
+func UpdateMetricsNew(ctx context.Context, pollInterval time.Duration, wg *sync.WaitGroup, storageM storage.StorageAgent) {
 	defer wg.Done()
 	for {
 		select {
