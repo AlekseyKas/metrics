@@ -26,12 +26,6 @@ import (
 	"github.com/AlekseyKas/metrics/internal/storage"
 )
 
-// func SetStorageAgent(s storage.StorageAgent) {
-// 	storageM = s
-// }
-
-// var storageM storage.StorageAgent
-
 func main() {
 	var wg = &sync.WaitGroup{}
 	var storageM storage.StorageAgent
@@ -40,7 +34,6 @@ func main() {
 	s := &storage.MetricsStore{
 		MM: MapMetrics,
 	}
-	// SetStorageAgent(s)
 	storageM = s
 	termEnvFlags()
 	ctx, cancel := context.WithCancel(context.Background())

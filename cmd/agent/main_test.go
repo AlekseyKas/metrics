@@ -23,7 +23,6 @@ func TestClient(t *testing.T) {
 		MM: MapMetrics,
 	}
 	storageM = s
-	// SetStorageAgent(s)
 	t.Run(name, func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		p := config.LoadConfig()
