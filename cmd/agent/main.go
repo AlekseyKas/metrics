@@ -12,49 +12,55 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"sync"
 	"syscall"
 	"time"
 
 	"github.com/fatih/structs"
 	"github.com/go-resty/resty/v2"
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/mem"
 	"github.com/sirupsen/logrus"
 
 	"github.com/AlekseyKas/metrics/internal/config"
 	"github.com/AlekseyKas/metrics/internal/storage"
 )
 
-var storageM storage.StorageAgent
-
-func SetStorageAgent(s storage.StorageAgent) {
-	storageM = s
-}
-
 func main() {
+	var wg = &sync.WaitGroup{}
+	var storageM storage.StorageAgent
+
 	var MapMetrics map[string]interface{} = structs.Map(storage.Metrics{})
-	//инициализация хранилища метрик
 	s := &storage.MetricsStore{
 		MM: MapMetrics,
 	}
-	SetStorageAgent(s)
+	storageM = s
 	termEnvFlags()
-	// fmt.Println(config.ArgsM.Key)
 	ctx, cancel := context.WithCancel(context.Background())
-	go waitSignals(cancel)
-	go UpdateMetrics(ctx, config.ArgsM.PollInterval)
+	wg.Add(4)
+	go waitSignals(cancel, wg)
+	go UpdateMetrics(ctx, config.ArgsM.PollInterval, wg, storageM)
+	go UpdateMetricsNew(ctx, config.ArgsM.PollInterval, wg, storageM)
+	go SendMetrics(ctx, wg, storageM)
 
+	wg.Wait()
+
+}
+
+func SendMetrics(ctx context.Context, wg *sync.WaitGroup, storageM storage.StorageAgent) {
+	defer wg.Done()
 	for {
 		select {
 		case <-ctx.Done():
 			logrus.Info("Agent is down send metrics.")
 			return
 		case <-time.After(config.ArgsM.PollInterval):
-			err := sendMetricsSlice(ctx, config.ArgsM.Address, []byte(config.ArgsM.Key))
+			err := sendMetricsSlice(ctx, config.ArgsM.Address, []byte(config.ArgsM.Key), storageM)
 			if err != nil {
 				logrus.Error("Error sending POST: ", err)
 			}
 		}
 	}
-
 }
 
 func termEnvFlags() {
@@ -91,7 +97,7 @@ func termEnvFlags() {
 		config.ArgsM.Key = env.Key
 	}
 }
-func sendMetricsSlice(ctx context.Context, address string, key []byte) error {
+func sendMetricsSlice(ctx context.Context, address string, key []byte, storageM storage.StorageAgent) error {
 	client := resty.New()
 
 	JSONMetrics, err := storageM.GetMetricsJSON()
@@ -111,13 +117,8 @@ func sendMetricsSlice(ctx context.Context, address string, key []byte) error {
 					logrus.Error("Error save hash of metrics: ", err)
 				}
 			}
-			if JSONMetrics[i].ID == "PollCount" {
-				logrus.Info("oooooooo", *JSONMetrics[i].Delta, ": ", JSONMetrics[i].Hash)
-
-			}
 		}
 	}
-
 	var buf bytes.Buffer
 	var b bytes.Buffer
 
@@ -162,22 +163,18 @@ func SaveHash(JSONMetric *storage.JSONMetrics, key []byte) (hash string, err err
 }
 
 //wating signals
-func waitSignals(cancel context.CancelFunc) {
+func waitSignals(cancel context.CancelFunc, wg *sync.WaitGroup) {
+	defer wg.Done()
 	terminate := make(chan os.Signal, 1)
 	signal.Notify(terminate, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
-	for {
-		sig := <-terminate
-		switch sig {
-		case os.Interrupt:
-			logrus.Info("Agent is down terminate!")
-			cancel()
-			return
-		}
-	}
+	<-terminate
+	logrus.Info("Agent is down terminate!")
+	cancel()
 }
 
 //Update metrics
-func UpdateMetrics(ctx context.Context, pollInterval time.Duration) {
+func UpdateMetrics(ctx context.Context, pollInterval time.Duration, wg *sync.WaitGroup, storageM storage.StorageAgent) {
+	defer wg.Done()
 	for {
 		select {
 		//send command to ending
@@ -188,6 +185,29 @@ func UpdateMetrics(ctx context.Context, pollInterval time.Duration) {
 			var memStats runtime.MemStats
 			runtime.ReadMemStats(&memStats)
 			storageM.ChangeMetrics(memStats)
+		}
+	}
+}
+
+//Update metrics
+func UpdateMetricsNew(ctx context.Context, pollInterval time.Duration, wg *sync.WaitGroup, storageM storage.StorageAgent) {
+	defer wg.Done()
+	for {
+		select {
+		//send command to ending
+		case <-ctx.Done():
+			logrus.Info("Agent is down update metrics mem & cpu!")
+			return
+		case <-time.After(pollInterval):
+			mem, err := mem.VirtualMemory()
+			if err != nil {
+				logrus.Error(err)
+			}
+			cpu, err := cpu.Percent(time.Second, false)
+			if err != nil {
+				logrus.Error(err)
+			}
+			storageM.ChangeMetricsNew(mem, cpu)
 		}
 	}
 }

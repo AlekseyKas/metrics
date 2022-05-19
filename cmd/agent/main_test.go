@@ -17,15 +17,16 @@ var Hash string
 
 func TestClient(t *testing.T) {
 	name := "test saveMetricss"
+	var storageM storage.StorageAgent
 	var MapMetrics map[string]interface{} = structs.Map(storage.Metrics{})
 	s := &storage.MetricsStore{
 		MM: MapMetrics,
 	}
-	SetStorageAgent(s)
+	storageM = s
 	t.Run(name, func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		p := config.LoadConfig()
-		err := sendMetricsSlice(ctx, p.Address, []byte(p.Key))
+		err := sendMetricsSlice(ctx, p.Address, []byte(p.Key), storageM)
 		require.Error(t, err)
 		time.AfterFunc(4*time.Second, cancel)
 	})

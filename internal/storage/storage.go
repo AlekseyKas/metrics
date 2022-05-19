@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/shirou/gopsutil/v3/mem"
 	"github.com/sirupsen/logrus"
 
 	"github.com/AlekseyKas/metrics/cmd/server/database"
@@ -72,6 +73,7 @@ type MetricsStore struct {
 type StorageAgent interface {
 	GetMetrics() map[string]interface{}
 	ChangeMetrics(metrics runtime.MemStats) error
+	ChangeMetricsNew(metrics *mem.VirtualMemoryStat, cpu []float64) error
 	GetMetricsJSON() ([]JSONMetrics, error)
 }
 
@@ -251,6 +253,15 @@ func (m *MetricsStore) ChangeMetrics(memStats runtime.MemStats) error {
 	m.MM["TotalAlloc"] = gauge(memStats.TotalAlloc)
 	m.MM["RandomValue"] = gauge(rand.Float64())
 	m.MM["PollCount"] = counter(m.PollCount)
+	return nil
+}
+
+func (m *MetricsStore) ChangeMetricsNew(mem *mem.VirtualMemoryStat, cpu []float64) error {
+	m.mux.Lock()
+	defer m.mux.Unlock()
+	m.MM["TotalMemory"] = gauge(float64(mem.Total))
+	m.MM["FreeMemory"] = gauge(float64(mem.Free))
+	m.MM["CPUutilization1"] = gauge(cpu[0])
 	return nil
 }
 
