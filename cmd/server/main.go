@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"net/http"
+	_ "net/http/pprof" // подключаем пакет pprof
 	"os"
 	"os/signal"
 	"sync"
@@ -28,6 +29,7 @@ func main() {
 	s := &storage.MetricsStore{
 		MM: structs.Map(storage.Metrics{}),
 	}
+
 	termEnvFlags()
 	handlers.SetStorage(s)
 
@@ -44,7 +46,7 @@ func main() {
 	}
 	//DB connection
 	if config.ArgsM.DBURL != "" {
-		err := database.DBConnect()
+		err := database.DBConnect(config.ArgsM.DBURL)
 		if err != nil {
 			logrus.Error("Connection to postrgres faild: ", err)
 		}
@@ -141,7 +143,7 @@ func termEnvFlags() {
 	flag.StringVar(&config.FlagsServer.DBURL, "d", "", "Database URL")
 	flag.StringVar(&config.FlagsServer.StoreFile, "f", "", "File path store")
 	flag.StringVar(&config.FlagsServer.Key, "k", "", "Secret key")
-	flag.BoolVar(&config.FlagsServer.Restore, "r", true, "Restire drom file")
+	flag.BoolVar(&config.FlagsServer.Restore, "r", true, "Restore from file")
 	flag.DurationVar(&config.FlagsServer.StoreInterval, "i", 300000000000, "Interval store file")
 	flag.Parse()
 	env := config.LoadConfig()

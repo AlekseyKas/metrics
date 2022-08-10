@@ -12,6 +12,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/http/pprof" // подключаем пакет pprof
 	"reflect"
 	"strconv"
 	"strings"
@@ -51,6 +52,11 @@ func Router(r chi.Router) {
 	r.Post("/updates/", saveMetricsSlice())
 	r.Post("/value/", getMetricsJSON())
 
+	r.Get("/debug/pprof/", pprof.Index)
+	r.Get("/debug/pprof/cmdline", pprof.Cmdline)
+	r.Get("/debug/pprof/profile", pprof.Profile)
+	r.Get("/debug/pprof/symbol", pprof.Symbol)
+	r.Get("/debug/pprof/trace", pprof.Trace)
 }
 
 type gzipBodyWriter struct {

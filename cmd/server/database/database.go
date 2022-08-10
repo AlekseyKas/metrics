@@ -5,15 +5,13 @@ import (
 
 	"github.com/jackc/pgx"
 	"github.com/sirupsen/logrus"
-
-	"github.com/AlekseyKas/metrics/internal/config"
 )
 
 var Conn *pgx.Conn
 
 //Connect to DB
-func DBConnect() error {
-	DBURL := config.ArgsM.DBURL
+func DBConnect(DBURL string) error {
+	// DBURL := config.ArgsM.DBURL
 	cfgURL, err := pgx.ParseConnectionString(DBURL)
 	if err != nil {
 		logrus.Error("Error parsing URL: ", err)
@@ -29,6 +27,10 @@ func DBConnect() error {
 	}
 	return nil
 }
-func DBClose() {
-	Conn.Close()
+func DBClose() error {
+	err := Conn.Close()
+	if err != nil {
+		logrus.Error(err)
+	}
+	return err
 }
