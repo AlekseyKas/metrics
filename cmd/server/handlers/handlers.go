@@ -159,6 +159,7 @@ func saveMetricsSlice() http.HandlerFunc {
 								ii, err := strconv.Atoi(fmt.Sprintf("%v", metrics[nameMet]))
 								if err != nil {
 									rw.WriteHeader(http.StatusBadRequest)
+									return
 								}
 								valueMetInt = int(*s[i].Delta) + ii
 								StorageM.ChangeMetric(nameMet, counter(valueMetInt), config.ArgsM)
@@ -191,7 +192,8 @@ func saveMetricsSlice() http.HandlerFunc {
 						if _, ok := metrics[nameMet]; ok {
 							ii, err := strconv.Atoi(fmt.Sprintf("%v", metrics[nameMet]))
 							if err != nil {
-								logrus.Error("Error convert metric: ", err)
+								rw.WriteHeader(http.StatusBadRequest)
+								return
 							}
 							valueMetInt = int(*s[i].Delta) + ii
 							StorageM.ChangeMetric(nameMet, counter(valueMetInt), config.ArgsM)

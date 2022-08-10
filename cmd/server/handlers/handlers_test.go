@@ -105,13 +105,24 @@ func TestRouter(t *testing.T) {
 		},
 
 		{
-			name:   "saveMetricsSlice#",
+			name:   "saveMetricsSlice success#",
 			url:    "/updates/",
 			method: "POST",
-			body:   []byte(`{"ID": "Alloc", "type": "gauge", "value": 3.1}`),
+			body:   []byte(`[{"ID": "Alloc", "type": "gauge", "value": 3.1}]`),
 			want: want{
 				contentType: "application/json",
 				statusCode:  200,
+			},
+		},
+
+		{
+			name:   "saveMetricsSlice#",
+			url:    "/updates/",
+			method: "POST",
+			body:   []byte(`[{"ID": "Alloc", "type": "counter", "delta": 3.2}]`),
+			want: want{
+				contentType: "application/json",
+				statusCode:  400,
 			},
 		},
 	}

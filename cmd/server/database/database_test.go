@@ -8,12 +8,11 @@ import (
 
 func TestDBConnect(t *testing.T) {
 	DBURL := "postgres://postgres:postgres@postgres:5432/praktikum?sslmode=disable"
-	// DBURL, id, _ := helpers.StartDB()
+
 	t.Run("Test DB connect", func(t *testing.T) {
 		err := DBConnect(DBURL)
 		require.NoError(t, err)
 	})
-	// helpers.StopDB(id)
 }
 
 func TestDBClose(t *testing.T) {

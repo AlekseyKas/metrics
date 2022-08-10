@@ -55,6 +55,7 @@ func SendMetrics(ctx context.Context, wg *sync.WaitGroup, storageM storage.Stora
 			logrus.Info("Agent is down send metrics.")
 			return
 		case <-time.After(config.ArgsM.PollInterval):
+			logrus.Info("44444444444444444444444444444444", storageM)
 			err := sendMetricsSlice(ctx, config.ArgsM.Address, []byte(config.ArgsM.Key), storageM)
 			if err != nil {
 				logrus.Error("Error sending POST: ", err)
