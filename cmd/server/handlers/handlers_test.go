@@ -295,3 +295,213 @@ func Test_getMetrics(t *testing.T) {
 		})
 	}
 }
+
+func Test_getMetric(t *testing.T) {
+
+	type want struct {
+		contentType string
+		statusCode  int
+	}
+
+	tests := []struct {
+		name   string
+		url    string
+		method string
+		want   want
+	}{
+		{
+			name:   "fist sample#",
+			url:    "/value/gauge/Alloc",
+			method: "GET",
+			want: want{
+				contentType: "text/html",
+				statusCode:  200,
+			},
+		},
+		{
+			name:   "second sample#",
+			url:    "/value/unknown/Alloc",
+			method: "GET",
+			want: want{
+				contentType: "text/html",
+				statusCode:  500,
+			},
+		},
+		{
+			name:   "third sample#",
+			url:    "/value/gauge/PollCount",
+			method: "GET",
+			want: want{
+				contentType: "text/html",
+				statusCode:  404,
+			},
+		},
+
+		{
+			name:   "4th sample#",
+			url:    "/value/gauge/unknown",
+			method: "GET",
+			want: want{
+				contentType: "text/html",
+				statusCode:  404,
+			},
+		},
+		{
+			name:   "5th sample#",
+			url:    "/value/counter/PollCount",
+			method: "GET",
+			want: want{
+				contentType: "text/html",
+				statusCode:  200,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := chi.NewRouter()
+			r.Route("/", Router)
+
+			ts := httptest.NewServer(r)
+			defer ts.Close()
+
+			req, err := http.NewRequest(tt.method, ts.URL+tt.url, nil)
+			require.NoError(t, err)
+
+			resp, errr := http.DefaultClient.Do(req)
+			require.Equal(t, tt.want.statusCode, resp.StatusCode)
+			require.NoError(t, errr)
+
+			defer resp.Body.Close()
+
+		})
+	}
+}
+
+func Test_saveMetrics(t *testing.T) {
+	type want struct {
+		contentType string
+		statusCode  int
+	}
+
+	tests := []struct {
+		name   string
+		url    string
+		method string
+		want   want
+	}{
+		{
+			name:   "fist sample#",
+			url:    "/update/gauge/Alloc/2.1",
+			method: "POST",
+			want: want{
+				contentType: "text/plain",
+				statusCode:  200,
+			},
+		},
+
+		{
+			name:   "second sample#",
+			url:    "/update/counter/PollCounter/2",
+			method: "POST",
+			want: want{
+				contentType: "text/plain",
+				statusCode:  200,
+			},
+		},
+
+		{
+			name:   "third sample#",
+			url:    "/update/unknown/PollCounter/2",
+			method: "POST",
+			want: want{
+				contentType: "text/plain",
+				statusCode:  501,
+			},
+		},
+
+		{
+			name:   "4th sample#",
+			url:    "/update/gauge/unknown/aaa",
+			method: "POST",
+			want: want{
+				contentType: "text/plain",
+				statusCode:  400,
+			},
+		},
+
+		{
+			name:   "5th sample#",
+			url:    "/update/counter/unknown/aaa",
+			method: "POST",
+			want: want{
+				contentType: "text/plain",
+				statusCode:  400,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := chi.NewRouter()
+			r.Route("/", Router)
+
+			ts := httptest.NewServer(r)
+			defer ts.Close()
+
+			req, err := http.NewRequest(tt.method, ts.URL+tt.url, nil)
+			require.NoError(t, err)
+
+			resp, errr := http.DefaultClient.Do(req)
+			require.Equal(t, tt.want.statusCode, resp.StatusCode)
+			require.NoError(t, errr)
+
+			defer resp.Body.Close()
+
+		})
+	}
+}
+
+func Test_checkConnection(t *testing.T) {
+
+	type want struct {
+		contentType string
+		statusCode  int
+	}
+
+	tests := []struct {
+		name   string
+		url    string
+		method string
+		want   want
+	}{
+		{
+			name:   "fist sample#",
+			url:    "/ping",
+			method: "GET",
+			want: want{
+				contentType: "text/html",
+				statusCode:  500,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := chi.NewRouter()
+			r.Route("/", Router)
+
+			ts := httptest.NewServer(r)
+			defer ts.Close()
+
+			req, err := http.NewRequest(tt.method, ts.URL+tt.url, nil)
+			require.NoError(t, err)
+
+			resp, errr := http.DefaultClient.Do(req)
+			require.Equal(t, tt.want.statusCode, resp.StatusCode)
+			require.NoError(t, errr)
+
+			defer resp.Body.Close()
+		})
+	}
+}

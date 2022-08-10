@@ -523,6 +523,7 @@ func saveMetrics() http.HandlerFunc {
 			if err != nil {
 				rw.Header().Add("Content-Type", "text/plain")
 				rw.WriteHeader(http.StatusBadRequest)
+				return
 			}
 			if err == nil {
 				if metrics[nameMet] != gauge(valueMetFloat) {

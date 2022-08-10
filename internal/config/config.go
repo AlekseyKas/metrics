@@ -1,7 +1,9 @@
 package config
 
 import (
+	"flag"
 	"log"
+	"os"
 	"time"
 
 	"github.com/caarlos0/env"
@@ -55,4 +57,66 @@ func LoadConfig() Param {
 		log.Fatal(err)
 	}
 	return Parametrs
+}
+
+func TermEnvFlags() {
+	// kong.Parse(&config.FlagsServer)
+	flag.StringVar(&FlagsServer.Address, "a", "127.0.0.1:8080", "Address")
+	flag.StringVar(&FlagsServer.DBURL, "d", "", "Database URL")
+	flag.StringVar(&FlagsServer.StoreFile, "f", "", "File path store")
+	flag.StringVar(&FlagsServer.Key, "k", "", "Secret key")
+	flag.BoolVar(&FlagsServer.Restore, "r", true, "Restore from file")
+	flag.DurationVar(&FlagsServer.StoreInterval, "i", 300000000000, "Interval store file")
+	flag.Parse()
+	env := LoadConfig()
+	envADDR, _ := os.LookupEnv("ADDRESS")
+	if envADDR == "" {
+		ArgsM.Address = FlagsServer.Address
+	} else {
+		ArgsM.Address = env.Address
+
+	}
+	envRest, _ := os.LookupEnv("RESTORE")
+	if envRest == "" {
+		ArgsM.Restore = FlagsServer.Restore
+	} else {
+		ArgsM.Restore = env.Restore
+	}
+	envStoreint, _ := os.LookupEnv("STORE_INTERVAL")
+	if envStoreint == "" {
+		ArgsM.StoreInterval = FlagsServer.StoreInterval
+	} else {
+		ArgsM.StoreInterval = env.StoreInterval
+	}
+	envKey, _ := os.LookupEnv("KEY")
+	if envKey == "" {
+		ArgsM.Key = FlagsServer.Key
+	} else {
+		ArgsM.Key = env.Key
+	}
+
+	envFile, b := os.LookupEnv("STORE_FILE")
+
+	switch envFile == "" && b {
+	case true:
+		ArgsM.StoreFile = ""
+	case false:
+		if envFile == "" {
+			ArgsM.StoreFile = FlagsServer.StoreFile
+		} else {
+			ArgsM.StoreFile = env.StoreFile
+		}
+	}
+
+	envDBURL, _ := os.LookupEnv("DATABASE_DSN")
+
+	if envDBURL == "" && FlagsServer.DBURL == "" {
+		ArgsM.DBURL = ""
+	} else {
+		if envDBURL != "" {
+			ArgsM.DBURL = envDBURL
+		} else {
+			ArgsM.DBURL = FlagsServer.DBURL
+		}
+	}
 }

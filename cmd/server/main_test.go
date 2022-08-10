@@ -18,25 +18,25 @@ import (
 // termEnvFlags()
 // handlers.SetStorage(s)
 
-func Test_termEnvFlags(t *testing.T) {
+// func Test_termEnvFlags(t *testing.T) {
 
-	termEnvFlags()
+// 	termEnvFlags()
 
-	t.Run("Test terminate flags", func(t *testing.T) {
-		require.Equal(t, config.ArgsM.Address, "127.0.0.1:8080")
-		require.Equal(t, config.ArgsM.StoreFile, "")
-		require.Equal(t, config.ArgsM.DBURL, "")
-		require.Equal(t, config.ArgsM.StoreInterval, time.Duration(300000000000))
-	})
-}
+// 	t.Run("Test terminate flags", func(t *testing.T) {
+// 		require.Equal(t, config.ArgsM.Address, "127.0.0.1:8080")
+// 		require.Equal(t, config.ArgsM.StoreFile, "")
+// 		require.Equal(t, config.ArgsM.DBURL, "")
+// 		require.Equal(t, config.ArgsM.StoreInterval, time.Duration(300000000000))
+// 	})
+// }
 
-func Test_loadFromFile(t *testing.T) {
+// func Test_loadFromFile(t *testing.T) {
 
-	t.Run("Test loadFromFile", func(t *testing.T) {
-		err := loadFromFile(config.ArgsM)
-		require.NoError(t, err)
-	})
-}
+// 	t.Run("Test loadFromFile", func(t *testing.T) {
+// 		err := loadFromFile(config.ArgsM)
+// 		require.NoError(t, err)
+// 	})
+// }
 
 func Test_syncFile(t *testing.T) {
 	var wg sync.WaitGroup
