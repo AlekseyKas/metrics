@@ -255,7 +255,7 @@ func getMetricsJSON() http.HandlerFunc {
 					s.Delta = &a
 					var buf bytes.Buffer
 					if config.ArgsM.Key != "" {
-						err := calculateHash(&s, []byte(config.ArgsM.Key))
+						calculateHash(&s, []byte(config.ArgsM.Key))
 						if err != nil {
 							logrus.Error("Error calculate hash: ", err)
 						}
@@ -287,7 +287,7 @@ func getMetricsJSON() http.HandlerFunc {
 					s.Value = &float
 					var buf bytes.Buffer
 					if config.ArgsM.Key != "" {
-						err := calculateHash(&s, []byte(config.ArgsM.Key))
+						calculateHash(&s, []byte(config.ArgsM.Key))
 						if err != nil {
 							logrus.Error("Error calculate hash: ", err)
 						}
@@ -311,9 +311,9 @@ func getMetricsJSON() http.HandlerFunc {
 	}
 }
 
-func calculateHash(s *storage.JSONMetrics, key []byte) error {
+func calculateHash(s *storage.JSONMetrics, key []byte) {
 	var h hash.Hash
-
+	// var err error
 	switch s.MType {
 	case "counter":
 		data := (fmt.Sprintf("%s:counter:%d", s.ID, *s.Delta))
@@ -326,7 +326,7 @@ func calculateHash(s *storage.JSONMetrics, key []byte) error {
 		h.Write([]byte(data))
 		s.Hash = fmt.Sprintf("%x", h.Sum(nil))
 	}
-	return nil
+	// return err
 }
 
 //save metrics
@@ -441,6 +441,7 @@ func getMetrics() http.HandlerFunc {
 		err := encoder.Encode(metrics)
 		if err != nil {
 			http.Error(rw, err.Error(), http.StatusBadRequest)
+			return
 		}
 		rw.Header().Add("Content-Type", "text/html")
 		rw.WriteHeader(http.StatusOK)

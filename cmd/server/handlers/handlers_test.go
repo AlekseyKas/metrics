@@ -6,11 +6,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/AlekseyKas/metrics/internal/storage"
 	"github.com/fatih/structs"
 	"github.com/go-chi/chi"
 	"github.com/stretchr/testify/require"
-
-	"github.com/AlekseyKas/metrics/internal/storage"
 )
 
 var body []byte
@@ -201,6 +200,98 @@ func Test_compareHash(t *testing.T) {
 			if gotB != tt.wantBool {
 				t.Errorf("compareHash() = %v, want %v", gotB, tt.wantBool)
 			}
+		})
+	}
+}
+
+func Test_calculateHash(t *testing.T) {
+	f := float64(99.1)
+	c := int64(99)
+
+	type args struct {
+		s   *storage.JSONMetrics
+		key []byte
+	}
+
+	tests := []struct {
+		name     string
+		args     args
+		wantHash string
+	}{
+		{
+			name: "Success calculate",
+			args: args{
+				s: &storage.JSONMetrics{
+					ID:    "Alloc",
+					MType: "gauge",
+					Value: &f,
+				},
+				key: []byte("key"),
+			},
+			wantHash: "7c1ce04447600a7ede550e33a9133102e8706755d86205774fa5e8ca2fe5e352",
+		},
+		{
+			name: "Success calculate",
+			args: args{
+				s: &storage.JSONMetrics{
+					ID:    "PollCount",
+					MType: "counter",
+					Delta: &c,
+				},
+				key: []byte("key"),
+			},
+			wantHash: "10cf641702fb80988f18a68a913dd980d0b10a9e24332be9edd5f4da92b12a22",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			calculateHash(tt.args.s, tt.args.key)
+			require.Equal(t, tt.wantHash, tt.args.s.Hash)
+		})
+	}
+}
+
+func Test_getMetrics(t *testing.T) {
+
+	type want struct {
+		contentType string
+		statusCode  int
+	}
+
+	tests := []struct {
+		name   string
+		url    string
+		method string
+		want   want
+	}{
+		{
+			name:   "fist sample#",
+			url:    "/",
+			method: "GET",
+			want: want{
+				contentType: "text/html",
+				statusCode:  200,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := chi.NewRouter()
+			r.Route("/", Router)
+
+			ts := httptest.NewServer(r)
+			defer ts.Close()
+
+			req, err := http.NewRequest(tt.method, ts.URL+tt.url, nil)
+			require.NoError(t, err)
+
+			resp, errr := http.DefaultClient.Do(req)
+			require.Equal(t, tt.want.statusCode, resp.StatusCode)
+			require.NoError(t, errr)
+
+			defer resp.Body.Close()
+
 		})
 	}
 }

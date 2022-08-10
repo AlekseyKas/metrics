@@ -1,4 +1,13 @@
 mode: set
+github.com/AlekseyKas/metrics/cmd/server/database/database.go:13.36,16.16 2 1
+github.com/AlekseyKas/metrics/cmd/server/database/database.go:20.2,22.16 2 1
+github.com/AlekseyKas/metrics/cmd/server/database/database.go:28.2,28.12 1 1
+github.com/AlekseyKas/metrics/cmd/server/database/database.go:16.16,19.3 2 0
+github.com/AlekseyKas/metrics/cmd/server/database/database.go:22.16,25.3 2 0
+github.com/AlekseyKas/metrics/cmd/server/database/database.go:25.8,27.3 1 1
+github.com/AlekseyKas/metrics/cmd/server/database/database.go:30.22,32.16 2 1
+github.com/AlekseyKas/metrics/cmd/server/database/database.go:35.2,35.12 1 1
+github.com/AlekseyKas/metrics/cmd/server/database/database.go:32.16,34.3 1 0
 github.com/AlekseyKas/metrics/cmd/server/main.go:27.13,41.34 7 0
 github.com/AlekseyKas/metrics/cmd/server/main.go:48.2,48.30 1 0
 github.com/AlekseyKas/metrics/cmd/server/main.go:63.2,70.11 6 0
@@ -193,10 +202,10 @@ github.com/AlekseyKas/metrics/cmd/server/handlers/handlers.go:291.21,293.8 1 0
 github.com/AlekseyKas/metrics/cmd/server/handlers/handlers.go:297.20,299.7 1 0
 github.com/AlekseyKas/metrics/cmd/server/handlers/handlers.go:303.11,305.6 1 0
 github.com/AlekseyKas/metrics/cmd/server/handlers/handlers.go:306.10,308.5 1 0
-github.com/AlekseyKas/metrics/cmd/server/handlers/handlers.go:314.62,317.17 2 0
-github.com/AlekseyKas/metrics/cmd/server/handlers/handlers.go:329.2,329.12 1 0
+github.com/AlekseyKas/metrics/cmd/server/handlers/handlers.go:314.62,317.17 3 1
+github.com/AlekseyKas/metrics/cmd/server/handlers/handlers.go:329.2,329.12 1 1
 github.com/AlekseyKas/metrics/cmd/server/handlers/handlers.go:318.17,322.41 4 0
-github.com/AlekseyKas/metrics/cmd/server/handlers/handlers.go:323.15,327.41 4 0
+github.com/AlekseyKas/metrics/cmd/server/handlers/handlers.go:323.15,327.41 4 1
 github.com/AlekseyKas/metrics/cmd/server/handlers/handlers.go:333.41,334.57 1 1
 github.com/AlekseyKas/metrics/cmd/server/handlers/handlers.go:334.57,338.17 3 1
 github.com/AlekseyKas/metrics/cmd/server/handlers/handlers.go:342.3,344.17 3 1
@@ -275,12 +284,3 @@ github.com/AlekseyKas/metrics/cmd/server/handlers/handlers.go:563.31,565.18 2 0
 github.com/AlekseyKas/metrics/cmd/server/handlers/handlers.go:565.18,567.5 1 0
 github.com/AlekseyKas/metrics/cmd/server/handlers/handlers.go:567.10,569.5 1 0
 github.com/AlekseyKas/metrics/cmd/server/handlers/handlers.go:570.9,572.4 1 0
-github.com/AlekseyKas/metrics/cmd/server/database/database.go:13.36,16.16 2 1
-github.com/AlekseyKas/metrics/cmd/server/database/database.go:20.2,22.16 2 1
-github.com/AlekseyKas/metrics/cmd/server/database/database.go:28.2,28.12 1 1
-github.com/AlekseyKas/metrics/cmd/server/database/database.go:16.16,19.3 2 0
-github.com/AlekseyKas/metrics/cmd/server/database/database.go:22.16,25.3 2 0
-github.com/AlekseyKas/metrics/cmd/server/database/database.go:25.8,27.3 1 1
-github.com/AlekseyKas/metrics/cmd/server/database/database.go:30.22,32.16 2 1
-github.com/AlekseyKas/metrics/cmd/server/database/database.go:35.2,35.12 1 1
-github.com/AlekseyKas/metrics/cmd/server/database/database.go:32.16,34.3 1 0
