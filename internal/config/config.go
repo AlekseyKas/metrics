@@ -60,7 +60,6 @@ func LoadConfig() Param {
 }
 
 func TermEnvFlags() {
-	// kong.Parse(&config.FlagsServer)
 	flag.StringVar(&FlagsServer.Address, "a", "127.0.0.1:8080", "Address")
 	flag.StringVar(&FlagsServer.DBURL, "d", "", "Database URL")
 	flag.StringVar(&FlagsServer.StoreFile, "f", "", "File path store")

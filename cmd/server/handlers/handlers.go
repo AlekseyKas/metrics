@@ -524,8 +524,7 @@ func saveMetrics() http.HandlerFunc {
 				rw.Header().Add("Content-Type", "text/plain")
 				rw.WriteHeader(http.StatusBadRequest)
 				return
-			}
-			if err == nil {
+			} else {
 				if metrics[nameMet] != gauge(valueMetFloat) {
 					StorageM.ChangeMetric(nameMet, gauge(valueMetFloat), config.ArgsM)
 					rw.Header().Add("Content-Type", "text/plain")
