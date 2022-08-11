@@ -31,7 +31,7 @@ func main() {
 
 	config.TermEnvFlags()
 	handlers.SetStorage(s)
-
+	logrus.Info(config.ArgsM.StoreFile)
 	ctx, cancel := context.WithCancel(context.Background())
 	wg.Add(1)
 	go waitSignals(cancel)

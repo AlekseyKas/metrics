@@ -2,87 +2,157 @@ package main
 
 import (
 	"context"
+	"io/ioutil"
 	_ "net/http/pprof"
-	"sync"
 	"testing"
 	"time"
 
+	"github.com/AlekseyKas/metrics/cmd/server/handlers"
 	"github.com/AlekseyKas/metrics/internal/config"
+	"github.com/AlekseyKas/metrics/internal/storage"
+	"github.com/fatih/structs"
 	"github.com/stretchr/testify/require"
 )
 
-// s := &storage.MetricsStore{
-// 	MM: structs.Map(storage.Metrics{}),
-// }
-
-// termEnvFlags()
-// handlers.SetStorage(s)
-
-// func Test_termEnvFlags(t *testing.T) {
-
-// 	termEnvFlags()
-
-// 	t.Run("Test terminate flags", func(t *testing.T) {
-// 		require.Equal(t, config.ArgsM.Address, "127.0.0.1:8080")
-// 		require.Equal(t, config.ArgsM.StoreFile, "")
-// 		require.Equal(t, config.ArgsM.DBURL, "")
-// 		require.Equal(t, config.ArgsM.StoreInterval, time.Duration(300000000000))
-// 	})
-// }
-
-// func Test_loadFromFile(t *testing.T) {
-
-// 	t.Run("Test loadFromFile", func(t *testing.T) {
-// 		err := loadFromFile(config.ArgsM)
-// 		require.NoError(t, err)
-// 	})
-// }
-
 func Test_syncFile(t *testing.T) {
-	var wg sync.WaitGroup
-	t.Run("Test syncFile", func(t *testing.T) {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*10))
-		wg.Add(1)
-		go syncFile(config.ArgsM, ctx)
-		wg.Add(1)
-		go waitSignals(cancel)
-	})
+
+	tests := []struct {
+		name   string
+		config config.Args
+	}{
+		{
+			name: "first",
+			config: config.Args{
+				StoreFile:     "",
+				StoreInterval: 1,
+			},
+		},
+
+		{
+			name: "Second",
+			config: config.Args{
+				StoreFile:     "/tmp/file",
+				StoreInterval: 1,
+			},
+		},
+		{
+			name: "Third",
+			config: config.Args{
+				StoreFile:     "/tmp/file",
+				StoreInterval: 0,
+			},
+		},
+		// TODO: Add test cases.
+	}
+	s := &storage.MetricsStore{
+		MM: structs.Map(storage.Metrics{}),
+	}
+	handlers.SetStorage(s)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			wg.Add(1)
+			go syncFile(tt.config, ctx)
+			if tt.config.StoreFile != "" {
+				require.FileExists(t, tt.config.StoreFile)
+			} else {
+				require.NoFileExists(t, tt.config.StoreFile)
+			}
+			wg.Add(1)
+			time.Sleep(time.Second * 2)
+			cancel()
+			wg.Done()
+		})
+	}
 }
 
-// func Test_waitSignals(t *testing.T) {
-// 	var wg sync.WaitGroup
-// 	logrus.Info("yyyyyyyyyyyyyyyyyyyyyy")
-// 	_, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*3))
-// 	logrus.Info("ppppppppppppppppppppppp")
-// 	t.Run("Test waitSignals 3 seconds", func(t *testing.T) {
-// 		wg.Add(1)
-// 		waitSignals(cancel)
-// 	})
+func Test_loadFromFile(t *testing.T) {
 
-// }
+	tests := []struct {
+		name    string
+		config  config.Args
+		wantErr bool
+	}{
+		{
+			name: "first",
+			config: config.Args{
+				StoreFile:     "file",
+				StoreInterval: 1,
+				Restore:       true,
+			},
+		},
+		{
+			name: "second",
+			config: config.Args{
+				StoreFile:     "",
+				StoreInterval: 1,
+				Restore:       true,
+			},
+		},
+		{
+			name: "third",
+			config: config.Args{
+				StoreFile:     "",
+				StoreInterval: 1,
+				Restore:       false,
+			},
+		},
+		{
+			name: "4th",
+			config: config.Args{
+				StoreFile:     "file",
+				StoreInterval: 1,
+				Restore:       false,
+			},
+		},
+	}
+	for _, tt := range tests {
+		_, err := ioutil.TempFile("/tmp/", tt.config.StoreFile)
+		require.NoError(t, err)
+
+		t.Run(tt.name, func(t *testing.T) {
+			err = loadFromFile(tt.config)
+			require.NoError(t, err)
+		})
+	}
+}
 
 func Test_fileExist(t *testing.T) {
 
 	tests := []struct {
-		name string
-		file string
-		want bool
+		name    string
+		config  config.Args
+		wantErr bool
 	}{
 		{
-			name: "file don't exist",
-			file: ".test",
-			want: false,
+			name: "first",
+			config: config.Args{
+				StoreFile:     "file",
+				StoreInterval: 1,
+				Restore:       true,
+			},
 		},
 		{
-			name: "file exist",
-			file: ".main.go",
-			want: false,
+			name: "second",
+			config: config.Args{
+				StoreFile:     "",
+				StoreInterval: 1,
+				Restore:       true,
+			},
 		},
-		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
+		_, err := ioutil.TempFile("/tmp/", tt.config.StoreFile)
+		require.NoError(t, err)
+
 		t.Run(tt.name, func(t *testing.T) {
-			require.NoFileExists(t, tt.file)
+			b := fileExist(tt.config.StoreFile)
+			if b {
+				require.True(t, b)
+			} else {
+				require.False(t, b)
+			}
+			require.NoError(t, err)
 		})
 	}
 }
