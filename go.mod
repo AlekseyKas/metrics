@@ -8,7 +8,6 @@ require (
 	github.com/go-chi/chi v1.5.4
 	github.com/go-resty/resty/v2 v2.7.0
 	github.com/jackc/pgx v3.6.2+incompatible
-	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/shirou/gopsutil/v3 v3.22.4
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.8.0
