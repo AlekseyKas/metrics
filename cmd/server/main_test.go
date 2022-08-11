@@ -15,6 +15,7 @@ import (
 )
 
 func Test_syncFile(t *testing.T) {
+	f, _ := ioutil.TempFile("/tmp/", "file")
 
 	tests := []struct {
 		name   string
@@ -31,14 +32,14 @@ func Test_syncFile(t *testing.T) {
 		{
 			name: "Second",
 			config: config.Args{
-				StoreFile:     "/tmp/file",
+				StoreFile:     f.Name(),
 				StoreInterval: 1,
 			},
 		},
 		{
 			name: "Third",
 			config: config.Args{
-				StoreFile:     "/tmp/file",
+				StoreFile:     f.Name(),
 				StoreInterval: 0,
 			},
 		},
@@ -118,7 +119,7 @@ func Test_loadFromFile(t *testing.T) {
 }
 
 func Test_fileExist(t *testing.T) {
-
+	f, _ := ioutil.TempFile("/tmp/", "file")
 	tests := []struct {
 		name    string
 		config  config.Args
@@ -127,7 +128,7 @@ func Test_fileExist(t *testing.T) {
 		{
 			name: "first",
 			config: config.Args{
-				StoreFile:     "file",
+				StoreFile:     f.Name(),
 				StoreInterval: 1,
 				Restore:       true,
 			},
@@ -142,8 +143,6 @@ func Test_fileExist(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		_, err := ioutil.TempFile("/tmp/", tt.config.StoreFile)
-		require.NoError(t, err)
 
 		t.Run(tt.name, func(t *testing.T) {
 			b := fileExist(tt.config.StoreFile)
@@ -152,7 +151,6 @@ func Test_fileExist(t *testing.T) {
 			} else {
 				require.False(t, b)
 			}
-			require.NoError(t, err)
 		})
 	}
 }
