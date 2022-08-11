@@ -6,10 +6,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/AlekseyKas/metrics/internal/storage"
 	"github.com/fatih/structs"
 	"github.com/go-chi/chi"
 	"github.com/stretchr/testify/require"
+
+	"github.com/AlekseyKas/metrics/internal/storage"
 )
 
 var body []byte

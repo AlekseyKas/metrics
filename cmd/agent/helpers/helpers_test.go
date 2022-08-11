@@ -6,10 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/AlekseyKas/metrics/internal/config"
-	"github.com/AlekseyKas/metrics/internal/storage"
 	"github.com/fatih/structs"
 	"github.com/stretchr/testify/require"
+
+	"github.com/AlekseyKas/metrics/internal/config"
+	"github.com/AlekseyKas/metrics/internal/storage"
 )
 
 func TestSaveHash(t *testing.T) {

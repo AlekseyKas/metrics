@@ -9,9 +9,11 @@ import (
 	"github.com/caarlos0/env"
 )
 
+// Init variable for flags.
 var FlagsServer FlagsServ
 var FlagsAgent FlagsAg
 
+// Server flags.
 type FlagsServ struct {
 	Address       string
 	Key           string
@@ -20,6 +22,8 @@ type FlagsServ struct {
 	StoreFile     string
 	DBURL         string
 }
+
+// Agent flags.
 type FlagsAg struct {
 	Address        string
 	Key            string
@@ -27,6 +31,7 @@ type FlagsAg struct {
 	PollInterval   time.Duration
 }
 
+// Parametrs enviroment for server.
 type Param struct {
 	PollInterval   time.Duration `env:"POLL_INTERVAL" envDefault:"2s"`
 	ReportInterval time.Duration `env:"REPORT_INTERVAL" envDefault:"10s"`
@@ -37,6 +42,8 @@ type Param struct {
 	Key            string        `env:"KEY"`
 	DBURL          string        `env:"DATABASE_DSN"`
 }
+
+// Parametrs enviroment for agent.
 type Args struct {
 	DBURL          string
 	Address        string
@@ -48,9 +55,11 @@ type Args struct {
 	Restore        bool
 }
 
+// Variable for environment and flags
 var ArgsM Args
 
-func LoadConfig() Param {
+// Terminate flags and env
+func loadConfig() Param {
 	var Parametrs Param
 	err := env.Parse(&Parametrs)
 	if err != nil {
@@ -59,6 +68,7 @@ func LoadConfig() Param {
 	return Parametrs
 }
 
+// Terminate flags and env with default value for server
 func TermEnvFlags() {
 	flag.StringVar(&FlagsServer.Address, "a", "127.0.0.1:8080", "Address")
 	flag.StringVar(&FlagsServer.DBURL, "d", "", "Database URL")
@@ -67,7 +77,7 @@ func TermEnvFlags() {
 	flag.BoolVar(&FlagsServer.Restore, "r", true, "Restore from file")
 	flag.DurationVar(&FlagsServer.StoreInterval, "i", 300000000000, "Interval store file")
 	flag.Parse()
-	env := LoadConfig()
+	env := loadConfig()
 	envADDR, _ := os.LookupEnv("ADDRESS")
 	if envADDR == "" {
 		ArgsM.Address = FlagsServer.Address
@@ -120,6 +130,7 @@ func TermEnvFlags() {
 	}
 }
 
+// Terminate flags and env with default value for agent
 func TermEnvFlagsAgent() {
 	flag.StringVar(&FlagsAgent.Address, "a", "127.0.0.1:8080", "Address")
 	flag.StringVar(&FlagsAgent.Key, "k", "", "Secret key")
@@ -128,7 +139,7 @@ func TermEnvFlagsAgent() {
 
 	flag.Parse()
 
-	env := LoadConfig()
+	env := loadConfig()
 	envADDR, _ := os.LookupEnv("ADDRESS")
 	if envADDR == "" {
 		ArgsM.Address = FlagsAgent.Address

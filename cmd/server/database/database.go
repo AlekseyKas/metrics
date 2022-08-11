@@ -7,11 +7,11 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// Init database connection
 var Conn *pgx.Conn
 
-//Connect to DB
+// Connect to database via DBURL
 func DBConnect(DBURL string) error {
-	// DBURL := config.ArgsM.DBURL
 	cfgURL, err := pgx.ParseConnectionString(DBURL)
 	if err != nil {
 		logrus.Error("Error parsing URL: ", err)
@@ -27,6 +27,8 @@ func DBConnect(DBURL string) error {
 	}
 	return nil
 }
+
+// Close connection to database
 func DBClose() error {
 	err := Conn.Close()
 	if err != nil {

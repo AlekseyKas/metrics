@@ -15,14 +15,16 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/AlekseyKas/metrics/internal/config"
-	"github.com/AlekseyKas/metrics/internal/storage"
 	"github.com/go-resty/resty/v2"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/mem"
 	"github.com/sirupsen/logrus"
+
+	"github.com/AlekseyKas/metrics/internal/config"
+	"github.com/AlekseyKas/metrics/internal/storage"
 )
 
+// Send metrics to server
 func SendMetrics(ctx context.Context, wg *sync.WaitGroup, storageM storage.StorageAgent) {
 	defer wg.Done()
 	for {
@@ -39,6 +41,7 @@ func SendMetrics(ctx context.Context, wg *sync.WaitGroup, storageM storage.Stora
 	}
 }
 
+// Prepare and sending metrics to server
 func SendMetricsSlice(ctx context.Context, address string, key []byte, storageM storage.StorageAgent) error {
 	client := resty.New()
 
@@ -85,6 +88,7 @@ func SendMetricsSlice(ctx context.Context, address string, key []byte, storageM 
 	return nil
 }
 
+// Set sha256 hash for metric
 func saveHash(JSONMetric *storage.JSONMetrics, key []byte) (hash string, err error) {
 	var hh string
 	switch JSONMetric.MType {
@@ -104,7 +108,7 @@ func saveHash(JSONMetric *storage.JSONMetrics, key []byte) (hash string, err err
 	return hh, nil
 }
 
-//Update metrics
+//Update metrics terminating
 func UpdateMetrics(ctx context.Context, pollInterval time.Duration, wg *sync.WaitGroup, storageM storage.StorageAgent) {
 	defer wg.Done()
 	for {
@@ -121,12 +125,11 @@ func UpdateMetrics(ctx context.Context, pollInterval time.Duration, wg *sync.Wai
 	}
 }
 
-//Update metrics
+//Update new metrics
 func UpdateMetricsNew(ctx context.Context, pollInterval time.Duration, wg *sync.WaitGroup, storageM storage.StorageAgent) {
 	defer wg.Done()
 	for {
 		select {
-		//send command to ending
 		case <-ctx.Done():
 			logrus.Info("Agent is down update metrics mem & cpu!")
 			return
@@ -144,6 +147,7 @@ func UpdateMetricsNew(ctx context.Context, pollInterval time.Duration, wg *sync.
 	}
 }
 
+// Wait siglans SIGTERM, SIGINT, SIGQUIT
 func WaitSignals(cancel context.CancelFunc, wg *sync.WaitGroup) {
 	defer wg.Done()
 	terminate := make(chan os.Signal, 1)

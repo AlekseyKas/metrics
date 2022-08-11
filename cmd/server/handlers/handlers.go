@@ -12,7 +12,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"net/http/pprof" // подключаем пакет pprof
+	"net/http/pprof"
 	"reflect"
 	"strconv"
 	"strings"
@@ -26,17 +26,19 @@ import (
 	"github.com/AlekseyKas/metrics/internal/storage"
 )
 
-//init typs
+// Init type metrics gauge and counter
 type gauge float64
 type counter int64
 
+// Init server storage
 var StorageM storage.Storage
 
+// Terminate storage server
 func SetStorage(s storage.Storage) {
 	StorageM = s
 }
 
-//router
+// Handlers server
 func Router(r chi.Router) {
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
@@ -59,15 +61,18 @@ func Router(r chi.Router) {
 	r.Get("/debug/pprof/trace", pprof.Trace)
 }
 
+// Init type for zipping
 type gzipBodyWriter struct {
 	http.ResponseWriter
 	writer io.Writer
 }
 
+// Write and compress data
 func (gz gzipBodyWriter) Write(b []byte) (int, error) {
 	return gz.writer.Write(b)
 }
 
+// Decompress data
 func DecompressGzip(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
@@ -88,6 +93,7 @@ func DecompressGzip(next http.Handler) http.Handler {
 	})
 }
 
+// Compress data
 func CompressGzip(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
@@ -112,6 +118,7 @@ func CompressGzip(next http.Handler) http.Handler {
 	})
 }
 
+// Handler for saving metrics
 func saveMetricsSlice() http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
@@ -212,6 +219,7 @@ func saveMetricsSlice() http.HandlerFunc {
 	})
 }
 
+// Handler for getting metrics format JSON
 func getMetricsJSON() http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		defer req.Body.Close()
@@ -276,7 +284,6 @@ func getMetricsJSON() http.HandlerFunc {
 				rw.WriteHeader(http.StatusNotFound)
 			}
 		}
-
 		if typeMet == "gauge" {
 			if _, ok := metrics[nameMet]; ok {
 				if strings.Split(reflect.ValueOf(metrics[nameMet]).Type().String(), ".")[1] == "gauge" {
@@ -311,9 +318,10 @@ func getMetricsJSON() http.HandlerFunc {
 	}
 }
 
+// Calculate sha256
 func calculateHash(s *storage.JSONMetrics, key []byte) {
+	// Init hash
 	var h hash.Hash
-	// var err error
 	switch s.MType {
 	case "counter":
 		data := (fmt.Sprintf("%s:counter:%d", s.ID, *s.Delta))
@@ -326,10 +334,9 @@ func calculateHash(s *storage.JSONMetrics, key []byte) {
 		h.Write([]byte(data))
 		s.Hash = fmt.Sprintf("%x", h.Sum(nil))
 	}
-	// return err
 }
 
-//save metrics
+// Save metrics from format JSON
 func saveMetricsJSON() http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		defer req.Body.Close()
@@ -363,7 +370,7 @@ func saveMetricsJSON() http.HandlerFunc {
 			rw.WriteHeader(http.StatusNotImplemented)
 			return
 		}
-		//update gauge
+		// Update gauge
 		if typeMet == "gauge" {
 			if s.Value == nil {
 				rw.WriteHeader(http.StatusInternalServerError)
@@ -377,7 +384,7 @@ func saveMetricsJSON() http.HandlerFunc {
 				}
 			}
 		}
-		//update counter
+		// Update counter
 		if typeMet == "counter" {
 
 			if err != nil {
@@ -411,9 +418,9 @@ func saveMetricsJSON() http.HandlerFunc {
 	}
 }
 
+// Compare hashe metrics
 func compareHash(s *storage.JSONMetrics, key []byte) (b bool, err error) {
 	var h hash.Hash
-
 	switch s.MType {
 	case "counter":
 		data := (fmt.Sprintf("%s:counter:%d", s.ID, *s.Delta))
@@ -431,7 +438,7 @@ func compareHash(s *storage.JSONMetrics, key []byte) (b bool, err error) {
 	return b, nil
 }
 
-//Get all metrics
+// Getting all metrics
 func getMetrics() http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 
@@ -449,7 +456,7 @@ func getMetrics() http.HandlerFunc {
 	}
 }
 
-//Get value metric
+// Get value metric
 func getMetric() http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 
@@ -464,10 +471,8 @@ func getMetric() http.HandlerFunc {
 		case "counter":
 			typeMet = "counter"
 		}
-
 		if typeMet != "gauge" && typeMet != "counter" {
 			rw.Header().Add("Content-Type", "text/plain")
-
 			rw.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -485,11 +490,9 @@ func getMetric() http.HandlerFunc {
 				return
 			}
 		} else {
-
 			rw.Header().Add("Content-Type", "text/plain")
 			rw.WriteHeader(http.StatusNotFound)
 		}
-
 		if typeMet == "gauge" && nameMet != "PollCount" {
 			rw.Header().Add("Content-Type", "text/plain")
 			rw.WriteHeader(http.StatusOK)
@@ -505,8 +508,9 @@ func saveMetrics() http.HandlerFunc {
 		nameMet := chi.URLParam(req, "nameMet")
 		value := chi.URLParam(req, "value")
 
+		// Get metrics from memory
 		metrics := StorageM.GetMetrics()
-		//typeMertic to URL
+
 		switch typeMet {
 		case "gauge":
 			typeMet = "gauge"
@@ -517,7 +521,7 @@ func saveMetrics() http.HandlerFunc {
 			rw.Header().Add("Content-Type", "text/plain")
 			rw.WriteHeader(http.StatusNotImplemented)
 		}
-		//update gauge
+		// Update gauge
 		if typeMet == "gauge" && nameMet != "PollCount" {
 			valueMetFloat, err := strconv.ParseFloat(value, 64)
 			if err != nil {
@@ -532,9 +536,8 @@ func saveMetrics() http.HandlerFunc {
 				}
 			}
 		}
-		//update counter
+		// Update counter
 		if typeMet == "counter" {
-
 			valueMetInt, err := strconv.Atoi(value)
 			if err != nil {
 				rw.Header().Add("Content-Type", "text/plain")
@@ -559,6 +562,7 @@ func saveMetrics() http.HandlerFunc {
 	}
 }
 
+// Checking connection to database
 func checkConnection() http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		if config.ArgsM.DBURL != "" {

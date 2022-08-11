@@ -7,11 +7,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/fatih/structs"
+	"github.com/stretchr/testify/require"
+
 	"github.com/AlekseyKas/metrics/cmd/server/handlers"
 	"github.com/AlekseyKas/metrics/internal/config"
 	"github.com/AlekseyKas/metrics/internal/storage"
-	"github.com/fatih/structs"
-	"github.com/stretchr/testify/require"
 )
 
 func Test_syncFile(t *testing.T) {
@@ -43,7 +44,6 @@ func Test_syncFile(t *testing.T) {
 				StoreInterval: 0,
 			},
 		},
-		// TODO: Add test cases.
 	}
 	s := &storage.MetricsStore{
 		MM: structs.Map(storage.Metrics{}),
@@ -143,7 +143,6 @@ func Test_fileExist(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-
 		t.Run(tt.name, func(t *testing.T) {
 			b := fileExist(tt.config.StoreFile)
 			if b {

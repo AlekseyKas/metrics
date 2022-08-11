@@ -18,11 +18,11 @@ import (
 	"github.com/AlekseyKas/metrics/internal/config"
 )
 
-//init typs
+// Init type metrics gauge and counter
 type gauge float64
 type counter int64
 
-//Struct for metrics
+// Struct for metrics known
 type Metrics struct {
 	Alloc         gauge
 	BuckHashSys   gauge
@@ -56,6 +56,7 @@ type Metrics struct {
 	RandomValue gauge
 }
 
+// Struct for metrics type JSON
 type JSONMetrics struct {
 	ID    string   `json:"id"`              // имя метрики
 	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
@@ -64,12 +65,14 @@ type JSONMetrics struct {
 	Hash  string   `json:"hash,omitempty"`  // значение хеш-функции
 }
 
+// Storage metrics in memory
 type MetricsStore struct {
 	mux       sync.Mutex
 	MM        map[string]interface{}
 	PollCount int
 }
 
+// Interface with method for agent
 type StorageAgent interface {
 	GetMetrics() map[string]interface{}
 	ChangeMetrics(metrics runtime.MemStats) error
@@ -77,6 +80,7 @@ type StorageAgent interface {
 	GetMetricsJSON() ([]JSONMetrics, error)
 }
 
+// Interface with method for server
 type Storage interface {
 	InitDB(jm []JSONMetrics) error
 	LoadMetricsDB() error
@@ -89,6 +93,7 @@ type Storage interface {
 	GetSliceStruct() []JSONMetrics
 }
 
+// Loading metrics to database
 func (m *MetricsStore) LoadMetricsDB() error {
 	var id string
 	var metricType string
@@ -114,7 +119,7 @@ func (m *MetricsStore) LoadMetricsDB() error {
 	return nil
 }
 
-//update metric in database
+// Update metrics in database
 func (m *MetricsStore) ChangeMetricDB(nameMet string, value interface{}, typeMet string, params config.Args) error {
 	if params.DBURL != "" {
 		switch typeMet {
@@ -133,7 +138,7 @@ func (m *MetricsStore) ChangeMetricDB(nameMet string, value interface{}, typeMet
 	return nil
 }
 
-//init database if don't exist table
+// Init database if don't exist table
 func (m *MetricsStore) InitDB(jm []JSONMetrics) error {
 
 	_, err := database.Conn.Exec("CREATE TABLE IF NOT EXISTS metrics (id VARCHAR NOT NULL UNIQUE, metric_type VARCHAR NOT NULL, delta BIGINT, value DOUBLE PRECISION)")
@@ -143,6 +148,7 @@ func (m *MetricsStore) InitDB(jm []JSONMetrics) error {
 	return nil
 }
 
+// Load metrics from file
 func (m *MetricsStore) LoadMetricsFile(file []byte) {
 	m.mux.Lock()
 	defer m.mux.Unlock()
@@ -177,21 +183,24 @@ func (m *MetricsStore) LoadMetricsFile(file []byte) {
 	}
 }
 
+// Init JSON struct for metrics
 func (m *MetricsStore) GetStructJSON() JSONMetrics {
 	s := JSONMetrics{}
 	return s
 }
 
+// Init SLICE struct for metrics
 func (m *MetricsStore) GetSliceStruct() []JSONMetrics {
 	s := []JSONMetrics{}
 	return s
 }
 
+// Get metrics from memory format JSON
 func (m *MetricsStore) GetMetricsJSON() ([]JSONMetrics, error) {
 	m.mux.Lock()
 	defer m.mux.Unlock()
 	var j []JSONMetrics
-
+	var err error
 	for k, v := range m.MM {
 		if strings.Split(reflect.ValueOf(v).Type().String(), ".")[1] == "gauge" {
 
@@ -217,9 +226,10 @@ func (m *MetricsStore) GetMetricsJSON() ([]JSONMetrics, error) {
 			})
 		}
 	}
-	return j, nil
+	return j, err
 }
 
+// Update metrics always
 func (m *MetricsStore) ChangeMetrics(memStats runtime.MemStats) error {
 	m.mux.Lock()
 	defer m.mux.Unlock()
@@ -256,6 +266,7 @@ func (m *MetricsStore) ChangeMetrics(memStats runtime.MemStats) error {
 	return nil
 }
 
+// Change metrics TotalMemory, FreeMemory, CPUutilization1
 func (m *MetricsStore) ChangeMetricsNew(mem *mem.VirtualMemoryStat, cpu []float64) error {
 	m.mux.Lock()
 	defer m.mux.Unlock()
@@ -265,6 +276,7 @@ func (m *MetricsStore) ChangeMetricsNew(mem *mem.VirtualMemoryStat, cpu []float6
 	return nil
 }
 
+// Change all metrics
 func (m *MetricsStore) ChangeMetric(nameMet string, value interface{}, params config.Args) error {
 	sl, err := m.GetMetricsJSON()
 	if err != nil {
@@ -288,10 +300,10 @@ func (m *MetricsStore) ChangeMetric(nameMet string, value interface{}, params co
 	} else {
 		m.MM[nameMet] = value
 	}
-
-	return nil
+	return err
 }
 
+// Get all metrics from memory
 func (m *MetricsStore) GetMetrics() map[string]interface{} {
 	m.mux.Lock()
 	defer m.mux.Unlock()

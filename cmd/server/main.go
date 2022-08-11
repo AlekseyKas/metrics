@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	_ "net/http/pprof" // подключаем пакет pprof
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"sync"
@@ -21,29 +21,32 @@ import (
 	"github.com/AlekseyKas/metrics/internal/storage"
 )
 
+// Init wait group
 var wg sync.WaitGroup
 
 func main() {
-	//инициализация хранилища метрик
+	// Inint storage server
 	s := &storage.MetricsStore{
 		MM: structs.Map(storage.Metrics{}),
 	}
-
+	// Terminate environment and flags
 	config.TermEnvFlags()
+	// Terminate storage metrics
 	handlers.SetStorage(s)
-	logrus.Info(config.ArgsM.StoreFile)
+	// Default context and cancel
 	ctx, cancel := context.WithCancel(context.Background())
+	// Add count wait group
 	wg.Add(1)
+	// Wait signal from operation system
 	go waitSignals(cancel)
-
-	//load metrics from file
+	// Load metrics from file
 	if config.ArgsM.StoreFile != "" {
 		err := loadFromFile(config.ArgsM)
 		if err != nil {
 			logrus.Error("Error load from file: ", err)
 		}
 	}
-	//DB connection
+	// Connect to database if DBURL exist
 	if config.ArgsM.DBURL != "" {
 		err := database.DBConnect(config.ArgsM.DBURL)
 		if err != nil {
@@ -54,21 +57,25 @@ func main() {
 			logrus.Error("Error getting metricsJSON for database: ", err)
 		}
 		handlers.StorageM.InitDB(jm)
-		//restore from DB
+		// Restore from database
 		if !config.ArgsM.Restore && config.ArgsM.DBURL != "" {
 			handlers.StorageM.LoadMetricsDB()
 		}
 	}
+	// Add count wait group
 	wg.Add(1)
-	//sync metrics with file
+	// Sync metrics with file
 	go syncFile(config.ArgsM, ctx)
+	// Init chi router
 	r := chi.NewRouter()
 	r.Route("/", handlers.Router)
+	// Start http server
 	go http.ListenAndServe(config.ArgsM.Address, r)
-
+	// Add count wait group
 	wg.Wait()
 }
 
+// Load metrics from file storage
 func loadFromFile(env config.Args) error {
 	if env.Restore && fileExist(env.StoreFile) {
 		file, err := os.ReadFile(env.StoreFile)
@@ -82,6 +89,7 @@ func loadFromFile(env config.Args) error {
 	return nil
 }
 
+// Sync metrics with file storage
 func syncFile(env config.Args, ctx context.Context) {
 	if env.StoreFile == "" {
 		for {
@@ -136,6 +144,7 @@ func syncFile(env config.Args, ctx context.Context) {
 	}
 }
 
+// Checking exist file or don't exist
 func fileExist(file string) bool {
 	var b bool
 	_, err := os.Stat(file)
@@ -146,7 +155,7 @@ func fileExist(file string) bool {
 	return b
 }
 
-//wating signals
+// Wait siglans SIGTERM, SIGINT, SIGQUIT
 func waitSignals(cancel context.CancelFunc) {
 	terminate := make(chan os.Signal, 1)
 	signal.Notify(terminate, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
