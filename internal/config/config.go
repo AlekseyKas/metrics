@@ -119,3 +119,38 @@ func TermEnvFlags() {
 		}
 	}
 }
+
+func TermEnvFlagsAgent() {
+	flag.StringVar(&FlagsAgent.Address, "a", "127.0.0.1:8080", "Address")
+	flag.StringVar(&FlagsAgent.Key, "k", "", "Secret key")
+	flag.DurationVar(&FlagsAgent.ReportInterval, "r", 10000000000, "Report interval")
+	flag.DurationVar(&FlagsAgent.PollInterval, "p", 2000000000, "Poll interval")
+
+	flag.Parse()
+
+	env := LoadConfig()
+	envADDR, _ := os.LookupEnv("ADDRESS")
+	if envADDR == "" {
+		ArgsM.Address = FlagsAgent.Address
+	} else {
+		ArgsM.Address = env.Address
+	}
+	envRest, _ := os.LookupEnv("REPORT_INTERVAL")
+	if envRest == "" {
+		ArgsM.ReportInterval = FlagsAgent.ReportInterval
+	} else {
+		ArgsM.ReportInterval = env.ReportInterval
+	}
+	envStoreint, _ := os.LookupEnv("POLL_INTERVAL")
+	if envStoreint == "" {
+		ArgsM.PollInterval = FlagsAgent.PollInterval
+	} else {
+		ArgsM.PollInterval = env.PollInterval
+	}
+	envKey, _ := os.LookupEnv("KEY")
+	if envKey == "" {
+		ArgsM.Key = FlagsAgent.Key
+	} else {
+		ArgsM.Key = env.Key
+	}
+}

@@ -136,68 +136,6 @@ func syncFile(env config.Args, ctx context.Context) {
 	}
 }
 
-// func termEnvFlags() {
-// 	// kong.Parse(&config.FlagsServer)
-// 	flag.StringVar(&config.FlagsServer.Address, "a", "127.0.0.1:8080", "Address")
-// 	flag.StringVar(&config.FlagsServer.DBURL, "d", "", "Database URL")
-// 	flag.StringVar(&config.FlagsServer.StoreFile, "f", "", "File path store")
-// 	flag.StringVar(&config.FlagsServer.Key, "k", "", "Secret key")
-// 	flag.BoolVar(&config.FlagsServer.Restore, "r", true, "Restore from file")
-// 	flag.DurationVar(&config.FlagsServer.StoreInterval, "i", 300000000000, "Interval store file")
-// 	flag.Parse()
-// 	env := config.LoadConfig()
-// 	envADDR, _ := os.LookupEnv("ADDRESS")
-// 	if envADDR == "" {
-// 		config.ArgsM.Address = config.FlagsServer.Address
-// 	} else {
-// 		config.ArgsM.Address = env.Address
-
-// 	}
-// 	envRest, _ := os.LookupEnv("RESTORE")
-// 	if envRest == "" {
-// 		config.ArgsM.Restore = config.FlagsServer.Restore
-// 	} else {
-// 		config.ArgsM.Restore = env.Restore
-// 	}
-// 	envStoreint, _ := os.LookupEnv("STORE_INTERVAL")
-// 	if envStoreint == "" {
-// 		config.ArgsM.StoreInterval = config.FlagsServer.StoreInterval
-// 	} else {
-// 		config.ArgsM.StoreInterval = env.StoreInterval
-// 	}
-// 	envKey, _ := os.LookupEnv("KEY")
-// 	if envKey == "" {
-// 		config.ArgsM.Key = config.FlagsServer.Key
-// 	} else {
-// 		config.ArgsM.Key = env.Key
-// 	}
-
-// 	envFile, b := os.LookupEnv("STORE_FILE")
-
-// 	switch envFile == "" && b {
-// 	case true:
-// 		config.ArgsM.StoreFile = ""
-// 	case false:
-// 		if envFile == "" {
-// 			config.ArgsM.StoreFile = config.FlagsServer.StoreFile
-// 		} else {
-// 			config.ArgsM.StoreFile = env.StoreFile
-// 		}
-// 	}
-
-// 	envDBURL, _ := os.LookupEnv("DATABASE_DSN")
-
-// 	if envDBURL == "" && config.FlagsServer.DBURL == "" {
-// 		config.ArgsM.DBURL = ""
-// 	} else {
-// 		if envDBURL != "" {
-// 			config.ArgsM.DBURL = envDBURL
-// 		} else {
-// 			config.ArgsM.DBURL = config.FlagsServer.DBURL
-// 		}
-// 	}
-// }
-
 func fileExist(file string) bool {
 	var b bool
 	_, err := os.Stat(file)
