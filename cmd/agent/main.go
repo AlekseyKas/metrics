@@ -12,9 +12,11 @@ import (
 )
 
 func main() {
+	// Init waitGroup
 	var wg = &sync.WaitGroup{}
+	// Init storage of metrics
 	var storageM storage.StorageAgent
-
+	// Init map of metrics
 	var MapMetrics map[string]interface{} = structs.Map(storage.Metrics{})
 	s := &storage.MetricsStore{
 		MM: MapMetrics,
