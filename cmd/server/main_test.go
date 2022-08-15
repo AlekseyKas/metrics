@@ -10,8 +10,8 @@ import (
 	"github.com/fatih/structs"
 	"github.com/stretchr/testify/require"
 
-	"github.com/AlekseyKas/metrics/cmd/server/handlers"
 	"github.com/AlekseyKas/metrics/internal/config"
+	"github.com/AlekseyKas/metrics/internal/server/handlers"
 	"github.com/AlekseyKas/metrics/internal/storage"
 )
 

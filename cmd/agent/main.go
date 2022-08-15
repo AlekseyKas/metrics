@@ -6,7 +6,7 @@ import (
 
 	"github.com/fatih/structs"
 
-	"github.com/AlekseyKas/metrics/cmd/agent/helpers"
+	"github.com/AlekseyKas/metrics/internal/agent/helpers"
 	"github.com/AlekseyKas/metrics/internal/config"
 	"github.com/AlekseyKas/metrics/internal/storage"
 )

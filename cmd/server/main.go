@@ -15,9 +15,9 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/sirupsen/logrus"
 
-	"github.com/AlekseyKas/metrics/cmd/server/database"
-	"github.com/AlekseyKas/metrics/cmd/server/handlers"
 	"github.com/AlekseyKas/metrics/internal/config"
+	"github.com/AlekseyKas/metrics/internal/server/database"
+	"github.com/AlekseyKas/metrics/internal/server/handlers"
 	"github.com/AlekseyKas/metrics/internal/storage"
 )
 
