@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
-	"io/ioutil"
 	_ "net/http/pprof"
+	"os"
 	"testing"
 	"time"
 
@@ -16,7 +16,7 @@ import (
 )
 
 func Test_syncFile(t *testing.T) {
-	f, _ := ioutil.TempFile("/tmp/", "file")
+	f, err := os.CreateTemp("/tmp/", "file")
 
 	tests := []struct {
 		name   string
@@ -51,6 +51,7 @@ func Test_syncFile(t *testing.T) {
 	handlers.SetStorage(s)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			require.NoError(t, err)
 			ctx, cancel := context.WithCancel(context.Background())
 			wg.Add(1)
 			go syncFile(tt.config, ctx)
@@ -108,7 +109,7 @@ func Test_loadFromFile(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		_, err := ioutil.TempFile("/tmp/", tt.config.StoreFile)
+		_, err := os.CreateTemp("/tmp/", tt.config.StoreFile)
 		require.NoError(t, err)
 
 		t.Run(tt.name, func(t *testing.T) {
@@ -119,7 +120,7 @@ func Test_loadFromFile(t *testing.T) {
 }
 
 func Test_fileExist(t *testing.T) {
-	f, _ := ioutil.TempFile("/tmp/", "file")
+	f, _ := os.CreateTemp("/tmp/", "file")
 	tests := []struct {
 		name    string
 		config  config.Args

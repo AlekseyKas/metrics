@@ -296,7 +296,10 @@ func (m *MetricsStore) ChangeMetric(nameMet string, value interface{}, params co
 		if err != nil {
 			logrus.Error("Error marshaling metrics : ", err)
 		}
-		file.Write(data)
+		_, err = file.Write(data)
+		if err != nil {
+			logrus.Error("Error write metrics to file : ", err)
+		}
 	} else {
 		m.MM[nameMet] = value
 	}

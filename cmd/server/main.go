@@ -56,10 +56,16 @@ func main() {
 		if err != nil {
 			logrus.Error("Error getting metricsJSON for database: ", err)
 		}
-		handlers.StorageM.InitDB(jm)
+		err = handlers.StorageM.InitDB(jm)
+		if err != nil {
+			logrus.Error("Error init database InitDB: ", err)
+		}
 		// Restore from database
 		if !config.ArgsM.Restore && config.ArgsM.DBURL != "" {
-			handlers.StorageM.LoadMetricsDB()
+			err = handlers.StorageM.LoadMetricsDB()
+			if err != nil {
+				logrus.Error("Error load metrics to database LoadMetricsDB: ", err)
+			}
 		}
 	}
 	// Add count wait group
@@ -70,7 +76,12 @@ func main() {
 	r := chi.NewRouter()
 	r.Route("/", handlers.Router)
 	// Start http server
-	go http.ListenAndServe(config.ArgsM.Address, r)
+	go func() {
+		err := http.ListenAndServe(config.ArgsM.Address, r)
+		if err != nil {
+			logrus.Error("Error http server CHI: ", err)
+		}
+	}()
 	// Add count wait group
 	wg.Wait()
 }
@@ -100,7 +111,10 @@ func syncFile(env config.Args, ctx context.Context) {
 		}
 	} else {
 		if env.StoreInterval == 0 {
-			metrics, _ := handlers.StorageM.GetMetricsJSON()
+			metrics, err := handlers.StorageM.GetMetricsJSON()
+			if err != nil {
+				logrus.Error("Error getting metrics format JSON GetMetricsJSON: ", err)
+			}
 			file, err := os.Create(env.StoreFile)
 			if err != nil {
 				logrus.Error("Error open file for writing: ", err)
@@ -111,7 +125,10 @@ func syncFile(env config.Args, ctx context.Context) {
 			if err != nil {
 				logrus.Error("Error marshaling metrics : ", err)
 			}
-			file.Write(data)
+			_, err = file.Write(data)
+			if err != nil {
+				logrus.Error("Error write data to file: ", err)
+			}
 			for {
 				<-ctx.Done()
 				logrus.Info("File syncing is down")
@@ -137,7 +154,10 @@ func syncFile(env config.Args, ctx context.Context) {
 					if err != nil {
 						logrus.Error("Error marshaling metrics : ", err)
 					}
-					file.Write(data)
+					_, err = file.Write(data)
+					if err != nil {
+						logrus.Error("Error writing data to file: ", err)
+					}
 				}
 			}
 		}

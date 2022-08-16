@@ -15,7 +15,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/go-resty/resty/v2"
+	resty "github.com/go-resty/resty/v2"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/mem"
 	"github.com/sirupsen/logrus"
@@ -75,7 +75,10 @@ func SendMetricsSlice(ctx context.Context, address string, key []byte, storageM 
 
 	gz, _ := gzip.NewWriterLevel(&b, gzip.BestSpeed)
 
-	gz.Write(buf.Bytes())
+	_, err = gz.Write(buf.Bytes())
+	if err != nil {
+		logrus.Error("Error write gz metrics: ", err)
+	}
 	gz.Close()
 	_, err = client.R().
 		SetHeader("Content-Encoding", "gzip").
@@ -120,7 +123,10 @@ func UpdateMetrics(ctx context.Context, pollInterval time.Duration, wg *sync.Wai
 		case <-time.After(pollInterval):
 			var memStats runtime.MemStats
 			runtime.ReadMemStats(&memStats)
-			storageM.ChangeMetrics(memStats)
+			err := storageM.ChangeMetrics(memStats)
+			if err != nil {
+				logrus.Error("Error changing metrics ChangeMetrics: ", err)
+			}
 		}
 	}
 }
@@ -142,7 +148,10 @@ func UpdateMetricsNew(ctx context.Context, pollInterval time.Duration, wg *sync.
 			if err != nil {
 				logrus.Error(err)
 			}
-			storageM.ChangeMetricsNew(mem, cpu)
+			err = storageM.ChangeMetricsNew(mem, cpu)
+			if err != nil {
+				logrus.Error("Error change new metrics ChangeMetricsNew: ", err)
+			}
 		}
 	}
 }

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/fatih/structs"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
 	"github.com/AlekseyKas/metrics/internal/config"
@@ -50,7 +51,6 @@ func TestSaveHash(t *testing.T) {
 			},
 			sha: "af087c9d1c0119ccb77efa66efc24250f9e515d665c925690d7f1c27d3f5c88a",
 		},
-		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -92,7 +92,10 @@ func Test_sendMetricsSlice(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Run("sendMetricsSlice", func(t *testing.T) {
 		wg.Add(1)
-		SendMetricsSlice(ctx, config.ArgsM.Address, []byte(config.ArgsM.Key), storageM)
+		err := SendMetricsSlice(ctx, config.ArgsM.Address, []byte(config.ArgsM.Key), storageM)
+		if err != nil {
+			logrus.Error("Error sending slice metrics: ", err)
+		}
 		time.Sleep(time.Second * 2)
 		cancel()
 		wg.Done()
