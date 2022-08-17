@@ -90,7 +90,6 @@ type StorageAgent interface {
 
 // Interface with method for server
 type Storage interface {
-	// InitDB(jm []JSONMetrics) error
 	StopDB()
 	InitDB(DBURL string) error
 	CheckConnection() error
@@ -185,16 +184,6 @@ func (m *MetricsStore) ChangeMetricDB(nameMet string, value interface{}, typeMet
 	}
 	return err
 }
-
-// Init database if don't exist table
-// func (m *MetricsStore) InitDB(jm []JSONMetrics) error {
-
-// 	_, err := database.Conn.Exec("CREATE TABLE IF NOT EXISTS metrics (id VARCHAR NOT NULL UNIQUE, metric_type VARCHAR NOT NULL, delta BIGINT, value DOUBLE PRECISION)")
-// 	if err != nil {
-// 		logrus.Error("Error create table: ", err)
-// 	}
-// 	return nil
-// }
 
 // Load metrics from file
 func (m *MetricsStore) LoadMetricsFile(file []byte) {

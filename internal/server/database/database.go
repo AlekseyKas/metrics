@@ -7,9 +7,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// Init database connection
-// var Conn *pgxpool.Pool
-
 // Connect to database via DBURL
 func Connect(ctx context.Context, loger logrus.FieldLogger, DBURL string) (Conn *pgxpool.Pool, err error) {
 	cfgURL, err := pgxpool.ParseConfig(DBURL)
@@ -24,12 +21,3 @@ func Connect(ctx context.Context, loger logrus.FieldLogger, DBURL string) (Conn 
 	}
 	return Conn, err
 }
-
-// // Close connection to database
-// func DBClose(Conn *pgxpool.Pool) {
-// 	Conn.Close()
-// 	// if err != nil {
-// 	// 	logrus.Error(err)
-// 	// }
-// 	return
-// }
