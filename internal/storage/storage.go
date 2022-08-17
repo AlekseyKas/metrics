@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"math/rand"
@@ -10,19 +11,23 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
+	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/shirou/gopsutil/v3/mem"
 	"github.com/sirupsen/logrus"
 
-	"github.com/AlekseyKas/metrics/cmd/server/database"
 	"github.com/AlekseyKas/metrics/internal/config"
+	"github.com/AlekseyKas/metrics/internal/config/migrate"
+	"github.com/AlekseyKas/metrics/internal/server/database"
+	"github.com/AlekseyKas/metrics/internal/storage/migrations"
 )
 
-//init typs
+// Init type metrics gauge and counter
 type gauge float64
 type counter int64
 
-//Struct for metrics
+// Struct for metrics known
 type Metrics struct {
 	Alloc         gauge
 	BuckHashSys   gauge
@@ -56,6 +61,7 @@ type Metrics struct {
 	RandomValue gauge
 }
 
+// Struct for metrics type JSON
 type JSONMetrics struct {
 	ID    string   `json:"id"`              // имя метрики
 	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
@@ -64,12 +70,17 @@ type JSONMetrics struct {
 	Hash  string   `json:"hash,omitempty"`  // значение хеш-функции
 }
 
+// Storage metrics in memory
 type MetricsStore struct {
+	Ctx       context.Context
+	Loger     logrus.FieldLogger
+	Conn      *pgxpool.Pool
 	mux       sync.Mutex
 	MM        map[string]interface{}
 	PollCount int
 }
 
+// Interface with method for agent
 type StorageAgent interface {
 	GetMetrics() map[string]interface{}
 	ChangeMetrics(metrics runtime.MemStats) error
@@ -77,8 +88,11 @@ type StorageAgent interface {
 	GetMetricsJSON() ([]JSONMetrics, error)
 }
 
+// Interface with method for server
 type Storage interface {
-	InitDB(jm []JSONMetrics) error
+	StopDB()
+	InitDB(DBURL string) error
+	CheckConnection() error
 	LoadMetricsDB() error
 	ChangeMetricDB(nameMet string, value interface{}, typeMet string, params config.Args) error
 	GetMetrics() map[string]interface{}
@@ -89,12 +103,49 @@ type Storage interface {
 	GetSliceStruct() []JSONMetrics
 }
 
+func (m *MetricsStore) CheckConnection() error {
+	err := m.Conn.Ping(m.Ctx)
+	if err != nil {
+		m.Loger.Error("Error checking connection to database: ", err)
+	}
+	return err
+}
+
+func (m *MetricsStore) StopDB() {
+	m.Conn.Close()
+}
+
+func (m *MetricsStore) InitDB(DBURL string) error {
+	var err error
+loop:
+	for {
+		select {
+		case <-m.Ctx.Done():
+			break loop
+		case <-time.After(2 * time.Second):
+			m.Conn, err = database.Connect(m.Ctx, m.Loger, DBURL)
+			if err != nil {
+				m.Loger.Error("Error conncet to DB: ", err)
+				continue
+			}
+			break loop
+		}
+	}
+	err = migrate.MigrateFromFS(m.Ctx, m.Conn, &migrations.Migrations, m.Loger)
+	if err != nil {
+		m.Loger.Error("Error migration: ", err)
+		return err
+	}
+	return err
+}
+
+// Loading metrics to database
 func (m *MetricsStore) LoadMetricsDB() error {
 	var id string
 	var metricType string
 	var value *float64
 	var delta *int64
-	row, err := database.Conn.Query("SELECT id, metric_type, value, delta FROM metrics")
+	row, err := m.Conn.Query(m.Ctx, "SELECT id, metric_type, value, delta FROM metrics")
 	if err != nil {
 		logrus.Error("Error select all from table metrics: ", err)
 	}
@@ -114,35 +165,27 @@ func (m *MetricsStore) LoadMetricsDB() error {
 	return nil
 }
 
-//update metric in database
+// Update metrics in database
 func (m *MetricsStore) ChangeMetricDB(nameMet string, value interface{}, typeMet string, params config.Args) error {
+	var err error
 	if params.DBURL != "" {
 		switch typeMet {
 		case "gauge":
-			_, err := database.Conn.Exec("INSERT INTO metrics (id, metric_type, value) VALUES($1,$2,$3) ON CONFLICT (id) DO UPDATE SET value = $3", nameMet, typeMet, value)
+			_, err = m.Conn.Exec(m.Ctx, "INSERT INTO metrics (id, metric_type, value) VALUES($1,$2,$3) ON CONFLICT (id) DO UPDATE SET value = $3", nameMet, typeMet, value)
 			if err != nil {
 				logrus.Error("Error insert metric gauge in database: ", err)
 			}
 		case "counter":
-			_, err := database.Conn.Exec("INSERT INTO metrics (id, metric_type, delta) VALUES($1,$2,$3) ON CONFLICT (id) DO UPDATE SET delta = $3", nameMet, typeMet, value)
+			_, err = m.Conn.Exec(m.Ctx, "INSERT INTO metrics (id, metric_type, delta) VALUES($1,$2,$3) ON CONFLICT (id) DO UPDATE SET delta = $3", nameMet, typeMet, value)
 			if err != nil {
 				logrus.Error("Error insert metric counter in database: ", err)
 			}
 		}
 	}
-	return nil
+	return err
 }
 
-//init database if don't exist table
-func (m *MetricsStore) InitDB(jm []JSONMetrics) error {
-
-	_, err := database.Conn.Exec("CREATE TABLE IF NOT EXISTS metrics (id VARCHAR NOT NULL UNIQUE, metric_type VARCHAR NOT NULL, delta BIGINT, value DOUBLE PRECISION)")
-	if err != nil {
-		logrus.Error("Error create table: ", err)
-	}
-	return nil
-}
-
+// Load metrics from file
 func (m *MetricsStore) LoadMetricsFile(file []byte) {
 	m.mux.Lock()
 	defer m.mux.Unlock()
@@ -177,21 +220,24 @@ func (m *MetricsStore) LoadMetricsFile(file []byte) {
 	}
 }
 
+// Init JSON struct for metrics
 func (m *MetricsStore) GetStructJSON() JSONMetrics {
 	s := JSONMetrics{}
 	return s
 }
 
+// Init SLICE struct for metrics
 func (m *MetricsStore) GetSliceStruct() []JSONMetrics {
 	s := []JSONMetrics{}
 	return s
 }
 
+// Get metrics from memory format JSON
 func (m *MetricsStore) GetMetricsJSON() ([]JSONMetrics, error) {
 	m.mux.Lock()
 	defer m.mux.Unlock()
 	var j []JSONMetrics
-
+	var err error
 	for k, v := range m.MM {
 		if strings.Split(reflect.ValueOf(v).Type().String(), ".")[1] == "gauge" {
 
@@ -217,9 +263,10 @@ func (m *MetricsStore) GetMetricsJSON() ([]JSONMetrics, error) {
 			})
 		}
 	}
-	return j, nil
+	return j, err
 }
 
+// Update metrics always
 func (m *MetricsStore) ChangeMetrics(memStats runtime.MemStats) error {
 	m.mux.Lock()
 	defer m.mux.Unlock()
@@ -256,6 +303,7 @@ func (m *MetricsStore) ChangeMetrics(memStats runtime.MemStats) error {
 	return nil
 }
 
+// Change metrics TotalMemory, FreeMemory, CPUutilization1
 func (m *MetricsStore) ChangeMetricsNew(mem *mem.VirtualMemoryStat, cpu []float64) error {
 	m.mux.Lock()
 	defer m.mux.Unlock()
@@ -265,6 +313,7 @@ func (m *MetricsStore) ChangeMetricsNew(mem *mem.VirtualMemoryStat, cpu []float6
 	return nil
 }
 
+// Change all metrics
 func (m *MetricsStore) ChangeMetric(nameMet string, value interface{}, params config.Args) error {
 	sl, err := m.GetMetricsJSON()
 	if err != nil {
@@ -284,14 +333,17 @@ func (m *MetricsStore) ChangeMetric(nameMet string, value interface{}, params co
 		if err != nil {
 			logrus.Error("Error marshaling metrics : ", err)
 		}
-		file.Write(data)
+		_, err = file.Write(data)
+		if err != nil {
+			logrus.Error("Error write metrics to file : ", err)
+		}
 	} else {
 		m.MM[nameMet] = value
 	}
-
-	return nil
+	return err
 }
 
+// Get all metrics from memory
 func (m *MetricsStore) GetMetrics() map[string]interface{} {
 	m.mux.Lock()
 	defer m.mux.Unlock()

@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"flag"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"sync"
@@ -15,59 +15,70 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/sirupsen/logrus"
 
-	"github.com/AlekseyKas/metrics/cmd/server/database"
-	"github.com/AlekseyKas/metrics/cmd/server/handlers"
 	"github.com/AlekseyKas/metrics/internal/config"
+	"github.com/AlekseyKas/metrics/internal/server/handlers"
 	"github.com/AlekseyKas/metrics/internal/storage"
 )
 
+// Init wait group
 var wg sync.WaitGroup
 
 func main() {
-	//инициализация хранилища метрик
-	s := &storage.MetricsStore{
-		MM: structs.Map(storage.Metrics{}),
-	}
-	termEnvFlags()
-	handlers.SetStorage(s)
-
+	// Default context and cancel
 	ctx, cancel := context.WithCancel(context.Background())
-	wg.Add(1)
-	go waitSignals(cancel)
-
-	//load metrics from file
+	// Inint storage server
+	s := &storage.MetricsStore{
+		MM:  structs.Map(storage.Metrics{}),
+		Ctx: ctx,
+	}
+	// Terminate environment and flags
+	config.TermEnvFlags()
+	// Terminate storage metrics
+	handlers.SetStorage(s)
+	// Load metrics from file
 	if config.ArgsM.StoreFile != "" {
 		err := loadFromFile(config.ArgsM)
 		if err != nil {
 			logrus.Error("Error load from file: ", err)
 		}
 	}
-	//DB connection
+	// Connect to database if DBURL exist
 	if config.ArgsM.DBURL != "" {
-		err := database.DBConnect()
+		err := handlers.StorageM.InitDB(config.ArgsM.DBURL)
 		if err != nil {
 			logrus.Error("Connection to postrgres faild: ", err)
 		}
-		jm, err := handlers.StorageM.GetMetricsJSON()
-		if err != nil {
-			logrus.Error("Error getting metricsJSON for database: ", err)
-		}
-		handlers.StorageM.InitDB(jm)
-		//restore from DB
+		// Restore from database
 		if !config.ArgsM.Restore && config.ArgsM.DBURL != "" {
-			handlers.StorageM.LoadMetricsDB()
+			err = handlers.StorageM.LoadMetricsDB()
+			if err != nil {
+				logrus.Error("Error load metrics to database LoadMetricsDB: ", err)
+			}
 		}
 	}
+	// Add count wait group
 	wg.Add(1)
-	//sync metrics with file
+	// Wait signal from operation system
+	go waitSignals(cancel)
+	// Add count wait group
+	wg.Add(1)
+	// Sync metrics with file
 	go syncFile(config.ArgsM, ctx)
+	// Init chi router
 	r := chi.NewRouter()
 	r.Route("/", handlers.Router)
-	go http.ListenAndServe(config.ArgsM.Address, r)
-
+	// Start http server
+	go func() {
+		err := http.ListenAndServe(config.ArgsM.Address, r)
+		if err != nil {
+			logrus.Error("Error http server CHI: ", err)
+		}
+	}()
+	// Add count wait group
 	wg.Wait()
 }
 
+// Load metrics from file storage
 func loadFromFile(env config.Args) error {
 	if env.Restore && fileExist(env.StoreFile) {
 		file, err := os.ReadFile(env.StoreFile)
@@ -81,6 +92,7 @@ func loadFromFile(env config.Args) error {
 	return nil
 }
 
+// Sync metrics with file storage
 func syncFile(env config.Args, ctx context.Context) {
 	if env.StoreFile == "" {
 		for {
@@ -91,7 +103,10 @@ func syncFile(env config.Args, ctx context.Context) {
 		}
 	} else {
 		if env.StoreInterval == 0 {
-			metrics, _ := handlers.StorageM.GetMetricsJSON()
+			metrics, err := handlers.StorageM.GetMetricsJSON()
+			if err != nil {
+				logrus.Error("Error getting metrics format JSON GetMetricsJSON: ", err)
+			}
 			file, err := os.Create(env.StoreFile)
 			if err != nil {
 				logrus.Error("Error open file for writing: ", err)
@@ -102,7 +117,10 @@ func syncFile(env config.Args, ctx context.Context) {
 			if err != nil {
 				logrus.Error("Error marshaling metrics : ", err)
 			}
-			file.Write(data)
+			_, err = file.Write(data)
+			if err != nil {
+				logrus.Error("Error write data to file: ", err)
+			}
 			for {
 				<-ctx.Done()
 				logrus.Info("File syncing is down")
@@ -128,75 +146,17 @@ func syncFile(env config.Args, ctx context.Context) {
 					if err != nil {
 						logrus.Error("Error marshaling metrics : ", err)
 					}
-					file.Write(data)
+					_, err = file.Write(data)
+					if err != nil {
+						logrus.Error("Error writing data to file: ", err)
+					}
 				}
 			}
 		}
 	}
 }
 
-func termEnvFlags() {
-	// kong.Parse(&config.FlagsServer)
-	flag.StringVar(&config.FlagsServer.Address, "a", "127.0.0.1:8080", "Address")
-	flag.StringVar(&config.FlagsServer.DBURL, "d", "", "Database URL")
-	flag.StringVar(&config.FlagsServer.StoreFile, "f", "", "File path store")
-	flag.StringVar(&config.FlagsServer.Key, "k", "", "Secret key")
-	flag.BoolVar(&config.FlagsServer.Restore, "r", true, "Restire drom file")
-	flag.DurationVar(&config.FlagsServer.StoreInterval, "i", 300000000000, "Interval store file")
-	flag.Parse()
-	env := config.LoadConfig()
-	envADDR, _ := os.LookupEnv("ADDRESS")
-	if envADDR == "" {
-		config.ArgsM.Address = config.FlagsServer.Address
-	} else {
-		config.ArgsM.Address = env.Address
-
-	}
-	envRest, _ := os.LookupEnv("RESTORE")
-	if envRest == "" {
-		config.ArgsM.Restore = config.FlagsServer.Restore
-	} else {
-		config.ArgsM.Restore = env.Restore
-	}
-	envStoreint, _ := os.LookupEnv("STORE_INTERVAL")
-	if envStoreint == "" {
-		config.ArgsM.StoreInterval = config.FlagsServer.StoreInterval
-	} else {
-		config.ArgsM.StoreInterval = env.StoreInterval
-	}
-	envKey, _ := os.LookupEnv("KEY")
-	if envKey == "" {
-		config.ArgsM.Key = config.FlagsServer.Key
-	} else {
-		config.ArgsM.Key = env.Key
-	}
-
-	envFile, b := os.LookupEnv("STORE_FILE")
-
-	switch envFile == "" && b {
-	case true:
-		config.ArgsM.StoreFile = ""
-	case false:
-		if envFile == "" {
-			config.ArgsM.StoreFile = config.FlagsServer.StoreFile
-		} else {
-			config.ArgsM.StoreFile = env.StoreFile
-		}
-	}
-
-	envDBURL, _ := os.LookupEnv("DATABASE_DSN")
-
-	if envDBURL == "" && config.FlagsServer.DBURL == "" {
-		config.ArgsM.DBURL = ""
-	} else {
-		if envDBURL != "" {
-			config.ArgsM.DBURL = envDBURL
-		} else {
-			config.ArgsM.DBURL = config.FlagsServer.DBURL
-		}
-	}
-}
-
+// Checking exist file or don't exist
 func fileExist(file string) bool {
 	var b bool
 	_, err := os.Stat(file)
@@ -207,7 +167,7 @@ func fileExist(file string) bool {
 	return b
 }
 
-//wating signals
+// Wait siglans SIGTERM, SIGINT, SIGQUIT
 func waitSignals(cancel context.CancelFunc) {
 	terminate := make(chan os.Signal, 1)
 	signal.Notify(terminate, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
@@ -216,7 +176,7 @@ func waitSignals(cancel context.CancelFunc) {
 		switch sig {
 		case os.Interrupt:
 			if config.ArgsM.DBURL != "" {
-				database.DBClose()
+				handlers.StorageM.StopDB()
 			}
 			cancel()
 			wg.Done()
