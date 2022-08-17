@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"math/rand"
@@ -10,12 +11,16 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
+	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/shirou/gopsutil/v3/mem"
 	"github.com/sirupsen/logrus"
 
 	"github.com/AlekseyKas/metrics/internal/config"
+	"github.com/AlekseyKas/metrics/internal/config/migrate"
 	"github.com/AlekseyKas/metrics/internal/server/database"
+	"github.com/AlekseyKas/metrics/internal/storage/migrations"
 )
 
 // Init type metrics gauge and counter
@@ -67,6 +72,9 @@ type JSONMetrics struct {
 
 // Storage metrics in memory
 type MetricsStore struct {
+	Ctx       context.Context
+	Loger     logrus.FieldLogger
+	Conn      *pgxpool.Pool
 	mux       sync.Mutex
 	MM        map[string]interface{}
 	PollCount int
@@ -82,7 +90,10 @@ type StorageAgent interface {
 
 // Interface with method for server
 type Storage interface {
-	InitDB(jm []JSONMetrics) error
+	// InitDB(jm []JSONMetrics) error
+	StopDB() error
+	InitDB(DBURL string) error
+	CheckConnection() error
 	LoadMetricsDB() error
 	ChangeMetricDB(nameMet string, value interface{}, typeMet string, params config.Args) error
 	GetMetrics() map[string]interface{}
@@ -93,13 +104,54 @@ type Storage interface {
 	GetSliceStruct() []JSONMetrics
 }
 
+func (m *MetricsStore) CheckConnection() error {
+	err := m.Conn.Ping(m.Ctx)
+	if err != nil {
+		m.Loger.Error("Error checking connection to database: ", err)
+	}
+	return err
+}
+
+func (m *MetricsStore) StopDB() error {
+	var err error
+	m.Conn.Close()
+	if err != nil {
+		m.Loger.Error(err)
+	}
+	return err
+}
+
+func (m *MetricsStore) InitDB(DBURL string) error {
+	var err error
+loop:
+	for {
+		select {
+		case <-m.Ctx.Done():
+			break loop
+		case <-time.After(2 * time.Second):
+			m.Conn, err = database.Connect(m.Ctx, m.Loger, DBURL)
+			if err != nil {
+				m.Loger.Error("Error conncet to DB: ", err)
+				continue
+			}
+			break loop
+		}
+	}
+	err = migrate.MigrateFromFS(m.Ctx, m.Conn, &migrations.Migrations, m.Loger)
+	if err != nil {
+		m.Loger.Error("Error migration: ", err)
+		return err
+	}
+	return err
+}
+
 // Loading metrics to database
 func (m *MetricsStore) LoadMetricsDB() error {
 	var id string
 	var metricType string
 	var value *float64
 	var delta *int64
-	row, err := database.Conn.Query("SELECT id, metric_type, value, delta FROM metrics")
+	row, err := m.Conn.Query(m.Ctx, "SELECT id, metric_type, value, delta FROM metrics")
 	if err != nil {
 		logrus.Error("Error select all from table metrics: ", err)
 	}
@@ -121,32 +173,33 @@ func (m *MetricsStore) LoadMetricsDB() error {
 
 // Update metrics in database
 func (m *MetricsStore) ChangeMetricDB(nameMet string, value interface{}, typeMet string, params config.Args) error {
+	var err error
 	if params.DBURL != "" {
 		switch typeMet {
 		case "gauge":
-			_, err := database.Conn.Exec("INSERT INTO metrics (id, metric_type, value) VALUES($1,$2,$3) ON CONFLICT (id) DO UPDATE SET value = $3", nameMet, typeMet, value)
+			_, err = m.Conn.Exec(m.Ctx, "INSERT INTO metrics (id, metric_type, value) VALUES($1,$2,$3) ON CONFLICT (id) DO UPDATE SET value = $3", nameMet, typeMet, value)
 			if err != nil {
 				logrus.Error("Error insert metric gauge in database: ", err)
 			}
 		case "counter":
-			_, err := database.Conn.Exec("INSERT INTO metrics (id, metric_type, delta) VALUES($1,$2,$3) ON CONFLICT (id) DO UPDATE SET delta = $3", nameMet, typeMet, value)
+			_, err = m.Conn.Exec(m.Ctx, "INSERT INTO metrics (id, metric_type, delta) VALUES($1,$2,$3) ON CONFLICT (id) DO UPDATE SET delta = $3", nameMet, typeMet, value)
 			if err != nil {
 				logrus.Error("Error insert metric counter in database: ", err)
 			}
 		}
 	}
-	return nil
+	return err
 }
 
 // Init database if don't exist table
-func (m *MetricsStore) InitDB(jm []JSONMetrics) error {
+// func (m *MetricsStore) InitDB(jm []JSONMetrics) error {
 
-	_, err := database.Conn.Exec("CREATE TABLE IF NOT EXISTS metrics (id VARCHAR NOT NULL UNIQUE, metric_type VARCHAR NOT NULL, delta BIGINT, value DOUBLE PRECISION)")
-	if err != nil {
-		logrus.Error("Error create table: ", err)
-	}
-	return nil
-}
+// 	_, err := database.Conn.Exec("CREATE TABLE IF NOT EXISTS metrics (id VARCHAR NOT NULL UNIQUE, metric_type VARCHAR NOT NULL, delta BIGINT, value DOUBLE PRECISION)")
+// 	if err != nil {
+// 		logrus.Error("Error create table: ", err)
+// 	}
+// 	return nil
+// }
 
 // Load metrics from file
 func (m *MetricsStore) LoadMetricsFile(file []byte) {

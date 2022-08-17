@@ -3,7 +3,6 @@ package handlers
 import (
 	"bytes"
 	"compress/gzip"
-	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/json"
@@ -21,7 +20,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/AlekseyKas/metrics/internal/config"
-	"github.com/AlekseyKas/metrics/internal/server/database"
 	"github.com/AlekseyKas/metrics/internal/storage"
 )
 
@@ -646,7 +644,8 @@ func saveMetrics() http.HandlerFunc {
 func checkConnection() http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		if config.ArgsM.DBURL != "" {
-			err := database.Conn.Ping(context.Background())
+
+			err := StorageM.CheckConnection()
 			if err != nil {
 				rw.WriteHeader(http.StatusInternalServerError)
 			} else {

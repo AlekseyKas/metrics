@@ -16,7 +16,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/AlekseyKas/metrics/internal/config"
-	"github.com/AlekseyKas/metrics/internal/server/database"
 	"github.com/AlekseyKas/metrics/internal/server/handlers"
 	"github.com/AlekseyKas/metrics/internal/storage"
 )
@@ -25,20 +24,17 @@ import (
 var wg sync.WaitGroup
 
 func main() {
+	// Default context and cancel
+	ctx, cancel := context.WithCancel(context.Background())
 	// Inint storage server
 	s := &storage.MetricsStore{
-		MM: structs.Map(storage.Metrics{}),
+		MM:  structs.Map(storage.Metrics{}),
+		Ctx: ctx,
 	}
 	// Terminate environment and flags
 	config.TermEnvFlags()
 	// Terminate storage metrics
 	handlers.SetStorage(s)
-	// Default context and cancel
-	ctx, cancel := context.WithCancel(context.Background())
-	// Add count wait group
-	wg.Add(1)
-	// Wait signal from operation system
-	go waitSignals(cancel)
 	// Load metrics from file
 	if config.ArgsM.StoreFile != "" {
 		err := loadFromFile(config.ArgsM)
@@ -48,18 +44,27 @@ func main() {
 	}
 	// Connect to database if DBURL exist
 	if config.ArgsM.DBURL != "" {
-		err := database.DBConnect(config.ArgsM.DBURL)
+		err := handlers.StorageM.InitDB(config.ArgsM.DBURL)
 		if err != nil {
 			logrus.Error("Connection to postrgres faild: ", err)
 		}
-		jm, err := handlers.StorageM.GetMetricsJSON()
-		if err != nil {
-			logrus.Error("Error getting metricsJSON for database: ", err)
-		}
-		err = handlers.StorageM.InitDB(jm)
-		if err != nil {
-			logrus.Error("Error init database InitDB: ", err)
-		}
+		// conn, err := database.DBConnect(s.Ctx, config.ArgsM.DBURL)
+		// if err != nil {
+		// 	logrus.Error("Connection to postrgres faild: ", err)
+		// }
+		// jm, err := handlers.StorageM.GetMetricsJSON()
+		// if err != nil {
+		// 	logrus.Error("Error getting metricsJSON for database: ", err)
+		// }
+		// logerDB := logrus.New()
+		// err = migrate.MigrateFromFS(ctx, conn, &migrations.Migrations, logerDB)
+		// if err != nil {
+		// 	logerDB.Error("Error migration: ", err)
+		// }
+		// err = handlers.StorageM.InitDB(jm)
+		// if err != nil {
+		// 	logrus.Error("Error init database InitDB: ", err)
+		// }
 		// Restore from database
 		if !config.ArgsM.Restore && config.ArgsM.DBURL != "" {
 			err = handlers.StorageM.LoadMetricsDB()
@@ -68,6 +73,10 @@ func main() {
 			}
 		}
 	}
+	// Add count wait group
+	wg.Add(1)
+	// Wait signal from operation system
+	go waitSignals(cancel)
 	// Add count wait group
 	wg.Add(1)
 	// Sync metrics with file
@@ -184,7 +193,10 @@ func waitSignals(cancel context.CancelFunc) {
 		switch sig {
 		case os.Interrupt:
 			if config.ArgsM.DBURL != "" {
-				database.DBClose()
+				err := handlers.StorageM.StopDB()
+				if err != nil {
+					logrus.Error("Faild stoping database: ", err)
+				}
 			}
 			cancel()
 			wg.Done()

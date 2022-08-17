@@ -1,38 +1,35 @@
 package database
 
 import (
-	"os"
+	"context"
 
-	"github.com/jackc/pgx"
+	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/sirupsen/logrus"
 )
 
 // Init database connection
-var Conn *pgx.Conn
+// var Conn *pgxpool.Pool
 
 // Connect to database via DBURL
-func DBConnect(DBURL string) error {
-	cfgURL, err := pgx.ParseConnectionString(DBURL)
+func Connect(ctx context.Context, loger logrus.FieldLogger, DBURL string) (Conn *pgxpool.Pool, err error) {
+	cfgURL, err := pgxpool.ParseConfig(DBURL)
 	if err != nil {
 		logrus.Error("Error parsing URL: ", err)
-		return err
+		panic(err)
 	}
-	Conn, err = pgx.Connect(cfgURL)
-
+	Conn, err = pgxpool.ConnectConfig(ctx, cfgURL)
 	if err != nil {
-		logrus.Error("Error connection to DB: ", err)
-		os.Exit(1)
-	} else {
-		logrus.Info("Connected to the DB: true [" + os.Getenv("DATABASE_DSN") + "] \n")
+		logrus.Panic("Error connect ot database: ", err)
+		panic(err)
 	}
-	return nil
+	return Conn, err
 }
 
-// Close connection to database
-func DBClose() error {
-	err := Conn.Close()
-	if err != nil {
-		logrus.Error(err)
-	}
-	return err
-}
+// // Close connection to database
+// func DBClose(Conn *pgxpool.Pool) {
+// 	Conn.Close()
+// 	// if err != nil {
+// 	// 	logrus.Error(err)
+// 	// }
+// 	return
+// }
