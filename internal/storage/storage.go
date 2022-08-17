@@ -91,7 +91,7 @@ type StorageAgent interface {
 // Interface with method for server
 type Storage interface {
 	// InitDB(jm []JSONMetrics) error
-	StopDB() error
+	StopDB()
 	InitDB(DBURL string) error
 	CheckConnection() error
 	LoadMetricsDB() error
@@ -112,13 +112,8 @@ func (m *MetricsStore) CheckConnection() error {
 	return err
 }
 
-func (m *MetricsStore) StopDB() error {
-	var err error
+func (m *MetricsStore) StopDB() {
 	m.Conn.Close()
-	if err != nil {
-		m.Loger.Error(err)
-	}
-	return err
 }
 
 func (m *MetricsStore) InitDB(DBURL string) error {

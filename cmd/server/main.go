@@ -48,23 +48,6 @@ func main() {
 		if err != nil {
 			logrus.Error("Connection to postrgres faild: ", err)
 		}
-		// conn, err := database.DBConnect(s.Ctx, config.ArgsM.DBURL)
-		// if err != nil {
-		// 	logrus.Error("Connection to postrgres faild: ", err)
-		// }
-		// jm, err := handlers.StorageM.GetMetricsJSON()
-		// if err != nil {
-		// 	logrus.Error("Error getting metricsJSON for database: ", err)
-		// }
-		// logerDB := logrus.New()
-		// err = migrate.MigrateFromFS(ctx, conn, &migrations.Migrations, logerDB)
-		// if err != nil {
-		// 	logerDB.Error("Error migration: ", err)
-		// }
-		// err = handlers.StorageM.InitDB(jm)
-		// if err != nil {
-		// 	logrus.Error("Error init database InitDB: ", err)
-		// }
 		// Restore from database
 		if !config.ArgsM.Restore && config.ArgsM.DBURL != "" {
 			err = handlers.StorageM.LoadMetricsDB()
@@ -193,10 +176,7 @@ func waitSignals(cancel context.CancelFunc) {
 		switch sig {
 		case os.Interrupt:
 			if config.ArgsM.DBURL != "" {
-				err := handlers.StorageM.StopDB()
-				if err != nil {
-					logrus.Error("Faild stoping database: ", err)
-				}
+				handlers.StorageM.StopDB()
 			}
 			cancel()
 			wg.Done()
