@@ -139,7 +139,8 @@ func saveMetricsSlice() http.HandlerFunc {
 			metrics := StorageM.GetMetrics()
 
 			if config.ArgsM.Key != "" {
-				b, err := compareHash(&s[i], []byte(config.ArgsM.Key))
+				var b bool
+				b, err = compareHash(&s[i], []byte(config.ArgsM.Key))
 				if err != nil {
 					logrus.Error("Error compare hash of metrics: ", err)
 				}
@@ -166,7 +167,8 @@ func saveMetricsSlice() http.HandlerFunc {
 						var valueMetInt int
 						if s[i].Delta != nil {
 							if _, ok := metrics[nameMet]; ok {
-								ii, err := strconv.Atoi(fmt.Sprintf("%v", metrics[nameMet]))
+								var ii int
+								ii, err = strconv.Atoi(fmt.Sprintf("%v", metrics[nameMet]))
 								if err != nil {
 									rw.WriteHeader(http.StatusBadRequest)
 									return
@@ -218,7 +220,8 @@ func saveMetricsSlice() http.HandlerFunc {
 					var valueMetInt int
 					if s[i].Delta != nil {
 						if _, ok := metrics[nameMet]; ok {
-							ii, err := strconv.Atoi(fmt.Sprintf("%v", metrics[nameMet]))
+							var ii int
+							ii, err = strconv.Atoi(fmt.Sprintf("%v", metrics[nameMet]))
 							if err != nil {
 								rw.WriteHeader(http.StatusBadRequest)
 								return
@@ -396,7 +399,8 @@ func saveMetricsJSON() http.HandlerFunc {
 		typeMet := s.MType
 		nameMet := s.ID
 		if config.ArgsM.Key != "" {
-			b, err := compareHash(&s, []byte(config.ArgsM.Key))
+			var b bool
+			b, err = compareHash(&s, []byte(config.ArgsM.Key))
 			if err != nil {
 				logrus.Error("Error compare hash of metrics: ", err)
 			}
@@ -439,7 +443,8 @@ func saveMetricsJSON() http.HandlerFunc {
 			var valueMetInt int
 			if s.Delta != nil {
 				if _, ok := metrics[nameMet]; ok {
-					i, err := strconv.Atoi(fmt.Sprintf("%v", metrics[nameMet]))
+					var i int
+					i, err = strconv.Atoi(fmt.Sprintf("%v", metrics[nameMet]))
 					if err != nil {
 						rw.WriteHeader(http.StatusBadRequest)
 						return
@@ -617,7 +622,8 @@ func saveMetrics() http.HandlerFunc {
 			}
 			if err == nil {
 				if _, ok := metrics[nameMet]; ok {
-					i, err := strconv.Atoi(fmt.Sprintf("%v", metrics[nameMet]))
+					var i int
+					i, err = strconv.Atoi(fmt.Sprintf("%v", metrics[nameMet]))
 					if err != nil {
 						rw.Header().Add("Content-Type", "text/plain")
 						rw.WriteHeader(http.StatusBadRequest)

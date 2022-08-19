@@ -63,20 +63,20 @@ type Metrics struct {
 
 // Struct for metrics type JSON
 type JSONMetrics struct {
-	ID    string   `json:"id"`              // имя метрики
-	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
 	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
 	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
+	ID    string   `json:"id"`              // имя метрики
+	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
 	Hash  string   `json:"hash,omitempty"`  // значение хеш-функции
 }
 
 // Storage metrics in memory
 type MetricsStore struct {
-	Ctx       context.Context
 	Loger     logrus.FieldLogger
+	Ctx       context.Context
+	MM        map[string]interface{}
 	Conn      *pgxpool.Pool
 	mux       sync.Mutex
-	MM        map[string]interface{}
 	PollCount int
 }
 
@@ -240,8 +240,8 @@ func (m *MetricsStore) GetMetricsJSON() ([]JSONMetrics, error) {
 	var err error
 	for k, v := range m.MM {
 		if strings.Split(reflect.ValueOf(v).Type().String(), ".")[1] == "gauge" {
-
-			a, err := strconv.ParseFloat(fmt.Sprintf("%v", v), 64)
+			var a float64
+			a, err = strconv.ParseFloat(fmt.Sprintf("%v", v), 64)
 			if err != nil {
 				logrus.Error("Error parsing gauge value: ", err)
 			}
@@ -252,7 +252,8 @@ func (m *MetricsStore) GetMetricsJSON() ([]JSONMetrics, error) {
 			})
 		}
 		if strings.Split(reflect.ValueOf(v).Type().String(), ".")[1] == "counter" {
-			i, err := strconv.ParseInt(fmt.Sprintf("%v", v), 10, 64)
+			var i int64
+			i, err = strconv.ParseInt(fmt.Sprintf("%v", v), 10, 64)
 			if err != nil {
 				logrus.Error("Error parsing counter value: ", err)
 			}
@@ -323,13 +324,14 @@ func (m *MetricsStore) ChangeMetric(nameMet string, value interface{}, params co
 	defer m.mux.Unlock()
 	if params.StoreInterval == 0 {
 		m.MM[nameMet] = value
-		file, err := os.OpenFile(params.StoreFile, os.O_WRONLY|os.O_TRUNC, 0777)
+		var file *os.File
+		file, err = os.OpenFile(params.StoreFile, os.O_WRONLY|os.O_TRUNC, 0777)
 		if err != nil {
 			logrus.Error("Error open file for writing:!!!!!!!! ", err)
 		}
 		defer file.Close()
-
-		data, err := json.Marshal(sl)
+		var data []byte
+		data, err = json.Marshal(sl)
 		if err != nil {
 			logrus.Error("Error marshaling metrics : ", err)
 		}
