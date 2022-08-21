@@ -23,13 +23,13 @@ import (
 
 var (
 	// Build version.
-	buildVersion string
+	buildVersion string = "N/A"
 
 	// Build date.
-	buildDate string
+	buildDate string = "N/A"
 
 	// Build commit.
-	buildCommit string
+	buildCommit string = "N/A"
 )
 
 // Init wait group.
@@ -79,16 +79,6 @@ func main() {
 	// Init chi router.
 	r := chi.NewRouter()
 	r.Route("/", handlers.Router)
-
-	if buildVersion == "" {
-		buildVersion = "N/A"
-	}
-	if buildDate == "" {
-		buildDate = "N/A"
-	}
-	if buildCommit == "" {
-		buildCommit = "N/A"
-	}
 
 	fmt.Printf("Build version:%s \n", buildVersion)
 	fmt.Printf("Build date:%s \n", buildDate)

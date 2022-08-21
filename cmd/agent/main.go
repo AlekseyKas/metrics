@@ -14,13 +14,13 @@ import (
 
 var (
 	// Build version.
-	buildVersion string
+	buildVersion string = "N/A"
 
 	// Build date.
-	buildDate string
+	buildDate string = "N/A"
 
 	// Build commit.
-	buildCommit string
+	buildCommit string = "N/A"
 )
 
 func main() {
@@ -48,18 +48,6 @@ func main() {
 	go helpers.UpdateMetricsNew(ctx, config.ArgsM.PollInterval, wg, storageM)
 	// Send metrics to server.
 	go helpers.SendMetrics(ctx, wg, storageM)
-	// Check version flag.
-	if buildVersion == "" {
-		buildVersion = "N/A"
-	}
-	// Check build date.
-	if buildDate == "" {
-		buildDate = "N/A"
-	}
-	// Check build commit.
-	if buildCommit == "" {
-		buildCommit = "N/A"
-	}
 
 	// Printing build options.
 	fmt.Printf("Build version:%s \n", buildVersion)
