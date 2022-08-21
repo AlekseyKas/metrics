@@ -17,10 +17,10 @@ var FlagsAgent FlagsAg
 type FlagsServ struct {
 	Address       string
 	Key           string
-	Restore       bool
-	StoreInterval time.Duration
 	StoreFile     string
 	DBURL         string
+	Restore       bool
+	StoreInterval time.Duration
 }
 
 // Agent flags.
@@ -33,14 +33,14 @@ type FlagsAg struct {
 
 // Parametrs enviroment for server.
 type Param struct {
-	PollInterval   time.Duration `env:"POLL_INTERVAL" envDefault:"2s"`
-	ReportInterval time.Duration `env:"REPORT_INTERVAL" envDefault:"10s"`
-	Address        string        `env:"ADDRESS" envDefault:"127.0.0.1:8080"`
-	StoreInterval  time.Duration `env:"STORE_INTERVAL" envDefault:"300s"`
-	StoreFile      string        `env:"STORE_FILE" envDefault:"/tmp/devops-metrics-db.json"`
-	Restore        bool          `env:"RESTORE" envDefault:"true"`
 	Key            string        `env:"KEY"`
 	DBURL          string        `env:"DATABASE_DSN"`
+	Address        string        `env:"ADDRESS" envDefault:"127.0.0.1:8080"`
+	StoreFile      string        `env:"STORE_FILE" envDefault:"/tmp/devops-metrics-db.json"`
+	Restore        bool          `env:"RESTORE" envDefault:"true"`
+	PollInterval   time.Duration `env:"POLL_INTERVAL" envDefault:"2s"`
+	ReportInterval time.Duration `env:"REPORT_INTERVAL" envDefault:"10s"`
+	StoreInterval  time.Duration `env:"STORE_INTERVAL" envDefault:"300s"`
 }
 
 // Parametrs enviroment for agent.
@@ -48,11 +48,11 @@ type Args struct {
 	DBURL          string
 	Address        string
 	Key            string
+	StoreFile      string
+	Restore        bool
 	PollInterval   time.Duration
 	ReportInterval time.Duration
 	StoreInterval  time.Duration
-	StoreFile      string
-	Restore        bool
 }
 
 // Variable for environment and flags

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgconn"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/sirupsen/logrus"
@@ -29,11 +30,13 @@ func MigrateFromDir(ctx context.Context, db *pgx.Conn, migrationDir string, loge
 			modified_at timestamp not null
 		);
 	`
-	if _, err := tx.Exec(ctx, createMigrationTable); err != nil {
+	var com pgconn.CommandTag
+	if com, err = tx.Exec(ctx, createMigrationTable); err != nil {
 		return err
 	}
+	logrus.Debug(string(com))
 
-	if _, err := tx.Exec(ctx, `LOCK TABLE migration;`); err != nil {
+	if _, err = tx.Exec(ctx, `LOCK TABLE migration;`); err != nil {
 		return err
 	}
 
@@ -62,8 +65,8 @@ func MigrateFromDir(ctx context.Context, db *pgx.Conn, migrationDir string, loge
 		r := tx.QueryRow(ctx, `SELECT id, modified_at FROM migration WHERE id = $1;`, fileName)
 
 		type migrationItem struct {
-			ID         string
 			ModifiedAt time.Time
+			ID         string
 		}
 
 		mi := &migrationItem{}
@@ -130,13 +133,15 @@ func MigrateFromFS(ctx context.Context, db *pgxpool.Pool, migrations *embed.FS, 
 			modified_at timestamp not null
 		);
 	`
-	if _, err := tx.Exec(ctx, createMigrationTable); err != nil {
+	var commandTag pgconn.CommandTag
+	if commandTag, err = tx.Exec(ctx, createMigrationTable); err != nil {
 		return err
 	}
-
-	if _, err := tx.Exec(ctx, `LOCK TABLE migration;`); err != nil {
+	logrus.Debug(commandTag)
+	if commandTag, err = tx.Exec(ctx, `LOCK TABLE migration;`); err != nil {
 		return err
 	}
+	logrus.Debug(commandTag)
 	files, err := migrations.ReadDir(".")
 	if err != nil {
 		err = tx.Rollback(ctx)
@@ -150,14 +155,14 @@ func MigrateFromFS(ctx context.Context, db *pgxpool.Pool, migrations *embed.FS, 
 	sort.Slice(files, func(i, j int) bool {
 		return files[i].Name() < files[j].Name()
 	})
-
+	// changed
+	type migrationItem struct {
+		ModifiedAt time.Time
+		ID         string
+	}
 	for _, f := range files {
 		fileName := f.Name()
 		r := tx.QueryRow(ctx, `SELECT id, modified_at FROM migration WHERE id = $1;`, fileName)
-		type migrationItem struct {
-			ID         string
-			ModifiedAt time.Time
-		}
 
 		mi := &migrationItem{}
 		err := r.Scan(&mi.ID, &mi.ModifiedAt)

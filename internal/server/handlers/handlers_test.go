@@ -216,8 +216,8 @@ func Test_calculateHash(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		args     args
 		wantHash string
+		args     args
 	}{
 		{
 			name: "Success calculate",

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -20,35 +21,46 @@ import (
 	"github.com/AlekseyKas/metrics/internal/storage"
 )
 
-// Init wait group
+var (
+	// Build version.
+	buildVersion string = "N/A"
+
+	// Build date.
+	buildDate string = "N/A"
+
+	// Build commit.
+	buildCommit string = "N/A"
+)
+
+// Init wait group.
 var wg sync.WaitGroup
 
 func main() {
-	// Default context and cancel
+	// Default context and cancel.
 	ctx, cancel := context.WithCancel(context.Background())
-	// Inint storage server
+	// Inint storage server.
 	s := &storage.MetricsStore{
 		MM:  structs.Map(storage.Metrics{}),
 		Ctx: ctx,
 	}
-	// Terminate environment and flags
+	// Terminate environment and flags.
 	config.TermEnvFlags()
-	// Terminate storage metrics
+	// Terminate storage metrics.
 	handlers.SetStorage(s)
-	// Load metrics from file
+	// Load metrics from file.
 	if config.ArgsM.StoreFile != "" {
 		err := loadFromFile(config.ArgsM)
 		if err != nil {
 			logrus.Error("Error load from file: ", err)
 		}
 	}
-	// Connect to database if DBURL exist
+	// Connect to database if DBURL exist.
 	if config.ArgsM.DBURL != "" {
 		err := handlers.StorageM.InitDB(config.ArgsM.DBURL)
 		if err != nil {
 			logrus.Error("Connection to postrgres faild: ", err)
 		}
-		// Restore from database
+		// Restore from database.
 		if !config.ArgsM.Restore && config.ArgsM.DBURL != "" {
 			err = handlers.StorageM.LoadMetricsDB()
 			if err != nil {
@@ -56,29 +68,34 @@ func main() {
 			}
 		}
 	}
-	// Add count wait group
+	// Add count wait group.
 	wg.Add(1)
-	// Wait signal from operation system
+	// Wait signal from operation system.
 	go waitSignals(cancel)
-	// Add count wait group
+	// Add count wait group.
 	wg.Add(1)
-	// Sync metrics with file
+	// Sync metrics with file.
 	go syncFile(config.ArgsM, ctx)
-	// Init chi router
+	// Init chi router.
 	r := chi.NewRouter()
 	r.Route("/", handlers.Router)
-	// Start http server
+
+	fmt.Printf("Build version:%s \n", buildVersion)
+	fmt.Printf("Build date:%s \n", buildDate)
+	fmt.Printf("Build commit:%s \n", buildCommit)
+
+	// Start http server.
 	go func() {
 		err := http.ListenAndServe(config.ArgsM.Address, r)
 		if err != nil {
 			logrus.Error("Error http server CHI: ", err)
 		}
 	}()
-	// Add count wait group
+	// Add count wait group.
 	wg.Wait()
 }
 
-// Load metrics from file storage
+// Load metrics from file storage.
 func loadFromFile(env config.Args) error {
 	if env.Restore && fileExist(env.StoreFile) {
 		file, err := os.ReadFile(env.StoreFile)
@@ -92,7 +109,7 @@ func loadFromFile(env config.Args) error {
 	return nil
 }
 
-// Sync metrics with file storage
+// Sync metrics with file storage.
 func syncFile(env config.Args, ctx context.Context) {
 	if env.StoreFile == "" {
 		for {
@@ -156,7 +173,7 @@ func syncFile(env config.Args, ctx context.Context) {
 	}
 }
 
-// Checking exist file or don't exist
+// Checking exist file or don't exist.
 func fileExist(file string) bool {
 	var b bool
 	_, err := os.Stat(file)
@@ -167,7 +184,7 @@ func fileExist(file string) bool {
 	return b
 }
 
-// Wait siglans SIGTERM, SIGINT, SIGQUIT
+// Wait siglans SIGTERM, SIGINT, SIGQUIT.
 func waitSignals(cancel context.CancelFunc) {
 	terminate := make(chan os.Signal, 1)
 	signal.Notify(terminate, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)

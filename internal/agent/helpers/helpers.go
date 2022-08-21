@@ -57,7 +57,7 @@ func SendMetricsSlice(ctx context.Context, address string, key []byte, storageM 
 			return nil
 		default:
 			if string(key) != "" {
-				_, err := saveHash(&JSONMetrics[i], []byte(key))
+				_, err = saveHash(&JSONMetrics[i], []byte(key))
 				if err != nil {
 					logrus.Error("Error save hash of metrics: ", err)
 				}

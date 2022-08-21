@@ -24,8 +24,8 @@ func TestSaveHash(t *testing.T) {
 	}
 	tests := []struct {
 		name string
-		args args
 		sha  string
+		args args
 	}{
 		{
 			name: "first",
