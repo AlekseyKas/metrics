@@ -4,19 +4,19 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v4/pgxpool"
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 )
 
 // Connect to database via DBURL
-func Connect(ctx context.Context, loger logrus.FieldLogger, DBURL string) (Conn *pgxpool.Pool, err error) {
+func Connect(ctx context.Context, logger *zap.Logger, DBURL string) (Conn *pgxpool.Pool, err error) {
 	cfgURL, err := pgxpool.ParseConfig(DBURL)
 	if err != nil {
-		logrus.Error("Error parsing URL: ", err)
+		logger.Error("Error parsing URL: ", zap.Error(err))
 		panic(err)
 	}
 	Conn, err = pgxpool.ConnectConfig(ctx, cfgURL)
 	if err != nil {
-		logrus.Panic("Error connect ot database: ", err)
+		logger.Panic("Error connect ot database: ", zap.Error(err))
 		panic(err)
 	}
 	return Conn, err

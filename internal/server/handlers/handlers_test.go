@@ -9,6 +9,7 @@ import (
 	"github.com/fatih/structs"
 	"github.com/go-chi/chi"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 
 	"github.com/AlekseyKas/metrics/internal/storage"
 )
@@ -119,14 +120,26 @@ func TestRouter(t *testing.T) {
 			name:   "saveMetricsSlice#",
 			url:    "/updates/",
 			method: "POST",
-			body:   []byte(`[{"ID": "Alloc", "type": "counter", "delta": 3.2}]`),
+			body:   []byte(`[{"ID": "Alloc", "type": "counter", "delta": 3}]`),
+			want: want{
+				contentType: "application/json",
+				statusCode:  400,
+			},
+		},
+		{
+			name:   "saveMetricsSlice delta float64#",
+			url:    "/updates/",
+			method: "POST",
+			body:   []byte(`[{"ID": "Alloc", "type": "counter", "delta": 3.1}]`),
 			want: want{
 				contentType: "application/json",
 				statusCode:  400,
 			},
 		},
 	}
+	logger, _ := zap.NewProduction()
 
+	InitLogger(logger)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := chi.NewRouter()

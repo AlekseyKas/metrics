@@ -1,14 +1,16 @@
-package main
+package helpers
 
 import (
 	"context"
 	_ "net/http/pprof"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/fatih/structs"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 
 	"github.com/AlekseyKas/metrics/internal/config"
 	"github.com/AlekseyKas/metrics/internal/server/handlers"
@@ -16,8 +18,9 @@ import (
 )
 
 func Test_syncFile(t *testing.T) {
-	f, err := os.CreateTemp("/tmp/", "file")
+	f, _ := os.CreateTemp("/tmp/", "file")
 
+	var wg = &sync.WaitGroup{}
 	tests := []struct {
 		name   string
 		config config.Args
@@ -27,6 +30,13 @@ func Test_syncFile(t *testing.T) {
 			config: config.Args{
 				StoreFile:     "",
 				StoreInterval: 1,
+			},
+		},
+		{
+			name: "first",
+			config: config.Args{
+				StoreFile:     "",
+				StoreInterval: 0,
 			},
 		},
 
@@ -49,12 +59,12 @@ func Test_syncFile(t *testing.T) {
 		MM: structs.Map(storage.Metrics{}),
 	}
 	handlers.SetStorage(s)
+	logger, _ := zap.NewProduction()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.NoError(t, err)
 			ctx, cancel := context.WithCancel(context.Background())
 			wg.Add(1)
-			go syncFile(tt.config, ctx)
+			go SyncFile(ctx, wg, logger, tt.config)
 			if tt.config.StoreFile != "" {
 				require.FileExists(t, tt.config.StoreFile)
 			} else {
@@ -68,8 +78,8 @@ func Test_syncFile(t *testing.T) {
 	}
 }
 
-func Test_loadFromFile(t *testing.T) {
-
+func Test_LoadFromFile(t *testing.T) {
+	var wg = &sync.WaitGroup{}
 	tests := []struct {
 		name    string
 		config  config.Args
@@ -108,12 +118,13 @@ func Test_loadFromFile(t *testing.T) {
 			},
 		},
 	}
+	logger, _ := zap.NewProduction()
 	for _, tt := range tests {
 		_, err := os.CreateTemp("/tmp/", tt.config.StoreFile)
 		require.NoError(t, err)
 
 		t.Run(tt.name, func(t *testing.T) {
-			err = loadFromFile(tt.config)
+			err = LoadFromFile(wg, logger, tt.config)
 			require.NoError(t, err)
 		})
 	}

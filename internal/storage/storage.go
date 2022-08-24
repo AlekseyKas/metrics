@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/shirou/gopsutil/v3/mem"
 	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 
 	"github.com/AlekseyKas/metrics/internal/config"
 	"github.com/AlekseyKas/metrics/internal/config/migrate"
@@ -72,7 +73,6 @@ type JSONMetrics struct {
 
 // Storage metrics in memory
 type MetricsStore struct {
-	Loger     logrus.FieldLogger
 	Ctx       context.Context
 	MM        map[string]interface{}
 	Conn      *pgxpool.Pool
@@ -103,10 +103,17 @@ type Storage interface {
 	GetSliceStruct() []JSONMetrics
 }
 
+// Init logger.
+var Logger *zap.Logger
+
+func InitLogger(logger *zap.Logger) {
+	Logger = logger
+}
+
 func (m *MetricsStore) CheckConnection() error {
 	err := m.Conn.Ping(m.Ctx)
 	if err != nil {
-		m.Loger.Error("Error checking connection to database: ", err)
+		Logger.Error("Error checking connection to database: ", zap.Error(err))
 	}
 	return err
 }
@@ -123,17 +130,17 @@ loop:
 		case <-m.Ctx.Done():
 			break loop
 		case <-time.After(2 * time.Second):
-			m.Conn, err = database.Connect(m.Ctx, m.Loger, DBURL)
+			m.Conn, err = database.Connect(m.Ctx, Logger, DBURL)
 			if err != nil {
-				m.Loger.Error("Error conncet to DB: ", err)
+				Logger.Error("Error conncet to DB: ", zap.Error(err))
 				continue
 			}
 			break loop
 		}
 	}
-	err = migrate.MigrateFromFS(m.Ctx, m.Conn, &migrations.Migrations, m.Loger)
+	err = migrate.MigrateFromFS(m.Ctx, m.Conn, &migrations.Migrations, Logger)
 	if err != nil {
-		m.Loger.Error("Error migration: ", err)
+		Logger.Error("Error migration: ", zap.Error(err))
 		return err
 	}
 	return err
@@ -147,14 +154,14 @@ func (m *MetricsStore) LoadMetricsDB() error {
 	var delta *int64
 	row, err := m.Conn.Query(m.Ctx, "SELECT id, metric_type, value, delta FROM metrics")
 	if err != nil {
-		logrus.Error("Error select all from table metrics: ", err)
+		Logger.Error("Error select all from table metrics: ", zap.Error(err))
 	}
 	m.mux.Lock()
 	defer m.mux.Unlock()
 	for row.Next() {
 		err = row.Scan(&id, &metricType, &value, &delta)
 		if err != nil {
-			logrus.Error("Error scan row in select all: ", err)
+			Logger.Error("Error scan row in select all: ", zap.Error(err))
 		}
 		if metricType == "gauge" {
 			m.MM[id] = value
@@ -173,12 +180,12 @@ func (m *MetricsStore) ChangeMetricDB(nameMet string, value interface{}, typeMet
 		case "gauge":
 			_, err = m.Conn.Exec(m.Ctx, "INSERT INTO metrics (id, metric_type, value) VALUES($1,$2,$3) ON CONFLICT (id) DO UPDATE SET value = $3", nameMet, typeMet, value)
 			if err != nil {
-				logrus.Error("Error insert metric gauge in database: ", err)
+				Logger.Error("Error insert metric gauge in database: ", zap.Error(err))
 			}
 		case "counter":
 			_, err = m.Conn.Exec(m.Ctx, "INSERT INTO metrics (id, metric_type, delta) VALUES($1,$2,$3) ON CONFLICT (id) DO UPDATE SET delta = $3", nameMet, typeMet, value)
 			if err != nil {
-				logrus.Error("Error insert metric counter in database: ", err)
+				logrus.Error("Error insert metric counter in database: ", zap.Error(err))
 			}
 		}
 	}
@@ -192,7 +199,7 @@ func (m *MetricsStore) LoadMetricsFile(file []byte) {
 	var jMetric []JSONMetrics
 	err := json.Unmarshal(file, &jMetric)
 	if err != nil {
-		logrus.Error("Error unmarshaling file to map", err)
+		Logger.Error("Error unmarshaling file to map", zap.Error(err))
 	}
 	for i := 0; i < len(jMetric); i++ {
 		if _, ok := m.MM[jMetric[i].ID]; ok {
@@ -243,7 +250,7 @@ func (m *MetricsStore) GetMetricsJSON() ([]JSONMetrics, error) {
 			var a float64
 			a, err = strconv.ParseFloat(fmt.Sprintf("%v", v), 64)
 			if err != nil {
-				logrus.Error("Error parsing gauge value: ", err)
+				Logger.Error("Error parsing gauge value: ", zap.Error(err))
 			}
 			j = append(j, JSONMetrics{
 				ID:    k,
@@ -255,7 +262,7 @@ func (m *MetricsStore) GetMetricsJSON() ([]JSONMetrics, error) {
 			var i int64
 			i, err = strconv.ParseInt(fmt.Sprintf("%v", v), 10, 64)
 			if err != nil {
-				logrus.Error("Error parsing counter value: ", err)
+				Logger.Error("Error parsing counter value: ", zap.Error(err))
 			}
 			j = append(j, JSONMetrics{
 				ID:    k,
@@ -318,26 +325,29 @@ func (m *MetricsStore) ChangeMetricsNew(mem *mem.VirtualMemoryStat, cpu []float6
 func (m *MetricsStore) ChangeMetric(nameMet string, value interface{}, params config.Args) error {
 	sl, err := m.GetMetricsJSON()
 	if err != nil {
-		logrus.Error(err)
+		logrus.Error("Error getting metric JSON formay: ", err)
 	}
 	m.mux.Lock()
 	defer m.mux.Unlock()
 	if params.StoreInterval == 0 {
 		m.MM[nameMet] = value
-		var file *os.File
-		file, err = os.OpenFile(params.StoreFile, os.O_WRONLY|os.O_TRUNC, 0777)
-		if err != nil {
-			logrus.Error("Error open file for writing:!!!!!!!! ", err)
-		}
-		defer file.Close()
-		var data []byte
-		data, err = json.Marshal(sl)
-		if err != nil {
-			logrus.Error("Error marshaling metrics : ", err)
-		}
-		_, err = file.Write(data)
-		if err != nil {
-			logrus.Error("Error write metrics to file : ", err)
+		// Change
+		if params.StoreFile != "" {
+			var file *os.File
+			file, err = os.OpenFile(params.StoreFile, os.O_WRONLY|os.O_TRUNC, 0777)
+			if err != nil {
+				Logger.Error("Error open file for writing:!!!!!!!! ", zap.Error(err))
+			}
+			defer file.Close()
+			var data []byte
+			data, err = json.Marshal(sl)
+			if err != nil {
+				Logger.Error("Error marshaling metrics : ", zap.Error(err))
+			}
+			_, err = file.Write(data)
+			if err != nil {
+				Logger.Error("Error write metrics to file : ", zap.Error(err))
+			}
 		}
 	} else {
 		m.MM[nameMet] = value

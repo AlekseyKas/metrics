@@ -9,6 +9,7 @@ import (
 	"github.com/fatih/structs"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 
 	"github.com/AlekseyKas/metrics/internal/config"
 	"github.com/AlekseyKas/metrics/internal/storage"
@@ -71,9 +72,10 @@ func TestSendMetrics(t *testing.T) {
 	}
 	storageM = s
 	config.TermEnvFlagsAgent()
+	logger, _ := zap.NewProduction()
 	t.Run("SendMetrics", func(t *testing.T) {
 		wg.Add(2)
-		go SendMetrics(ctx, wg, storageM)
+		go SendMetrics(ctx, wg, logger, storageM)
 		time.Sleep(time.Second * 2)
 		cancel()
 		wg.Done()
@@ -90,9 +92,10 @@ func Test_sendMetricsSlice(t *testing.T) {
 	}
 	storageM = s
 	ctx, cancel := context.WithCancel(context.Background())
+	logger, _ := zap.NewProduction()
 	t.Run("sendMetricsSlice", func(t *testing.T) {
 		wg.Add(1)
-		err := SendMetricsSlice(ctx, config.ArgsM.Address, []byte(config.ArgsM.Key), storageM)
+		err := SendMetricsSlice(ctx, logger, config.ArgsM.Address, []byte(config.ArgsM.Key), storageM)
 		if err != nil {
 			logrus.Error("Error sending slice metrics: ", err)
 		}
