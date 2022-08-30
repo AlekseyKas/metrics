@@ -51,6 +51,7 @@ func Router(r chi.Router) {
 	r.Use(middleware.Recoverer)
 	r.Use(CompressGzip)
 	r.Use(DecompressGzip)
+	// r.Use(Encrypt)
 	r.Get("/", getMetrics())
 	r.Get("/value/{typeMet}/{nameMet}", getMetric())
 	r.Get("/ping", checkConnection())
@@ -65,6 +66,12 @@ func Router(r chi.Router) {
 	r.Get("/debug/pprof/symbol", pprof.Symbol)
 	r.Get("/debug/pprof/trace", pprof.Trace)
 }
+
+// func Encrypt(next http.Handler) http.Handler {
+// 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+// 	})
+// }
 
 // Init type for zipping
 type gzipBodyWriter struct {
@@ -135,6 +142,8 @@ func saveMetricsSlice() http.HandlerFunc {
 		err = json.Unmarshal(out, &s)
 		if err != nil {
 			Logger.Error("Error unmarshaling request: ", zap.Error(err))
+			rw.WriteHeader(http.StatusBadRequest)
+			return
 		}
 		var typeMet string
 		var nameMet string
