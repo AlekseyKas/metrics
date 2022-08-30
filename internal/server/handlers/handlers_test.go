@@ -63,10 +63,10 @@ func TestRouter(t *testing.T) {
 			url:    "/value/",
 			method: "POST",
 			key:    "3333",
-			body:   []byte(`{"ID": "PollCount", "type": "gouge"}`),
+			body:   []byte(`{"ID": "PollCount", "type": "gauge"}`),
 			want: want{
 				contentType: "application/json",
-				statusCode:  500,
+				statusCode:  404,
 			},
 		},
 		{
@@ -80,42 +80,63 @@ func TestRouter(t *testing.T) {
 			},
 		},
 		{
-			name:   "5 sample#",
+			name:   "5 sample update 200#",
 			url:    "/update/",
 			method: "POST",
-			body:   []byte(`{"ID": "Pollcount", "type": "counter", "delta": 45}`),
+			body:   []byte(`{"ID": "PollCount", "type": "counter", "delta": 45}`),
 			want: want{
 				contentType: "application/json",
 				statusCode:  200,
 			},
 		},
 		{
-			name:   "6 sample#",
+			name:   "6 sample update 500#",
 			url:    "/update/",
 			method: "POST",
-			body:   []byte(`{"ID": "Pollcount", "type": "gauge", "delta": "12"}`),
+			body:   []byte(`{"ID": "PollCount", "type": "gauge", "delta": 12}`),
+			want: want{
+				contentType: "application/json",
+				statusCode:  500,
+			},
+		},
+		{
+			name:   "7 sample update 400#",
+			url:    "/update/",
+			method: "POST",
+			key:    "ssd",
+			body:   []byte(`{"ID": "Alloc", "type": "gauge", "value": 1}`),
 			want: want{
 				contentType: "application/json",
 				statusCode:  400,
 			},
 		},
-		// {
-		// 	name:   "7 sample#",
-		// 	url:    "/update/",
-		// 	method: "POST",
-		// 	key:    "ssd",
-		// 	body:   []byte(`{"ID": "Alloc", "type": "gauge", "value": 3.1}`),
-		// 	want: want{
-		// 		contentType: "application/json",
-		// 		statusCode:  200,
-		// 	},
-		// },
+		{
+			name:   "8 sample update 200#",
+			url:    "/update/",
+			method: "POST",
+			key:    "",
+			body:   []byte(`{"ID": "Alloc", "type": "gauge", "value": 1}`),
+			want: want{
+				contentType: "application/json",
+				statusCode:  200,
+			},
+		},
+		{
+			name:   "9 sample update 501#",
+			url:    "/update/",
+			method: "POST",
+			body:   []byte(`{"ID": "MetricName", "type": "test"}`),
+			want: want{
+				contentType: "application/json",
+				statusCode:  501,
+			},
+		},
 
 		{
 			name:   "saveMetricsSlice success 1#",
 			url:    "/updates/",
 			method: "POST",
-			key:    "ssd",
+			key:    "ssds",
 			body:   []byte(`[{"ID": "Alloc", "type": "gauge", "value": 3.1}]`),
 			want: want{
 				contentType: "application/json",
@@ -134,7 +155,7 @@ func TestRouter(t *testing.T) {
 			},
 		},
 		{
-			name:   "saveMetricsSlice success 2#",
+			name:   "saveMetricsSlice success 3#",
 			url:    "/updates/",
 			method: "POST",
 			key:    "lll",
@@ -145,7 +166,7 @@ func TestRouter(t *testing.T) {
 			},
 		},
 		{
-			name:   "saveMetricsSlice success 2#",
+			name:   "saveMetricsSlice success 4#",
 			url:    "/updates/",
 			method: "POST",
 			body:   []byte(`[{"ID": "TestCount", "type": "counter", "delta": 12202}]`),
@@ -155,69 +176,26 @@ func TestRouter(t *testing.T) {
 			},
 		},
 		{
-			name:   "saveMetricsSlice success 2#",
+			name:   "saveMetricsSlice success 5#",
 			url:    "/updates/",
 			method: "POST",
-			key:    "pppp",
-			body:   []byte(`[{"ID": "TestCount", "type": "counter", "delta": 12202}]`),
+			body:   []byte(`[{"ID": "Ametrics", "type": "gauge", "value": 3.2221}]`),
 			want: want{
 				contentType: "application/json",
 				statusCode:  200,
 			},
 		},
-		// {
-		// 	name:   "saveMetricsSlice bad request 1#",
-		// 	url:    "/updates/",
-		// 	method: "POST",
-		// 	body:   []byte(`[{"ID": "Alloc", "type": "counter", "delta": 3}]`),
-		// 	want: want{
-		// 		contentType: "application/json",
-		// 		statusCode:  400,
-		// 	},
-		// },
 
-		// {
-		// 	name:   "saveMetricsSlice bad request 2#",
-		// 	url:    "/updates/",
-		// 	method: "POST",
-		// 	body:   []byte(`[{"ID": "Alloc", "type": "counter", "delta": 3.1}]`),
-		// 	want: want{
-		// 		contentType: "application/json",
-		// 		statusCode:  400,
-		// 	},
-		// },
-		// {
-		// 	name:   "saveMetricsSlice bad request 3#",
-		// 	url:    "/updates/",
-		// 	method: "POST",
-		// 	body:   []byte(`[{"ID": "Ametrics", "type": "gauge", "value": 3.2221}]`),
-		// 	want: want{
-		// 		contentType: "application/json",
-		// 		statusCode:  200,
-		// 	},
-		// },
-
-		// {
-		// 	name:   "saveMetricsSlice bad request 4#",
-		// 	url:    "/updates/",
-		// 	method: "POST",
-		// 	body:   []byte(`[{"ID": "Ametrics", "type": "gauge", "delta": 3333.1}]`),
-		// 	want: want{
-		// 		contentType: "plain/text",
-		// 		statusCode:  200,
-		// 	},
-		// },
-
-		// {
-		// 	name:   "saveMetricsSlice bad request 5#",
-		// 	url:    "/updates/",
-		// 	method: "POST",
-		// 	body:   []byte(`[{"ID": "PollCount", "type": "gauge", "delta": 3333.1}]`),
-		// 	want: want{
-		// 		contentType: "plain/text",
-		// 		statusCode:  200,
-		// 	},
-		// },
+		{
+			name:   "saveMetricsSlice bad request 1#",
+			url:    "/updates/",
+			method: "POST",
+			body:   []byte(`[{"ID": "Alloc", "type": "counter", "delta": 3.1}]`),
+			want: want{
+				contentType: "application/json",
+				statusCode:  400,
+			},
+		},
 	}
 	logger, _ := zap.NewProduction()
 
@@ -661,68 +639,68 @@ func TestRouterCompressDecompress(t *testing.T) {
 				statusCode:  500,
 			},
 		},
-		// {
-		// 	name:   "5 sample#",
-		// 	url:    "/update/",
-		// 	method: "POST",
-		// 	body:   []byte(`{"ID": "Pollcount", "type": "counter", "delta": 45}`),
-		// 	want: want{
-		// 		contentType: "application/json",
-		// 		statusCode:  200,
-		// 	},
-		// },
-		// {
-		// 	name:   "6 sample#",
-		// 	url:    "/update/",
-		// 	method: "POST",
-		// 	body:   []byte(`{"ID": "Pollcount", "type": "gauge", "delta": "12"}`),
-		// 	want: want{
-		// 		contentType: "application/json",
-		// 		statusCode:  400,
-		// 	},
-		// },
-		// {
-		// 	name:   "7 sample#",
-		// 	url:    "/update/",
-		// 	method: "POST",
-		// 	body:   []byte(`{"ID": "Alloc", "type": "gauge", "value": 3.1}`),
-		// 	want: want{
-		// 		contentType: "application/json",
-		// 		statusCode:  200,
-		// 	},
-		// },
+		{
+			name:   "5 sample#",
+			url:    "/update/",
+			method: "POST",
+			body:   []byte(`{"ID": "Pollcount", "type": "counter", "delta": 45}`),
+			want: want{
+				contentType: "application/json",
+				statusCode:  200,
+			},
+		},
+		{
+			name:   "6 sample#",
+			url:    "/update/",
+			method: "POST",
+			body:   []byte(`{"ID": "Pollcount", "type": "gauge", "delta": "12"}`),
+			want: want{
+				contentType: "application/json",
+				statusCode:  400,
+			},
+		},
+		{
+			name:   "7 sample#",
+			url:    "/update/",
+			method: "POST",
+			body:   []byte(`{"ID": "Alloc", "type": "gauge", "value": 3.1}`),
+			want: want{
+				contentType: "application/json",
+				statusCode:  200,
+			},
+		},
 
-		// {
-		// 	name:   "saveMetricsSlice success#",
-		// 	url:    "/updates/",
-		// 	method: "POST",
-		// 	body:   []byte(`[{"ID": "Alloc", "type": "gauge", "value": 3.1}]`),
-		// 	want: want{
-		// 		contentType: "application/json",
-		// 		statusCode:  200,
-		// 	},
-		// },
+		{
+			name:   "saveMetricsSlice success#",
+			url:    "/updates/",
+			method: "POST",
+			body:   []byte(`[{"ID": "Alloc", "type": "gauge", "value": 3.1}]`),
+			want: want{
+				contentType: "application/json",
+				statusCode:  200,
+			},
+		},
 
-		// {
-		// 	name:   "saveMetricsSlice#",
-		// 	url:    "/updates/",
-		// 	method: "POST",
-		// 	body:   []byte(`[{"ID": "Alloc", "type": "counter", "delta": 3}]`),
-		// 	want: want{
-		// 		contentType: "application/json",
-		// 		statusCode:  400,
-		// 	},
-		// },
-		// {
-		// 	name:   "saveMetricsSlice delta float64#",
-		// 	url:    "/updates/",
-		// 	method: "POST",
-		// 	body:   []byte(`[{"ID": "Alloc", "type": "counter", "delta": 3.1}]`),
-		// 	want: want{
-		// 		contentType: "application/json",
-		// 		statusCode:  400,
-		// 	},
-		// },
+		{
+			name:   "saveMetricsSlice#",
+			url:    "/updates/",
+			method: "POST",
+			body:   []byte(`[{"ID": "Alloc", "type": "counter", "delta": 3}]`),
+			want: want{
+				contentType: "application/json",
+				statusCode:  400,
+			},
+		},
+		{
+			name:   "saveMetricsSlice delta float64#",
+			url:    "/updates/",
+			method: "POST",
+			body:   []byte(`[{"ID": "Alloc", "type": "counter", "delta": 3.1}]`),
+			want: want{
+				contentType: "application/json",
+				statusCode:  400,
+			},
+		},
 	}
 	logger, _ := zap.NewProduction()
 

@@ -408,7 +408,7 @@ func saveMetricsJSON() http.HandlerFunc {
 		if err != nil {
 			Logger.Error("Error unmarshaling request: ", zap.Error(err))
 			rw.WriteHeader(http.StatusBadRequest)
-
+			return
 		}
 		metrics := StorageM.GetMetrics()
 		typeMet := s.MType
