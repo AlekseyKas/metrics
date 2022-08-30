@@ -15,12 +15,12 @@ import (
 )
 
 // Load metrics from file storage.
-func LoadFromFile(wg *sync.WaitGroup, logger *zap.Logger, env config.Args) error {
+func LoadFromFile(logger *zap.Logger, env config.Args) error {
 	if env.Restore && fileExist(env.StoreFile) {
 		file, err := os.ReadFile(env.StoreFile)
 		if err != nil {
 			logger.Error("Error open file for writing: ", zap.Error(err))
-			wg.Done()
+
 			return err
 		}
 		handlers.StorageM.LoadMetricsFile(file)
