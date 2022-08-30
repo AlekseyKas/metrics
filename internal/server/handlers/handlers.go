@@ -85,7 +85,6 @@ func DecompressGzip(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
-
 		gz, err := gzip.NewReader(r.Body)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -94,7 +93,6 @@ func DecompressGzip(next http.Handler) http.Handler {
 		gz.Close()
 		r.Body = gz
 		next.ServeHTTP(w, r)
-
 	})
 }
 
@@ -134,7 +132,6 @@ func saveMetricsSlice() http.HandlerFunc {
 		if err != nil {
 			Logger.Error("Error read body: ", zap.Error(err))
 		}
-
 		err = json.Unmarshal(out, &s)
 		if err != nil {
 			Logger.Error("Error unmarshaling request: ", zap.Error(err))
@@ -279,6 +276,7 @@ func getMetricsJSON() http.HandlerFunc {
 		if err != nil {
 			Logger.Error("Error unmarshaling request: ", zap.Error(err))
 			http.Error(rw, err.Error(), http.StatusInternalServerError)
+
 		}
 
 		metrics := StorageM.GetMetrics()
@@ -400,8 +398,6 @@ func saveMetricsJSON() http.HandlerFunc {
 		err = json.Unmarshal(out, &s)
 		if err != nil {
 			Logger.Error("Error unmarshaling request: ", zap.Error(err))
-			// logrus.Error(err)
-
 			rw.WriteHeader(http.StatusBadRequest)
 
 		}

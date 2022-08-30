@@ -6,13 +6,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/AlekseyKas/metrics/internal/config"
+	"github.com/AlekseyKas/metrics/internal/storage"
 	"github.com/fatih/structs"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
-
-	"github.com/AlekseyKas/metrics/internal/config"
-	"github.com/AlekseyKas/metrics/internal/storage"
 )
 
 func TestSaveHash(t *testing.T) {
@@ -103,4 +102,35 @@ func Test_sendMetricsSlice(t *testing.T) {
 		cancel()
 		wg.Done()
 	})
+}
+
+func TestUpdateMetrics(t *testing.T) {
+	tests := []struct {
+		name         string
+		pollInterval time.Duration
+	}{
+		{
+			name:         "Pollinterval = 1s",
+			pollInterval: 1,
+		},
+	}
+	var storageM storage.StorageAgent
+	var MapMetrics map[string]interface{} = structs.Map(storage.Metrics{})
+	s := &storage.MetricsStore{
+		MM: MapMetrics,
+	}
+	storageM = s
+	wg := &sync.WaitGroup{}
+	ctx, cancel := context.WithCancel(context.Background())
+	logger, _ := zap.NewProduction()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			wg.Add(3)
+			go UpdateMetrics(ctx, tt.pollInterval, wg, logger, storageM)
+			go UpdateMetricsNew(ctx, tt.pollInterval, wg, logger, storageM)
+			go WaitSignals(cancel, logger, wg)
+			time.Sleep(time.Second * 4)
+			wg.Done()
+		})
+	}
 }

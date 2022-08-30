@@ -71,9 +71,8 @@ func Test_syncFile(t *testing.T) {
 				require.NoFileExists(t, tt.config.StoreFile)
 			}
 			wg.Add(1)
+			go WaitSignals(cancel, logger, wg)
 			time.Sleep(time.Second * 2)
-			cancel()
-			wg.Done()
 		})
 	}
 }
