@@ -122,6 +122,7 @@ func TestUpdateMetrics(t *testing.T) {
 	storageM = s
 	wg := &sync.WaitGroup{}
 	ctx, cancel := context.WithCancel(context.Background())
+
 	logger, _ := zap.NewProduction()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -131,6 +132,7 @@ func TestUpdateMetrics(t *testing.T) {
 			go WaitSignals(cancel, logger, wg)
 			time.Sleep(time.Second * 4)
 			wg.Done()
+			defer cancel()
 		})
 	}
 }
