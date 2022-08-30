@@ -78,7 +78,6 @@ func Test_syncFile(t *testing.T) {
 }
 
 func Test_LoadFromFile(t *testing.T) {
-	var wg = &sync.WaitGroup{}
 	tests := []struct {
 		name    string
 		config  config.Args
@@ -118,11 +117,13 @@ func Test_LoadFromFile(t *testing.T) {
 		},
 	}
 	logger, _ := zap.NewProduction()
+	var wg = &sync.WaitGroup{}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			f, err := os.CreateTemp("/tmp/", tt.config.StoreFile)
 			require.FileExists(t, f.Name())
 			require.NoError(t, err)
+			wg.Add(1)
 			err = LoadFromFile(wg, logger, tt.config)
 			require.NoError(t, err)
 		})
