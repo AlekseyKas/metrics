@@ -119,11 +119,10 @@ func Test_LoadFromFile(t *testing.T) {
 	}
 	logger, _ := zap.NewProduction()
 	for _, tt := range tests {
-		f, err := os.CreateTemp("/tmp/", tt.config.StoreFile)
-		require.FileExists(t, f.Name())
-		require.NoError(t, err)
-
 		t.Run(tt.name, func(t *testing.T) {
+			f, err := os.CreateTemp("/tmp/", tt.config.StoreFile)
+			require.FileExists(t, f.Name())
+			require.NoError(t, err)
 			err = LoadFromFile(wg, logger, tt.config)
 			require.NoError(t, err)
 		})
