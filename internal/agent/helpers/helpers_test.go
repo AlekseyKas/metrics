@@ -69,6 +69,7 @@ func TestSendMetrics(t *testing.T) {
 	s := &storage.MetricsStore{
 		MM: MapMetrics,
 	}
+
 	key := "key_test"
 	storageM = s
 	config.TermEnvFlagsAgent()
