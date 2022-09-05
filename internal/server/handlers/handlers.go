@@ -20,6 +20,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/AlekseyKas/metrics/internal/config"
+	"github.com/AlekseyKas/metrics/internal/crypto"
 	"github.com/AlekseyKas/metrics/internal/storage"
 )
 
@@ -57,6 +58,7 @@ func Router(r chi.Router) {
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+	r.Use(Dencrypt)
 	r.Use(CompressGzip)
 	r.Use(DecompressGzip)
 	// r.Use(Encrypt)
@@ -75,11 +77,27 @@ func Router(r chi.Router) {
 	r.Get("/debug/pprof/trace", pprof.Trace)
 }
 
-// func Encrypt(next http.Handler) http.Handler {
-// 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func Dencrypt(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if Args.PrivateKey != "" {
 
-// 	})
-// }
+			out, err := io.ReadAll(r.Body)
+			if err != nil {
+				Logger.Error("Error read body: ", zap.Error(err))
+			}
+			data, err := crypto.DecryptData(out, Args.PrivateKey)
+			if err != nil {
+				Logger.Error("Error decrypt data: ", zap.Error(err))
+			}
+			r.ContentLength = int64(len(data))
+			r.Body = io.NopCloser(bytes.NewBuffer(data))
+			next.ServeHTTP(w, r)
+		} else {
+			next.ServeHTTP(w, r)
+			return
+		}
+	})
+}
 
 // Init type for zipping
 type gzipBodyWriter struct {
