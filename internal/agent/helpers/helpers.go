@@ -21,11 +21,12 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/AlekseyKas/metrics/internal/config"
+	"github.com/AlekseyKas/metrics/internal/crypto"
 	"github.com/AlekseyKas/metrics/internal/storage"
 )
 
 // Send metrics to server
-func SendMetrics(ctx context.Context, wg *sync.WaitGroup, logger *zap.Logger, storageM storage.StorageAgent) {
+func SendMetrics(ctx context.Context, wg *sync.WaitGroup, logger *zap.Logger, pubKey string, storageM storage.StorageAgent) {
 	defer wg.Done()
 	for {
 		select {
@@ -33,7 +34,7 @@ func SendMetrics(ctx context.Context, wg *sync.WaitGroup, logger *zap.Logger, st
 			logger.Info("Agent is down send metrics.")
 			return
 		case <-time.After(config.ArgsM.PollInterval):
-			err := SendMetricsSlice(ctx, logger, config.ArgsM.Address, []byte(config.ArgsM.Key), storageM)
+			err := SendMetricsSlice(ctx, logger, config.ArgsM.Address, pubKey, []byte(config.ArgsM.Key), storageM)
 			if err != nil {
 				logger.Error("Error sending POST: ", zap.Error(err))
 			}
@@ -42,7 +43,7 @@ func SendMetrics(ctx context.Context, wg *sync.WaitGroup, logger *zap.Logger, st
 }
 
 // Prepare and sending metrics to server
-func SendMetricsSlice(ctx context.Context, logger *zap.Logger, address string, key []byte, storageM storage.StorageAgent) error {
+func SendMetricsSlice(ctx context.Context, logger *zap.Logger, address string, pubKey string, key []byte, storageM storage.StorageAgent) error {
 	client := resty.New()
 
 	JSONMetrics, err := storageM.GetMetricsJSON()
@@ -80,15 +81,34 @@ func SendMetricsSlice(ctx context.Context, logger *zap.Logger, address string, k
 		logger.Error("Error write gz metrics: ", zap.Error(err))
 	}
 	gz.Close()
-	_, err = client.R().
-		SetHeader("Content-Encoding", "gzip").
-		SetHeader("Content-Type", "application/json").
-		SetBody(&b).
-		Post("http://" + address + "/updates/")
-	if err != nil {
-		return err
+	// Encryption
+	if pubKey != "" {
+
+		var data []byte
+		data, err = crypto.EncryptData(b.Bytes(), pubKey)
+		if err != nil {
+			logger.Error("Error encrypt data: ", zap.Error(err))
+		}
+		_, err = client.R().
+			SetHeader("Content-Encoding", "gzip").
+			SetHeader("Content-Type", "application/json").
+			SetBody(data).
+			Post("http://" + address + "/updates/")
+		if err != nil {
+			return err
+		}
+		return nil
+	} else {
+		_, err = client.R().
+			SetHeader("Content-Encoding", "gzip").
+			SetHeader("Content-Type", "application/json").
+			SetBody(&b).
+			Post("http://" + address + "/updates/")
+		if err != nil {
+			return err
+		}
+		return nil
 	}
-	return nil
 }
 
 // Set sha256 hash for metric

@@ -56,7 +56,7 @@ func main() {
 	// Update new metrics.
 	go helpers.UpdateMetricsNew(ctx, config.ArgsM.PollInterval, wg, logger, storageM)
 	// Send metrics to server.
-	go helpers.SendMetrics(ctx, wg, logger, storageM)
+	go helpers.SendMetrics(ctx, wg, logger, ArgsM.PubKey, storageM)
 
 	// Printing build options.
 	fmt.Printf("Build version:%s \n", buildVersion)
