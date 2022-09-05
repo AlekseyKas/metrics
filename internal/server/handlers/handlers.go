@@ -43,6 +43,14 @@ func InitLogger(logger *zap.Logger) {
 	Logger = logger
 }
 
+// Init Args
+var Args config.Args
+
+// Set args
+func InitConfig(args config.Args) {
+	Args = args
+}
+
 // Handlers server
 func Router(r chi.Router) {
 	r.Use(middleware.RequestID)

@@ -50,6 +50,8 @@ func main() {
 	}
 	// Terminate environment and flags.
 	config.TermEnvFlags()
+	// Init config
+	handlers.InitConfig(config.ArgsM)
 	// Terminate storage metrics.
 	handlers.SetStorage(s)
 	// Load metrics from file.

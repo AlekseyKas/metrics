@@ -18,7 +18,9 @@ type FlagsServ struct {
 	Address       string
 	Key           string
 	StoreFile     string
+	PrivateKey    string
 	DBURL         string
+	Config        string
 	Restore       bool
 	StoreInterval time.Duration
 }
@@ -27,6 +29,7 @@ type FlagsServ struct {
 type FlagsAg struct {
 	Address        string
 	Key            string
+	PubKey         string
 	ReportInterval time.Duration
 	PollInterval   time.Duration
 }
@@ -36,6 +39,8 @@ type Param struct {
 	Key            string        `env:"KEY"`
 	DBURL          string        `env:"DATABASE_DSN"`
 	Address        string        `env:"ADDRESS" envDefault:"127.0.0.1:8080"`
+	PubKey         string        `env:"CRYPTO_KEY"`
+	PrivateKey     string        `env:"CRYPTO_KEY"`
 	StoreFile      string        `env:"STORE_FILE" envDefault:"/tmp/devops-metrics-db.json"`
 	Restore        bool          `env:"RESTORE" envDefault:"true"`
 	PollInterval   time.Duration `env:"POLL_INTERVAL" envDefault:"2s"`
@@ -49,6 +54,8 @@ type Args struct {
 	Address        string
 	Key            string
 	StoreFile      string
+	PubKey         string
+	PrivateKey     string
 	Restore        bool
 	PollInterval   time.Duration
 	ReportInterval time.Duration
@@ -74,10 +81,19 @@ func TermEnvFlags() {
 	flag.StringVar(&FlagsServer.DBURL, "d", "", "Database URL")
 	flag.StringVar(&FlagsServer.StoreFile, "f", "", "File path store")
 	flag.StringVar(&FlagsServer.Key, "k", "", "Secret key")
+	flag.StringVar(&FlagsServer.PrivateKey, "crypto-key", "", "Private key")
+	flag.StringVar(&FlagsServer.Config, "c", "", "Path configuration file")
 	flag.BoolVar(&FlagsServer.Restore, "r", true, "Restore from file")
 	flag.DurationVar(&FlagsServer.StoreInterval, "i", 300000000000, "Interval store file")
 	flag.Parse()
 	env := loadConfig()
+
+	envPrivateKey, _ := os.LookupEnv("CRYPTO_KEY")
+	if envPrivateKey == "" {
+		ArgsM.PrivateKey = FlagsServer.PrivateKey
+	} else {
+		ArgsM.PrivateKey = env.PrivateKey
+	}
 	envADDR, _ := os.LookupEnv("ADDRESS")
 	if envADDR == "" {
 		ArgsM.Address = FlagsServer.Address
@@ -136,10 +152,18 @@ func TermEnvFlagsAgent() {
 	flag.StringVar(&FlagsAgent.Key, "k", "", "Secret key")
 	flag.DurationVar(&FlagsAgent.ReportInterval, "r", 10000000000, "Report interval")
 	flag.DurationVar(&FlagsAgent.PollInterval, "p", 2000000000, "Poll interval")
-
+	flag.StringVar(&FlagsAgent.PubKey, "crypto-key", "", "Public key")
 	flag.Parse()
 
 	env := loadConfig()
+
+	envPubKey, _ := os.LookupEnv("CRYPTO_KEY")
+	if envPubKey == "" {
+		ArgsM.PubKey = FlagsAgent.PubKey
+	} else {
+		ArgsM.PubKey = env.PubKey
+	}
+
 	envADDR, _ := os.LookupEnv("ADDRESS")
 	if envADDR == "" {
 		ArgsM.Address = FlagsAgent.Address
