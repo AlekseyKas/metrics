@@ -166,8 +166,8 @@ type Duration struct {
 	time.Duration
 }
 
-func (p Duration) ToDuration() time.Duration {
-	return p.Duration
+func (d Duration) ToDuration() time.Duration {
+	return d.Duration
 }
 
 func (d *Duration) UnmarshalJSON(b []byte) error {
@@ -203,26 +203,30 @@ type Config struct {
 	PollInterval   Duration `json:"poll_interval"`
 }
 
+// Parse config.
 func parseConfig(configPath string) error {
 	jsonFile, err := os.Open(configPath)
 	if err != nil {
 		fmt.Println(err)
 	}
-
 	byteValue, _ := ioutil.ReadAll(jsonFile)
 	var config Config
 	err = json.Unmarshal(byteValue, &config)
 	if err != nil {
 		logrus.Error(err)
 	}
-	ArgsM.Address = config.Address
-	ArgsM.PrivateKey = config.CryptoKey
-	ArgsM.DBURL = config.DatabaseDSN
-	ArgsM.StoreFile = config.StoreFile
-	ArgsM.Restore = config.Restore
-	ArgsM.StoreInterval = config.StoreInterval.ToDuration()
-	ArgsM.ReportInterval = config.ReportInterval.ToDuration()
-	ArgsM.PollInterval = config.PollInterval.ToDuration()
+	if ArgsM.Address == "" {
+		ArgsM.Address = config.Address
+	}
+	if ArgsM.PrivateKey == "" {
+		ArgsM.PrivateKey = config.CryptoKey
+	}
+	if ArgsM.DBURL == "" {
+		ArgsM.DBURL = config.DatabaseDSN
+	}
+	if ArgsM.StoreFile == "" {
+		ArgsM.StoreFile = config.StoreFile
+	}
 	return err
 }
 
@@ -230,6 +234,8 @@ func parseConfig(configPath string) error {
 func TermEnvFlagsAgent() {
 	flag.StringVar(&FlagsAgent.Address, "a", "127.0.0.1:8080", "Address")
 	flag.StringVar(&FlagsAgent.Key, "k", "", "Secret key")
+	flag.StringVar(&FlagsAgent.Config, "c", "", "Path configuration file")
+	flag.StringVar(&FlagsAgent.Config, "config", "", "Path configuration file")
 	flag.DurationVar(&FlagsAgent.ReportInterval, "r", 10000000000, "Report interval")
 	flag.DurationVar(&FlagsAgent.PollInterval, "p", 2000000000, "Poll interval")
 	flag.StringVar(&FlagsAgent.PubKey, "crypto-key", "", "Public key")
@@ -267,5 +273,12 @@ func TermEnvFlagsAgent() {
 		ArgsM.Key = FlagsAgent.Key
 	} else {
 		ArgsM.Key = env.Key
+	}
+	envConfig, _ := os.LookupEnv("CONFIG")
+	if envConfig != "" && FlagsAgent.Config == "" {
+		parseConfig(envConfig)
+	}
+	if envConfig == "" && FlagsAgent.Config != "" {
+		parseConfig(FlagsAgent.Config)
 	}
 }
