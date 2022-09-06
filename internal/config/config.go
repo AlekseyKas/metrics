@@ -166,6 +166,10 @@ type Duration struct {
 	time.Duration
 }
 
+func (p Duration) ToDuration() time.Duration {
+	return p.Duration
+}
+
 func (d *Duration) UnmarshalJSON(b []byte) error {
 	var v interface{}
 	if err := json.Unmarshal(b, &v); err != nil {
@@ -201,32 +205,24 @@ type Config struct {
 
 func parseConfig(configPath string) error {
 	jsonFile, err := os.Open(configPath)
-	// if we os.Open returns an error then handle it
 	if err != nil {
 		fmt.Println(err)
 	}
 
 	byteValue, _ := ioutil.ReadAll(jsonFile)
-
-	// logrus.Info(string(conf))
 	var config Config
 	err = json.Unmarshal(byteValue, &config)
 	if err != nil {
 		logrus.Error(err)
 	}
-	logrus.Info(config)
-
-	// switch ArgsM.Address == "" && b {
-	// case true:
-	// 	ArgsM.StoreFile = ""
-	// case false:
-	// 	if envFile == "" {
-	// 		ArgsM.StoreFile = FlagsServer.StoreFile
-	// 	} else {
-	// 		ArgsM.StoreFile = env.StoreFile
-	// 	}
-	// }
-
+	ArgsM.Address = config.Address
+	ArgsM.PrivateKey = config.CryptoKey
+	ArgsM.DBURL = config.DatabaseDSN
+	ArgsM.StoreFile = config.StoreFile
+	ArgsM.Restore = config.Restore
+	ArgsM.StoreInterval = config.StoreInterval.ToDuration()
+	ArgsM.ReportInterval = config.ReportInterval.ToDuration()
+	ArgsM.PollInterval = config.PollInterval.ToDuration()
 	return err
 }
 
