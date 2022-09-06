@@ -1,12 +1,17 @@
 package config
 
 import (
+	"encoding/json"
+	"errors"
 	"flag"
+	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"time"
 
 	"github.com/caarlos0/env"
+	"github.com/sirupsen/logrus"
 )
 
 // Init variable for flags.
@@ -30,6 +35,7 @@ type FlagsAg struct {
 	Address        string
 	Key            string
 	PubKey         string
+	Config         string
 	ReportInterval time.Duration
 	PollInterval   time.Duration
 }
@@ -42,6 +48,7 @@ type Param struct {
 	PubKey         string        `env:"CRYPTO_KEY"`
 	PrivateKey     string        `env:"CRYPTO_KEY"`
 	StoreFile      string        `env:"STORE_FILE" envDefault:"/tmp/devops-metrics-db.json"`
+	Config         string        `env:"CONFIG"`
 	Restore        bool          `env:"RESTORE" envDefault:"true"`
 	PollInterval   time.Duration `env:"POLL_INTERVAL" envDefault:"2s"`
 	ReportInterval time.Duration `env:"REPORT_INTERVAL" envDefault:"10s"`
@@ -56,6 +63,7 @@ type Args struct {
 	StoreFile      string
 	PubKey         string
 	PrivateKey     string
+	Config         string
 	Restore        bool
 	PollInterval   time.Duration
 	ReportInterval time.Duration
@@ -83,6 +91,7 @@ func TermEnvFlags() {
 	flag.StringVar(&FlagsServer.Key, "k", "", "Secret key")
 	flag.StringVar(&FlagsServer.PrivateKey, "crypto-key", "", "Private key")
 	flag.StringVar(&FlagsServer.Config, "c", "", "Path configuration file")
+	flag.StringVar(&FlagsServer.Config, "config", "", "Path configuration file")
 	flag.BoolVar(&FlagsServer.Restore, "r", true, "Restore from file")
 	flag.DurationVar(&FlagsServer.StoreInterval, "i", 300000000000, "Interval store file")
 	flag.Parse()
@@ -144,6 +153,81 @@ func TermEnvFlags() {
 			ArgsM.DBURL = FlagsServer.DBURL
 		}
 	}
+	envConfig, _ := os.LookupEnv("CONFIG")
+	if envConfig != "" && FlagsServer.Config == "" {
+		parseConfig(envConfig)
+	}
+	if envConfig == "" && FlagsServer.Config != "" {
+		parseConfig(FlagsServer.Config)
+	}
+}
+
+type Duration struct {
+	time.Duration
+}
+
+func (d *Duration) UnmarshalJSON(b []byte) error {
+	var v interface{}
+	if err := json.Unmarshal(b, &v); err != nil {
+		return err
+	}
+	switch value := v.(type) {
+	case float64:
+		d.Duration = time.Duration(value)
+		return nil
+	case string:
+		var err error
+		d.Duration, err = time.ParseDuration(value)
+		if err != nil {
+			return err
+		}
+		return nil
+	default:
+		return errors.New("invalid duration")
+	}
+}
+
+// Parametrs enviroment for agent.
+type Config struct {
+	Database_dsn    string   `json:"database_dsn"`
+	Crypto_key      string   `json:"crypto_key"`
+	Address         string   `json:"address"`
+	Store_file      string   `json:"store_file"`
+	Restore         bool     `json:"restore"`
+	Store_interval  Duration `json:"store_interval"`
+	Report_interval Duration `json:"report_interval"`
+	Poll_interval   Duration `json:"poll_interval"`
+}
+
+func parseConfig(configPath string) error {
+	jsonFile, err := os.Open(configPath)
+	// if we os.Open returns an error then handle it
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	byteValue, _ := ioutil.ReadAll(jsonFile)
+
+	// logrus.Info(string(conf))
+	var config Config
+	err = json.Unmarshal(byteValue, &config)
+	if err != nil {
+		logrus.Error(err)
+	}
+	logrus.Info(config)
+
+	// switch ArgsM.Address == "" && b {
+	// case true:
+	// 	ArgsM.StoreFile = ""
+	// case false:
+	// 	if envFile == "" {
+	// 		ArgsM.StoreFile = FlagsServer.StoreFile
+	// 	} else {
+	// 		ArgsM.StoreFile = env.StoreFile
+	// 	}
+	// }
+
+	return err
 }
 
 // Terminate flags and env with default value for agent

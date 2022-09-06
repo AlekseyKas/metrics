@@ -24,3 +24,4 @@ vendor/
 .idea
 .vscode
 .profile.cov
+config

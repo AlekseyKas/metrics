@@ -69,7 +69,6 @@ func TestSendMetrics(t *testing.T) {
 	s := &storage.MetricsStore{
 		MM: MapMetrics,
 	}
-
 	key := "key_test"
 	storageM = s
 	config.TermEnvFlagsAgent()
@@ -81,7 +80,6 @@ func TestSendMetrics(t *testing.T) {
 		cancel()
 		wg.Done()
 	})
-
 }
 
 func Test_sendMetricsSlice(t *testing.T) {
