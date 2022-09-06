@@ -2,7 +2,6 @@ package helpers
 
 import (
 	"context"
-	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"sync"
@@ -64,8 +63,6 @@ func Test_syncFile(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			var srv = http.Server{Addr: "127.0.0.1:8081"}
-
 			ctx, cancel := context.WithCancel(context.Background())
 			wg.Add(1)
 			go SyncFile(ctx, wg, logger, tt.config)
@@ -75,14 +72,7 @@ func Test_syncFile(t *testing.T) {
 				require.NoFileExists(t, tt.config.StoreFile)
 			}
 			wg.Add(1)
-			go WaitSignals(cancel, logger, wg, srv)
-
-			go func() {
-				err := srv.ListenAndServe()
-				if err != nil {
-					logger.Error("Error http server CHI: ", zap.Error(err))
-				}
-			}()
+			go WaitSignals(cancel, logger, wg)
 
 			time.Sleep(time.Second * 2)
 		})

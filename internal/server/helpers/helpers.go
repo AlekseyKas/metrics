@@ -3,7 +3,6 @@ package helpers
 import (
 	"context"
 	"encoding/json"
-	"net/http"
 	"os"
 	"os/signal"
 	"sync"
@@ -41,7 +40,7 @@ func fileExist(file string) bool {
 }
 
 // Wait siglans SIGTERM, SIGINT, SIGQUIT.
-func WaitSignals(cancel context.CancelFunc, logger *zap.Logger, wg *sync.WaitGroup, srv http.Server) {
+func WaitSignals(cancel context.CancelFunc, logger *zap.Logger, wg *sync.WaitGroup) {
 	terminate := make(chan os.Signal, 1)
 	signal.Notify(terminate, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	for {
@@ -50,10 +49,6 @@ func WaitSignals(cancel context.CancelFunc, logger *zap.Logger, wg *sync.WaitGro
 		case os.Interrupt:
 			if config.ArgsM.DBURL != "" {
 				handlers.StorageM.StopDB()
-			}
-			err := srv.Shutdown(context.Background())
-			if err != nil {
-				logger.Error("Error shutdown http server: ", zap.Error(err))
 			}
 			cancel()
 			wg.Done()
