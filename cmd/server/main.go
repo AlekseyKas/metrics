@@ -54,6 +54,7 @@ func main() {
 	handlers.InitConfig(config.ArgsM)
 	// Terminate storage metrics.
 	handlers.SetStorage(s)
+
 	// Load metrics from file.
 	if config.ArgsM.StoreFile != "" {
 		err := helpers.LoadFromFile(logger, config.ArgsM)
@@ -75,10 +76,7 @@ func main() {
 			}
 		}
 	}
-	// Add count wait group.
-	wg.Add(1)
-	// Wait signal from operation system.
-	go helpers.WaitSignals(cancel, logger, &wg)
+
 	// Add count wait group.
 	wg.Add(1)
 	// Sync metrics with file.
@@ -90,10 +88,15 @@ func main() {
 	fmt.Printf("Build version:%s \n", buildVersion)
 	fmt.Printf("Build date:%s \n", buildDate)
 	fmt.Printf("Build commit:%s \n", buildCommit)
-
+	// Init http server
+	var srv = http.Server{Addr: config.ArgsM.Address, Handler: r}
+	// Add count wait group.
+	wg.Add(1)
+	// Wait signal from operation system.
+	go helpers.WaitSignals(cancel, logger, &wg, srv)
 	// Start http server.
 	go func() {
-		err := http.ListenAndServe(config.ArgsM.Address, r)
+		err = srv.ListenAndServe()
 		if err != nil {
 			logger.Error("Error http server CHI: ", zap.Error(err))
 		}
