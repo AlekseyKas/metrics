@@ -96,8 +96,10 @@ func main() {
 	go helpers.WaitSignals(cancel, logger, &wg, &srv)
 	// Start http server.
 	go func() {
-		err = srv.ListenAndServe()
-		if err != nil {
+		switch err = srv.ListenAndServe(); err {
+		case nil:
+		case http.ErrServerClosed:
+		default:
 			logger.Error("Error http server CHI: ", zap.Error(err))
 		}
 	}()
