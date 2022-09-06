@@ -189,14 +189,14 @@ func (d *Duration) UnmarshalJSON(b []byte) error {
 
 // Parametrs enviroment for agent.
 type Config struct {
-	Database_dsn    string   `json:"database_dsn"`
-	Crypto_key      string   `json:"crypto_key"`
-	Address         string   `json:"address"`
-	Store_file      string   `json:"store_file"`
-	Restore         bool     `json:"restore"`
-	Store_interval  Duration `json:"store_interval"`
-	Report_interval Duration `json:"report_interval"`
-	Poll_interval   Duration `json:"poll_interval"`
+	DatabaseDSN    string   `json:"database_dsn"`
+	CryptoKey      string   `json:"crypto_key"`
+	Address        string   `json:"address"`
+	StoreFile      string   `json:"store_file"`
+	Restore        bool     `json:"restore"`
+	StoreInterval  Duration `json:"store_interval"`
+	ReportInterval Duration `json:"report_interval"`
+	PollInterval   Duration `json:"poll_interval"`
 }
 
 func parseConfig(configPath string) error {
