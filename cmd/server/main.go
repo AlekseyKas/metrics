@@ -57,14 +57,14 @@ func main() {
 
 	// Load metrics from file.
 	if config.ArgsM.StoreFile != "" {
-		err := helpers.LoadFromFile(logger, config.ArgsM)
+		err = helpers.LoadFromFile(logger, config.ArgsM)
 		if err != nil {
 			logger.Error("Error load from file: ", zap.Error(err))
 		}
 	}
 	// Connect to database if DBURL exist.
 	if config.ArgsM.DBURL != "" {
-		err := handlers.StorageM.InitDB(config.ArgsM.DBURL)
+		err = handlers.StorageM.InitDB(config.ArgsM.DBURL)
 		if err != nil {
 			logger.Error("Connection to postrgres faild: ", zap.Error(err))
 		}

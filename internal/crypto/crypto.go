@@ -36,7 +36,8 @@ func EncryptData(data []byte, pubKey string) ([]byte, error) {
 		if finish > datalen {
 			finish = datalen
 		}
-		encryptedBlock, err := rsa.EncryptOAEP(hash, rand.Reader, pub, data[start:finish], nil)
+		var encryptedBlock []byte
+		encryptedBlock, err = rsa.EncryptOAEP(hash, rand.Reader, pub, data[start:finish], nil)
 		if err != nil {
 			return nil, err
 		}
@@ -71,7 +72,8 @@ func DecryptData(data []byte, privKey string) ([]byte, error) {
 		if finish > dataLen {
 			finish = dataLen
 		}
-		decryptedBlock, err := rsa.DecryptOAEP(hash, rand.Reader, key, data[start:finish], nil)
+		var decryptedBlock []byte
+		decryptedBlock, err = rsa.DecryptOAEP(hash, rand.Reader, key, data[start:finish], nil)
 		if err != nil {
 			return nil, err
 		}
