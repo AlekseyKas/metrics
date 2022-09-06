@@ -93,7 +93,7 @@ func main() {
 	// Add count wait group.
 	wg.Add(1)
 	// Wait signal from operation system.
-	go helpers.WaitSignals(cancel, logger, &wg)
+	go helpers.WaitSignals(cancel, logger, &wg, &srv)
 	// Start http server.
 	go func() {
 		err = srv.ListenAndServe()

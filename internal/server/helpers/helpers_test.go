@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"context"
+	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"sync"
@@ -71,9 +72,21 @@ func Test_syncFile(t *testing.T) {
 			} else {
 				require.NoFileExists(t, tt.config.StoreFile)
 			}
+			// wg.Add(1)
+			// go WaitSignals(cancel, logger, wg, ts)
+			var srv = http.Server{Addr: config.ArgsM.Address}
+			// Add count wait group.
 			wg.Add(1)
-			go WaitSignals(cancel, logger, wg)
-
+			// Wait signal from operation system.
+			go WaitSignals(cancel, logger, wg, &srv)
+			// Start http server.
+			wg.Add(1)
+			go func() {
+				err := srv.ListenAndServe()
+				if err != nil {
+					logger.Error("Error http server CHI: ", zap.Error(err))
+				}
+			}()
 			time.Sleep(time.Second * 2)
 		})
 	}
