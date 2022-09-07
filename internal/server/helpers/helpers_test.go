@@ -163,6 +163,7 @@ func Test_fileExist(t *testing.T) {
 				StoreInterval: 1,
 				Restore:       true,
 			},
+			wantErr: false,
 		},
 		{
 			name: "second",
@@ -171,12 +172,16 @@ func Test_fileExist(t *testing.T) {
 				StoreInterval: 1,
 				Restore:       true,
 			},
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			b, err := fileExist(tt.config.StoreFile)
-			require.NoError(t, err)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("hello() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
 			if b {
 				require.True(t, b)
 			} else {
