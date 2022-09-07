@@ -148,7 +148,6 @@ func Test_LoadFromFile(t *testing.T) {
 		})
 	}
 }
-
 func Test_fileExist(t *testing.T) {
 	f, _ := os.CreateTemp("/tmp/", "file")
 	tests := []struct {
