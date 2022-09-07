@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"context"
+	"log"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -19,8 +20,10 @@ import (
 )
 
 func Test_syncFile(t *testing.T) {
-	f, _ := os.CreateTemp("/tmp/", "file")
-
+	f, err := os.CreateTemp("/tmp/", "file")
+	if err != nil {
+		log.Fatalf("Error create template %e", err)
+	}
 	var wg = &sync.WaitGroup{}
 	tests := []struct {
 		name   string
@@ -60,8 +63,9 @@ func Test_syncFile(t *testing.T) {
 		MM: structs.Map(storage.Metrics{}),
 	}
 	handlers.SetStorage(s)
-	logger, _ := zap.NewProduction()
 	for _, tt := range tests {
+		logger, err := zap.NewProduction()
+		require.NoError(t, err)
 		t.Run(tt.name, func(t *testing.T) {
 
 			ctx, cancel := context.WithCancel(context.Background())
@@ -131,9 +135,10 @@ func Test_LoadFromFile(t *testing.T) {
 			},
 		},
 	}
-	logger, _ := zap.NewProduction()
 
 	for _, tt := range tests {
+		logger, err := zap.NewProduction()
+		require.NoError(t, err)
 		t.Run(tt.name, func(t *testing.T) {
 			f, err := os.CreateTemp("/tmp/", tt.config.StoreFile)
 			require.FileExists(t, f.Name())
@@ -170,7 +175,8 @@ func Test_fileExist(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			b := fileExist(tt.config.StoreFile)
+			b, err := fileExist(tt.config.StoreFile)
+			require.NoError(t, err)
 			if b {
 				require.True(t, b)
 			} else {

@@ -17,8 +17,13 @@ import (
 
 // Load metrics from file storage.
 func LoadFromFile(logger *zap.Logger, env config.Args) error {
-	if env.Restore && fileExist(env.StoreFile) {
-		file, err := os.ReadFile(env.StoreFile)
+	b, err := fileExist(env.StoreFile)
+	if err != nil {
+		logger.Error("Error read file: ", zap.Error(err))
+	}
+	if env.Restore && b {
+		var file []byte
+		file, err = os.ReadFile(env.StoreFile)
 		if err != nil {
 			logger.Error("Error open file for writing: ", zap.Error(err))
 
@@ -30,14 +35,14 @@ func LoadFromFile(logger *zap.Logger, env config.Args) error {
 }
 
 // Checking exist file or don't exist.
-func fileExist(file string) bool {
+func fileExist(file string) (bool, error) {
 	var b bool
 	_, err := os.Stat(file)
-	if os.IsNotExist(err) {
-		return b
+	if err != nil {
+		return b, err
 	}
 	b = true
-	return b
+	return b, err
 }
 
 // Wait siglans SIGTERM, SIGINT, SIGQUIT.
@@ -98,31 +103,31 @@ func SyncFile(ctx context.Context, wg *sync.WaitGroup, logger *zap.Logger, env c
 				wg.Done()
 				return
 			}
-		} else {
-			for {
-				select {
-				case <-ctx.Done():
-					logger.Info("File syncing is down")
-					wg.Done()
-					return
-				case <-time.After(env.StoreInterval):
-					metrics, _ := handlers.StorageM.GetMetricsJSON()
-					file, err := os.OpenFile(env.StoreFile, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0777)
-					if err != nil {
-						logger.Error("Error open file for writing: ", zap.Error(err))
-					}
-					defer file.Close()
+		}
+		for {
+			select {
+			case <-ctx.Done():
+				logger.Info("File syncing is down")
+				wg.Done()
+				return
+			case <-time.After(env.StoreInterval):
+				metrics, _ := handlers.StorageM.GetMetricsJSON()
+				file, err := os.OpenFile(env.StoreFile, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0777)
+				if err != nil {
+					logger.Error("Error open file for writing: ", zap.Error(err))
+				}
+				defer file.Close()
 
-					data, err := json.Marshal(metrics)
-					if err != nil {
-						logger.Error("Error marshaling metrics : ", zap.Error(err))
-					}
-					_, err = file.Write(data)
-					if err != nil {
-						logger.Error("Error writing data to file: ", zap.Error(err))
-					}
+				data, err := json.Marshal(metrics)
+				if err != nil {
+					logger.Error("Error marshaling metrics : ", zap.Error(err))
+				}
+				_, err = file.Write(data)
+				if err != nil {
+					logger.Error("Error writing data to file: ", zap.Error(err))
 				}
 			}
+
 		}
 	}
 }
