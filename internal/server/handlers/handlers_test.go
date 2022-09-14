@@ -2,15 +2,17 @@ package handlers
 
 import (
 	"bytes"
+	"compress/gzip"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/AlekseyKas/metrics/internal/config"
+	"github.com/AlekseyKas/metrics/internal/storage"
 	"github.com/fatih/structs"
 	"github.com/go-chi/chi"
 	"github.com/stretchr/testify/require"
-
-	"github.com/AlekseyKas/metrics/internal/storage"
+	"go.uber.org/zap"
 )
 
 var body []byte
@@ -30,6 +32,7 @@ func TestRouter(t *testing.T) {
 		name   string
 		url    string
 		method string
+		key    string
 		body   []byte
 		want   want
 	}{
@@ -38,6 +41,7 @@ func TestRouter(t *testing.T) {
 			url:    "/value/",
 			method: "POST",
 			body:   []byte(`{"ID": "Alloc", "type": "gauge"}`),
+			key:    "key",
 			want: want{
 				contentType: "application/json",
 				statusCode:  200,
@@ -47,6 +51,7 @@ func TestRouter(t *testing.T) {
 			name:   "fist sample#",
 			url:    "/value/",
 			method: "POST",
+			key:    "",
 			body:   []byte(`{"ID": "PollCount", "type": "counter"}`),
 			want: want{
 				contentType: "application/json",
@@ -57,10 +62,11 @@ func TestRouter(t *testing.T) {
 			name:   "second sample#",
 			url:    "/value/",
 			method: "POST",
-			body:   []byte(`{"ID": "PollCount", "type": "gouge"}`),
+			key:    "3333",
+			body:   []byte(`{"ID": "PollCount", "type": "gauge"}`),
 			want: want{
 				contentType: "application/json",
-				statusCode:  500,
+				statusCode:  404,
 			},
 		},
 		{
@@ -74,40 +80,63 @@ func TestRouter(t *testing.T) {
 			},
 		},
 		{
-			name:   "5 sample#",
+			name:   "5 sample update 200#",
 			url:    "/update/",
 			method: "POST",
-			body:   []byte(`{"ID": "Pollcount", "type": "counter", "delta": 45}`),
+			body:   []byte(`{"ID": "PollCount", "type": "counter", "delta": 45}`),
 			want: want{
 				contentType: "application/json",
 				statusCode:  200,
 			},
 		},
 		{
-			name:   "6 sample#",
+			name:   "6 sample update 500#",
 			url:    "/update/",
 			method: "POST",
-			body:   []byte(`{"ID": "Pollcount", "type": "gauge", "delta": "12"}`),
+			body:   []byte(`{"ID": "PollCount", "type": "gauge", "delta": 12}`),
+			want: want{
+				contentType: "application/json",
+				statusCode:  500,
+			},
+		},
+		{
+			name:   "7 sample update 400#",
+			url:    "/update/",
+			method: "POST",
+			key:    "ssd",
+			body:   []byte(`{"ID": "Alloc", "type": "gauge", "value": 1}`),
 			want: want{
 				contentType: "application/json",
 				statusCode:  400,
 			},
 		},
 		{
-			name:   "7 sample#",
+			name:   "8 sample update 200#",
 			url:    "/update/",
 			method: "POST",
-			body:   []byte(`{"ID": "Alloc", "type": "gauge", "value": 3.1}`),
+			key:    "",
+			body:   []byte(`{"ID": "Alloc", "type": "gauge", "value": 1}`),
 			want: want{
 				contentType: "application/json",
 				statusCode:  200,
 			},
 		},
+		{
+			name:   "9 sample update 501#",
+			url:    "/update/",
+			method: "POST",
+			body:   []byte(`{"ID": "MetricName", "type": "test"}`),
+			want: want{
+				contentType: "application/json",
+				statusCode:  501,
+			},
+		},
 
 		{
-			name:   "saveMetricsSlice success#",
+			name:   "saveMetricsSlice success 1#",
 			url:    "/updates/",
 			method: "POST",
+			key:    "ssds",
 			body:   []byte(`[{"ID": "Alloc", "type": "gauge", "value": 3.1}]`),
 			want: want{
 				contentType: "application/json",
@@ -116,17 +145,61 @@ func TestRouter(t *testing.T) {
 		},
 
 		{
-			name:   "saveMetricsSlice#",
+			name:   "saveMetricsSlice success 2#",
 			url:    "/updates/",
 			method: "POST",
-			body:   []byte(`[{"ID": "Alloc", "type": "counter", "delta": 3.2}]`),
+			body:   []byte(`[{"ID": "PollCount", "type": "counter", "delta": 102}]`),
+			want: want{
+				contentType: "application/json",
+				statusCode:  200,
+			},
+		},
+		{
+			name:   "saveMetricsSlice success 3#",
+			url:    "/updates/",
+			method: "POST",
+			key:    "lll",
+			body:   []byte(`[{"ID": "PollCount", "type": "counter", "delta": 102}]`),
+			want: want{
+				contentType: "application/json",
+				statusCode:  200,
+			},
+		},
+		{
+			name:   "saveMetricsSlice success 4#",
+			url:    "/updates/",
+			method: "POST",
+			body:   []byte(`[{"ID": "TestCount", "type": "counter", "delta": 12202}]`),
+			want: want{
+				contentType: "application/json",
+				statusCode:  200,
+			},
+		},
+		{
+			name:   "saveMetricsSlice success 5#",
+			url:    "/updates/",
+			method: "POST",
+			body:   []byte(`[{"ID": "Ametrics", "type": "gauge", "value": 3.2221}]`),
+			want: want{
+				contentType: "application/json",
+				statusCode:  200,
+			},
+		},
+
+		{
+			name:   "saveMetricsSlice bad request 1#",
+			url:    "/updates/",
+			method: "POST",
+			body:   []byte(`[{"ID": "Alloc", "type": "counter", "delta": 3.1}]`),
 			want: want{
 				contentType: "application/json",
 				statusCode:  400,
 			},
 		},
 	}
+	logger, _ := zap.NewProduction()
 
+	InitLogger(logger)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := chi.NewRouter()
@@ -135,8 +208,9 @@ func TestRouter(t *testing.T) {
 			ts := httptest.NewServer(r)
 			defer ts.Close()
 			body = tt.body
-
+			config.ArgsM.Key = tt.key
 			buff := bytes.NewBuffer(body)
+
 			req, err := http.NewRequest(tt.method, ts.URL+tt.url, buff)
 			require.NoError(t, err)
 
@@ -503,6 +577,160 @@ func Test_checkConnection(t *testing.T) {
 			require.NoError(t, errr)
 
 			defer resp.Body.Close()
+		})
+	}
+}
+
+func TestRouterCompressDecompress(t *testing.T) {
+
+	s := &storage.MetricsStore{
+		MM: structs.Map(storage.Metrics{}),
+	}
+	SetStorage(s)
+	type want struct {
+		contentType string
+		statusCode  int
+	}
+
+	tests := []struct {
+		name   string
+		url    string
+		method string
+		body   []byte
+		want   want
+	}{
+		{
+			name:   "fist sample#",
+			url:    "/value/",
+			method: "POST",
+			body:   []byte(`{"ID": "Alloc", "type": "gauge"}`),
+			want: want{
+				contentType: "application/json",
+				statusCode:  200,
+			},
+		},
+		{
+			name:   "fist sample#",
+			url:    "/value/",
+			method: "POST",
+			body:   []byte(`{"ID": "PollCount", "type": "counter"}`),
+			want: want{
+				contentType: "application/json",
+				statusCode:  200,
+			},
+		},
+		{
+			name:   "second sample#",
+			url:    "/value/",
+			method: "POST",
+			body:   []byte(`{"ID": "PollCount", "type": "gouge"}`),
+			want: want{
+				contentType: "application/json",
+				statusCode:  500,
+			},
+		},
+		{
+			name:   "4 sample#",
+			url:    "/value/",
+			method: "POST",
+			body:   []byte(`{"ID": "MetricName", "type": "test"}`),
+			want: want{
+				contentType: "application/json",
+				statusCode:  500,
+			},
+		},
+		{
+			name:   "5 sample#",
+			url:    "/update/",
+			method: "POST",
+			body:   []byte(`{"ID": "Pollcount", "type": "counter", "delta": 45}`),
+			want: want{
+				contentType: "application/json",
+				statusCode:  200,
+			},
+		},
+		{
+			name:   "6 sample#",
+			url:    "/update/",
+			method: "POST",
+			body:   []byte(`{"ID": "Pollcount", "type": "gauge", "delta": "12"}`),
+			want: want{
+				contentType: "application/json",
+				statusCode:  400,
+			},
+		},
+		{
+			name:   "7 sample#",
+			url:    "/update/",
+			method: "POST",
+			body:   []byte(`{"ID": "Alloc", "type": "gauge", "value": 3.1}`),
+			want: want{
+				contentType: "application/json",
+				statusCode:  200,
+			},
+		},
+
+		{
+			name:   "saveMetricsSlice success#",
+			url:    "/updates/",
+			method: "POST",
+			body:   []byte(`[{"ID": "Alloc", "type": "gauge", "value": 3.1}]`),
+			want: want{
+				contentType: "application/json",
+				statusCode:  200,
+			},
+		},
+
+		{
+			name:   "saveMetricsSlice#",
+			url:    "/updates/",
+			method: "POST",
+			body:   []byte(`[{"ID": "Alloc", "type": "counter", "delta": 3}]`),
+			want: want{
+				contentType: "application/json",
+				statusCode:  400,
+			},
+		},
+		{
+			name:   "saveMetricsSlice delta float64#",
+			url:    "/updates/",
+			method: "POST",
+			body:   []byte(`[{"ID": "Alloc", "type": "counter", "delta": 3.1}]`),
+			want: want{
+				contentType: "application/json",
+				statusCode:  400,
+			},
+		},
+	}
+	logger, _ := zap.NewProduction()
+
+	InitLogger(logger)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := chi.NewRouter()
+			r.Route("/", Router)
+
+			ts := httptest.NewServer(r)
+			defer ts.Close()
+			body = tt.body
+
+			var buf bytes.Buffer
+
+			gz, _ := gzip.NewWriterLevel(&buf, gzip.BestCompression)
+
+			gz.Write(tt.body)
+			gz.Close()
+
+			req, err := http.NewRequest(tt.method, ts.URL+tt.url, &buf)
+			req.Header.Set("Content-Encoding", "gzip")
+			req.Header.Set("Content-Type", "application/json")
+			require.NoError(t, err)
+			resp, errr := http.DefaultClient.Do(req)
+			require.NoError(t, errr)
+			require.Equal(t, tt.want.statusCode, resp.StatusCode)
+
+			defer resp.Body.Close()
+
 		})
 	}
 }

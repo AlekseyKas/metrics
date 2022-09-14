@@ -17,9 +17,10 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 
 	"github.com/AlekseyKas/metrics/internal/config"
+	"github.com/AlekseyKas/metrics/internal/crypto"
 	"github.com/AlekseyKas/metrics/internal/storage"
 )
 
@@ -35,14 +36,32 @@ func SetStorage(s storage.Storage) {
 	StorageM = s
 }
 
+// Init logger.
+var Logger *zap.Logger
+
+// Set logger.
+func InitLogger(logger *zap.Logger) {
+	Logger = logger
+}
+
+// Init Args
+var Args config.Args
+
+// Set args
+func InitConfig(args config.Args) {
+	Args = args
+}
+
 // Handlers server
 func Router(r chi.Router) {
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+	r.Use(Dencrypt)
 	r.Use(CompressGzip)
 	r.Use(DecompressGzip)
+	// r.Use(Encrypt)
 	r.Get("/", getMetrics())
 	r.Get("/value/{typeMet}/{nameMet}", getMetric())
 	r.Get("/ping", checkConnection())
@@ -56,6 +75,28 @@ func Router(r chi.Router) {
 	r.Get("/debug/pprof/profile", pprof.Profile)
 	r.Get("/debug/pprof/symbol", pprof.Symbol)
 	r.Get("/debug/pprof/trace", pprof.Trace)
+}
+
+func Dencrypt(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if Args.PrivateKey != "" {
+
+			out, err := io.ReadAll(r.Body)
+			if err != nil {
+				Logger.Error("Error read body: ", zap.Error(err))
+			}
+			data, err := crypto.DecryptData(out, Args.PrivateKey)
+			if err != nil {
+				Logger.Error("Error decrypt data: ", zap.Error(err))
+			}
+			r.ContentLength = int64(len(data))
+			r.Body = io.NopCloser(bytes.NewBuffer(data))
+			next.ServeHTTP(w, r)
+		} else {
+			next.ServeHTTP(w, r)
+			return
+		}
+	})
 }
 
 // Init type for zipping
@@ -77,7 +118,6 @@ func DecompressGzip(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
-
 		gz, err := gzip.NewReader(r.Body)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -86,7 +126,6 @@ func DecompressGzip(next http.Handler) http.Handler {
 		gz.Close()
 		r.Body = gz
 		next.ServeHTTP(w, r)
-
 	})
 }
 
@@ -124,12 +163,13 @@ func saveMetricsSlice() http.HandlerFunc {
 
 		out, err := io.ReadAll(r.Body)
 		if err != nil {
-			logrus.Error("Error read body: ", err)
+			Logger.Error("Error read body: ", zap.Error(err))
 		}
-
 		err = json.Unmarshal(out, &s)
 		if err != nil {
-			logrus.Error("Error unmarshaling request: ", err)
+			Logger.Error("Error unmarshaling request: ", zap.Error(err))
+			rw.WriteHeader(http.StatusBadRequest)
+			return
 		}
 		var typeMet string
 		var nameMet string
@@ -142,7 +182,7 @@ func saveMetricsSlice() http.HandlerFunc {
 				var b bool
 				b, err = compareHash(&s[i], []byte(config.ArgsM.Key))
 				if err != nil {
-					logrus.Error("Error compare hash of metrics: ", err)
+					Logger.Error("Error compare hash of metrics: ", zap.Error(err))
 				}
 				if b {
 
@@ -152,11 +192,11 @@ func saveMetricsSlice() http.HandlerFunc {
 							if metrics[nameMet] != gauge(*s[i].Value) {
 								err = StorageM.ChangeMetric(nameMet, gauge(*s[i].Value), config.ArgsM)
 								if err != nil {
-									logrus.Error("Error changing metric ChangeMetric: ", err)
+									Logger.Error("Error changing metric ChangeMetric: ", zap.Error(err))
 								}
 								err = StorageM.ChangeMetricDB(nameMet, *s[i].Value, typeMet, config.ArgsM)
 								if err != nil {
-									logrus.Error("Error changing metric ChangeMetricDB: ", err)
+									Logger.Error("Error changing metric ChangeMetricDB: ", zap.Error(err))
 								}
 								rw.WriteHeader(http.StatusOK)
 							}
@@ -176,22 +216,22 @@ func saveMetricsSlice() http.HandlerFunc {
 								valueMetInt = int(*s[i].Delta) + ii
 								err = StorageM.ChangeMetric(nameMet, counter(valueMetInt), config.ArgsM)
 								if err != nil {
-									logrus.Error("Error changing metric ChangeMetric: ", err)
+									Logger.Error("Error changing metric ChangeMetric: ", zap.Error(err))
 								}
 								err = StorageM.ChangeMetricDB(nameMet, valueMetInt, typeMet, config.ArgsM)
 								if err != nil {
-									logrus.Error("Error changing metric ChangeMetricDB: ", err)
+									Logger.Error("Error changing metric ChangeMetricDB: ", zap.Error(err))
 								}
 								rw.WriteHeader(http.StatusOK)
 							} else {
 								valueMetInt = int(*s[i].Delta)
 								err = StorageM.ChangeMetric(nameMet, counter(valueMetInt), config.ArgsM)
 								if err != nil {
-									logrus.Error("Error changing metric ChangeMetric: ", err)
+									Logger.Error("Error changing metric ChangeMetric: ", zap.Error(err))
 								}
 								err = StorageM.ChangeMetricDB(nameMet, valueMetInt, typeMet, config.ArgsM)
 								if err != nil {
-									logrus.Error("Error changing metric ChangeMetricDB: ", err)
+									Logger.Error("Error changing metric ChangeMetricDB: ", zap.Error(err))
 								}
 								rw.WriteHeader(http.StatusOK)
 							}
@@ -205,11 +245,11 @@ func saveMetricsSlice() http.HandlerFunc {
 						if metrics[nameMet] != gauge(*s[i].Value) {
 							err = StorageM.ChangeMetric(nameMet, gauge(*s[i].Value), config.ArgsM)
 							if err != nil {
-								logrus.Error("Error changing metric ChangeMetric: ", err)
+								Logger.Error("Error changing metric ChangeMetric: ", zap.Error(err))
 							}
 							err = StorageM.ChangeMetricDB(nameMet, *s[i].Value, typeMet, config.ArgsM)
 							if err != nil {
-								logrus.Error("Error changing metric ChangeMetricDB: ", err)
+								Logger.Error("Error changing metric ChangeMetricDB: ", zap.Error(err))
 							}
 							rw.WriteHeader(http.StatusOK)
 						}
@@ -229,22 +269,22 @@ func saveMetricsSlice() http.HandlerFunc {
 							valueMetInt = int(*s[i].Delta) + ii
 							err = StorageM.ChangeMetric(nameMet, counter(valueMetInt), config.ArgsM)
 							if err != nil {
-								logrus.Error("Error changing metric ChangeMetric: ", err)
+								Logger.Error("Error changing metric ChangeMetric: ", zap.Error(err))
 							}
 							err = StorageM.ChangeMetricDB(nameMet, valueMetInt, typeMet, config.ArgsM)
 							if err != nil {
-								logrus.Error("Error changing metric ChangeMetricDB: ", err)
+								Logger.Error("Error changing metric ChangeMetricDB: ", zap.Error(err))
 							}
 							rw.WriteHeader(http.StatusOK)
 						} else {
 							valueMetInt = int(*s[i].Delta)
 							err = StorageM.ChangeMetric(nameMet, counter(valueMetInt), config.ArgsM)
 							if err != nil {
-								logrus.Error("Error changing metric ChangeMetric: ", err)
+								Logger.Error("Error changing metric ChangeMetric: ", zap.Error(err))
 							}
 							err = StorageM.ChangeMetricDB(nameMet, valueMetInt, typeMet, config.ArgsM)
 							if err != nil {
-								logrus.Error("Error changing metric ChangeMetricDB: ", err)
+								Logger.Error("Error changing metric ChangeMetricDB: ", zap.Error(err))
 							}
 							rw.WriteHeader(http.StatusOK)
 						}
@@ -269,8 +309,9 @@ func getMetricsJSON() http.HandlerFunc {
 		s := StorageM.GetStructJSON()
 		err = json.Unmarshal(out, &s)
 		if err != nil {
-			logrus.Error("Error unmarshaling request: ", err)
+			Logger.Error("Error unmarshaling request: ", zap.Error(err))
 			http.Error(rw, err.Error(), http.StatusInternalServerError)
+
 		}
 
 		metrics := StorageM.GetMetrics()
@@ -301,18 +342,18 @@ func getMetricsJSON() http.HandlerFunc {
 					if config.ArgsM.Key != "" {
 						calculateHash(&s, []byte(config.ArgsM.Key))
 						if err != nil {
-							logrus.Error("Error calculate hash: ", err)
+							Logger.Error("Error calculate hash: ", zap.Error(err))
 						}
 					}
 					encoder := json.NewEncoder(&buf)
 					err = encoder.Encode(s)
 					if err != nil {
-						logrus.Info(err)
+						Logger.Error("Error encode metrics", zap.Error(err))
 						http.Error(rw, err.Error(), http.StatusBadRequest)
 					}
 					_, err = rw.Write(buf.Bytes())
 					if err != nil {
-						logrus.Error("Error write data in buff: ", err)
+						Logger.Error("Error write data in buff: ", zap.Error(err))
 					}
 					rw.WriteHeader(http.StatusOK)
 					return
@@ -335,7 +376,7 @@ func getMetricsJSON() http.HandlerFunc {
 					if config.ArgsM.Key != "" {
 						calculateHash(&s, []byte(config.ArgsM.Key))
 						if err != nil {
-							logrus.Error("Error calculate hash: ", err)
+							Logger.Error("Error calculate hash: ", zap.Error(err))
 						}
 					}
 					encoder := json.NewEncoder(&buf)
@@ -345,7 +386,7 @@ func getMetricsJSON() http.HandlerFunc {
 					}
 					_, err = rw.Write(buf.Bytes())
 					if err != nil {
-						logrus.Error("Error write bytes to req: ", err)
+						Logger.Error("Error write bytes to req: ", zap.Error(err))
 					}
 					rw.WriteHeader(http.StatusOK)
 					return
@@ -391,9 +432,9 @@ func saveMetricsJSON() http.HandlerFunc {
 		s := StorageM.GetStructJSON()
 		err = json.Unmarshal(out, &s)
 		if err != nil {
-			logrus.Error("Error unmarshaling request: ", err)
+			Logger.Error("Error unmarshaling request: ", zap.Error(err))
 			rw.WriteHeader(http.StatusBadRequest)
-
+			return
 		}
 		metrics := StorageM.GetMetrics()
 		typeMet := s.MType
@@ -402,7 +443,7 @@ func saveMetricsJSON() http.HandlerFunc {
 			var b bool
 			b, err = compareHash(&s, []byte(config.ArgsM.Key))
 			if err != nil {
-				logrus.Error("Error compare hash of metrics: ", err)
+				Logger.Error("Error compare hash of metrics: ", zap.Error(err))
 			}
 			if !b {
 				rw.WriteHeader(http.StatusBadRequest)
@@ -422,11 +463,11 @@ func saveMetricsJSON() http.HandlerFunc {
 				if metrics[nameMet] != gauge(*s.Value) {
 					err = StorageM.ChangeMetric(nameMet, gauge(*s.Value), config.ArgsM)
 					if err != nil {
-						logrus.Error("Error changing metric ChangeMetric: ", err)
+						Logger.Error("Error changing metric ChangeMetric: ", zap.Error(err))
 					}
 					err = StorageM.ChangeMetricDB(nameMet, *s.Value, typeMet, config.ArgsM)
 					if err != nil {
-						logrus.Error("Error changing metric ChangeMetricDB: ", err)
+						Logger.Error("Error changing metric ChangeMetricDB: ", zap.Error(err))
 					}
 					rw.WriteHeader(http.StatusOK)
 					return
@@ -435,11 +476,11 @@ func saveMetricsJSON() http.HandlerFunc {
 		}
 		// Update counter
 		if typeMet == "counter" {
-
 			if err != nil {
 				rw.WriteHeader(http.StatusBadRequest)
 				return
 			}
+
 			var valueMetInt int
 			if s.Delta != nil {
 				if _, ok := metrics[nameMet]; ok {
@@ -452,11 +493,11 @@ func saveMetricsJSON() http.HandlerFunc {
 					valueMetInt = int(*s.Delta) + i
 					err = StorageM.ChangeMetric(nameMet, counter(valueMetInt), config.ArgsM)
 					if err != nil {
-						logrus.Error("Error changing metric ChangeMetric: ", err)
+						Logger.Error("Error changing metric ChangeMetric: ", zap.Error(err))
 					}
 					err = StorageM.ChangeMetricDB(nameMet, valueMetInt, typeMet, config.ArgsM)
 					if err != nil {
-						logrus.Error("Error changing metric ChangeMetricDB: ", err)
+						Logger.Error("Error changing metric ChangeMetricDB: ", zap.Error(err))
 					}
 					rw.WriteHeader(http.StatusOK)
 					return
@@ -464,11 +505,11 @@ func saveMetricsJSON() http.HandlerFunc {
 					valueMetInt = int(*s.Delta)
 					err = StorageM.ChangeMetric(nameMet, counter(valueMetInt), config.ArgsM)
 					if err != nil {
-						logrus.Error("Error changing metric ChangeMetric: ", err)
+						Logger.Error("Error changing metric ChangeMetric: ", zap.Error(err))
 					}
 					err = StorageM.ChangeMetricDB(nameMet, valueMetInt, typeMet, config.ArgsM)
 					if err != nil {
-						logrus.Error("Error changing metric ChangeMetricDB: ", err)
+						Logger.Error("Error changing metric ChangeMetricDB: ", zap.Error(err))
 					}
 					rw.WriteHeader(http.StatusOK)
 					return
@@ -493,7 +534,7 @@ func compareHash(s *storage.JSONMetrics, key []byte) (b bool, err error) {
 		h = hmac.New(sha256.New, key)
 		_, err = h.Write([]byte(data))
 		if err != nil {
-			logrus.Error("Error write data hash: ", err)
+			Logger.Error("Error write data hash: ", zap.Error(err))
 		}
 	}
 	h.Sum(nil)
@@ -519,7 +560,7 @@ func getMetrics() http.HandlerFunc {
 		rw.WriteHeader(http.StatusOK)
 		_, err = rw.Write(buf.Bytes())
 		if err != nil {
-			logrus.Error("Error write bytes to req: ", err)
+			Logger.Error("Error write bytes to req: ", zap.Error(err))
 		}
 	}
 }
@@ -556,7 +597,7 @@ func getMetric() http.HandlerFunc {
 				rw.WriteHeader(http.StatusOK)
 				_, err := rw.Write([]byte(fmt.Sprintf("%v", metrics[nameMet])))
 				if err != nil {
-					logrus.Error("Error write bytes to req: ", err)
+					Logger.Error("Error write bytes to req: ", zap.Error(err))
 				}
 				return
 			}
@@ -569,7 +610,7 @@ func getMetric() http.HandlerFunc {
 			rw.WriteHeader(http.StatusOK)
 			_, err := rw.Write([]byte(fmt.Sprintf("%v", metrics[nameMet])))
 			if err != nil {
-				logrus.Error("Error write bytes to req: ", err)
+				Logger.Error("Error write bytes to req: ", zap.Error(err))
 			}
 			return
 		}
@@ -606,7 +647,7 @@ func saveMetrics() http.HandlerFunc {
 				if metrics[nameMet] != gauge(valueMetFloat) {
 					err = StorageM.ChangeMetric(nameMet, gauge(valueMetFloat), config.ArgsM)
 					if err != nil {
-						logrus.Error("Error changing metric ChangeMetric: ", err)
+						Logger.Error("Error changing metric ChangeMetric: ", zap.Error(err))
 					}
 					rw.Header().Add("Content-Type", "text/plain")
 					rw.WriteHeader(http.StatusOK)
@@ -631,14 +672,14 @@ func saveMetrics() http.HandlerFunc {
 					valueMetInt = valueMetInt + i
 					err = StorageM.ChangeMetric(nameMet, counter(valueMetInt), config.ArgsM)
 					if err != nil {
-						logrus.Error("Error changing metric ChangeMetric: ", err)
+						Logger.Error("Error changing metric ChangeMetric: ", zap.Error(err))
 					}
 					rw.Header().Add("Content-Type", "text/plain")
 					rw.WriteHeader(http.StatusOK)
 				} else {
 					err = StorageM.ChangeMetric(nameMet, counter(valueMetInt), config.ArgsM)
 					if err != nil {
-						logrus.Error("Error changing metric ChangeMetric: ", err)
+						Logger.Error("Error changing metric ChangeMetric: ", zap.Error(err))
 					}
 				}
 			}

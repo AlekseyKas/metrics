@@ -23,4 +23,5 @@ vendor/
 # IDEs directories
 .idea
 .vscode
-.profile.cov
+profile.cov
+config*

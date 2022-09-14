@@ -1,12 +1,16 @@
 package config
 
 import (
+	"encoding/json"
 	"flag"
+	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"time"
 
 	"github.com/caarlos0/env"
+	"github.com/sirupsen/logrus"
 )
 
 // Init variable for flags.
@@ -18,7 +22,9 @@ type FlagsServ struct {
 	Address       string
 	Key           string
 	StoreFile     string
+	PrivateKey    string
 	DBURL         string
+	Config        string
 	Restore       bool
 	StoreInterval time.Duration
 }
@@ -27,6 +33,8 @@ type FlagsServ struct {
 type FlagsAg struct {
 	Address        string
 	Key            string
+	PubKey         string
+	Config         string
 	ReportInterval time.Duration
 	PollInterval   time.Duration
 }
@@ -36,7 +44,10 @@ type Param struct {
 	Key            string        `env:"KEY"`
 	DBURL          string        `env:"DATABASE_DSN"`
 	Address        string        `env:"ADDRESS" envDefault:"127.0.0.1:8080"`
+	PubKey         string        `env:"CRYPTO_KEY"`
+	PrivateKey     string        `env:"CRYPTO_KEY"`
 	StoreFile      string        `env:"STORE_FILE" envDefault:"/tmp/devops-metrics-db.json"`
+	Config         string        `env:"CONFIG"`
 	Restore        bool          `env:"RESTORE" envDefault:"true"`
 	PollInterval   time.Duration `env:"POLL_INTERVAL" envDefault:"2s"`
 	ReportInterval time.Duration `env:"REPORT_INTERVAL" envDefault:"10s"`
@@ -49,6 +60,9 @@ type Args struct {
 	Address        string
 	Key            string
 	StoreFile      string
+	PubKey         string
+	PrivateKey     string
+	Config         string
 	Restore        bool
 	PollInterval   time.Duration
 	ReportInterval time.Duration
@@ -74,10 +88,20 @@ func TermEnvFlags() {
 	flag.StringVar(&FlagsServer.DBURL, "d", "", "Database URL")
 	flag.StringVar(&FlagsServer.StoreFile, "f", "", "File path store")
 	flag.StringVar(&FlagsServer.Key, "k", "", "Secret key")
+	flag.StringVar(&FlagsServer.PrivateKey, "crypto-key", "", "Private key")
+	flag.StringVar(&FlagsServer.Config, "c", "", "Path configuration file")
+	flag.StringVar(&FlagsServer.Config, "config", "", "Path configuration file")
 	flag.BoolVar(&FlagsServer.Restore, "r", true, "Restore from file")
 	flag.DurationVar(&FlagsServer.StoreInterval, "i", 300000000000, "Interval store file")
 	flag.Parse()
 	env := loadConfig()
+
+	envPrivateKey, _ := os.LookupEnv("CRYPTO_KEY")
+	if envPrivateKey == "" {
+		ArgsM.PrivateKey = FlagsServer.PrivateKey
+	} else {
+		ArgsM.PrivateKey = env.PrivateKey
+	}
 	envADDR, _ := os.LookupEnv("ADDRESS")
 	if envADDR == "" {
 		ArgsM.Address = FlagsServer.Address
@@ -128,18 +152,77 @@ func TermEnvFlags() {
 			ArgsM.DBURL = FlagsServer.DBURL
 		}
 	}
+	envConfig, _ := os.LookupEnv("CONFIG")
+	if envConfig != "" && FlagsServer.Config == "" {
+		parseConfig(envConfig)
+	}
+	if envConfig == "" && FlagsServer.Config != "" {
+		parseConfig(FlagsServer.Config)
+	}
+}
+
+// Var for unmarshal duration type
+type Duration time.Duration
+
+// Parametrs enviroment for agent.
+type Config struct {
+	DatabaseDSN    string   `json:"database_dsn"`
+	CryptoKey      string   `json:"crypto_key"`
+	Address        string   `json:"address"`
+	StoreFile      string   `json:"store_file"`
+	Restore        bool     `json:"restore"`
+	StoreInterval  Duration `json:"store_interval"`
+	ReportInterval Duration `json:"report_interval"`
+	PollInterval   Duration `json:"poll_interval"`
+}
+
+// Parse config.
+func parseConfig(configPath string) error {
+	jsonFile, err := os.Open(configPath)
+	if err != nil {
+		fmt.Println(err)
+	}
+	byteValue, _ := ioutil.ReadAll(jsonFile)
+	var config Config
+	err = json.Unmarshal(byteValue, &config)
+	if err != nil {
+		logrus.Error(err)
+	}
+	if ArgsM.Address == "" {
+		ArgsM.Address = config.Address
+	}
+	if ArgsM.PrivateKey == "" {
+		ArgsM.PrivateKey = config.CryptoKey
+	}
+	if ArgsM.DBURL == "" {
+		ArgsM.DBURL = config.DatabaseDSN
+	}
+	if ArgsM.StoreFile == "" {
+		ArgsM.StoreFile = config.StoreFile
+	}
+	return err
 }
 
 // Terminate flags and env with default value for agent
 func TermEnvFlagsAgent() {
 	flag.StringVar(&FlagsAgent.Address, "a", "127.0.0.1:8080", "Address")
 	flag.StringVar(&FlagsAgent.Key, "k", "", "Secret key")
+	flag.StringVar(&FlagsAgent.Config, "c", "", "Path configuration file")
+	flag.StringVar(&FlagsAgent.Config, "config", "", "Path configuration file")
 	flag.DurationVar(&FlagsAgent.ReportInterval, "r", 10000000000, "Report interval")
 	flag.DurationVar(&FlagsAgent.PollInterval, "p", 2000000000, "Poll interval")
-
+	flag.StringVar(&FlagsAgent.PubKey, "crypto-key", "", "Public key")
 	flag.Parse()
 
 	env := loadConfig()
+
+	envPubKey, _ := os.LookupEnv("CRYPTO_KEY")
+	if envPubKey == "" {
+		ArgsM.PubKey = FlagsAgent.PubKey
+	} else {
+		ArgsM.PubKey = env.PubKey
+	}
+
 	envADDR, _ := os.LookupEnv("ADDRESS")
 	if envADDR == "" {
 		ArgsM.Address = FlagsAgent.Address
@@ -163,5 +246,12 @@ func TermEnvFlagsAgent() {
 		ArgsM.Key = FlagsAgent.Key
 	} else {
 		ArgsM.Key = env.Key
+	}
+	envConfig, _ := os.LookupEnv("CONFIG")
+	if envConfig != "" && FlagsAgent.Config == "" {
+		parseConfig(envConfig)
+	}
+	if envConfig == "" && FlagsAgent.Config != "" {
+		parseConfig(FlagsAgent.Config)
 	}
 }

@@ -1,14 +1,18 @@
-package main
+package helpers
 
 import (
 	"context"
+	"log"
+	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/fatih/structs"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 
 	"github.com/AlekseyKas/metrics/internal/config"
 	"github.com/AlekseyKas/metrics/internal/server/handlers"
@@ -17,7 +21,10 @@ import (
 
 func Test_syncFile(t *testing.T) {
 	f, err := os.CreateTemp("/tmp/", "file")
-
+	if err != nil {
+		log.Fatalf("Error create template %e", err)
+	}
+	var wg = &sync.WaitGroup{}
 	tests := []struct {
 		name   string
 		config config.Args
@@ -29,16 +36,23 @@ func Test_syncFile(t *testing.T) {
 				StoreInterval: 1,
 			},
 		},
-
 		{
 			name: "Second",
+			config: config.Args{
+				StoreFile:     "",
+				StoreInterval: 0,
+			},
+		},
+
+		{
+			name: "3th",
 			config: config.Args{
 				StoreFile:     f.Name(),
 				StoreInterval: 1,
 			},
 		},
 		{
-			name: "Third",
+			name: "4th",
 			config: config.Args{
 				StoreFile:     f.Name(),
 				StoreInterval: 0,
@@ -50,26 +64,39 @@ func Test_syncFile(t *testing.T) {
 	}
 	handlers.SetStorage(s)
 	for _, tt := range tests {
+		logger, err := zap.NewProduction()
+		require.NoError(t, err)
 		t.Run(tt.name, func(t *testing.T) {
-			require.NoError(t, err)
+
 			ctx, cancel := context.WithCancel(context.Background())
 			wg.Add(1)
-			go syncFile(tt.config, ctx)
+			go SyncFile(ctx, wg, logger, tt.config)
 			if tt.config.StoreFile != "" {
 				require.FileExists(t, tt.config.StoreFile)
 			} else {
 				require.NoFileExists(t, tt.config.StoreFile)
 			}
+			// wg.Add(1)
+			// go WaitSignals(cancel, logger, wg, ts)
+			var srv = http.Server{Addr: config.ArgsM.Address}
+			// Add count wait group.
 			wg.Add(1)
+			// Wait signal from operation system.
+			go WaitSignals(cancel, logger, wg, &srv)
+			// Start http server.
+			wg.Add(1)
+			go func() {
+				err := srv.ListenAndServe()
+				if err != nil {
+					logger.Error("Error http server CHI: ", zap.Error(err))
+				}
+			}()
 			time.Sleep(time.Second * 2)
-			cancel()
-			wg.Done()
 		})
 	}
 }
 
-func Test_loadFromFile(t *testing.T) {
-
+func Test_LoadFromFile(t *testing.T) {
 	tests := []struct {
 		name    string
 		config  config.Args
@@ -108,17 +135,19 @@ func Test_loadFromFile(t *testing.T) {
 			},
 		},
 	}
-	for _, tt := range tests {
-		_, err := os.CreateTemp("/tmp/", tt.config.StoreFile)
-		require.NoError(t, err)
 
+	for _, tt := range tests {
+		logger, err := zap.NewProduction()
+		require.NoError(t, err)
 		t.Run(tt.name, func(t *testing.T) {
-			err = loadFromFile(tt.config)
+			f, err := os.CreateTemp("/tmp/", tt.config.StoreFile)
+			require.FileExists(t, f.Name())
+			require.NoError(t, err)
+			err = LoadFromFile(logger, tt.config)
 			require.NoError(t, err)
 		})
 	}
 }
-
 func Test_fileExist(t *testing.T) {
 	f, _ := os.CreateTemp("/tmp/", "file")
 	tests := []struct {
@@ -133,6 +162,7 @@ func Test_fileExist(t *testing.T) {
 				StoreInterval: 1,
 				Restore:       true,
 			},
+			wantErr: false,
 		},
 		{
 			name: "second",
@@ -141,11 +171,16 @@ func Test_fileExist(t *testing.T) {
 				StoreInterval: 1,
 				Restore:       true,
 			},
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			b := fileExist(tt.config.StoreFile)
+			b, err := fileExist(tt.config.StoreFile)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("hello() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
 			if b {
 				require.True(t, b)
 			} else {

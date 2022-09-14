@@ -18,48 +18,49 @@ import (
 	resty "github.com/go-resty/resty/v2"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/mem"
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 
 	"github.com/AlekseyKas/metrics/internal/config"
+	"github.com/AlekseyKas/metrics/internal/crypto"
 	"github.com/AlekseyKas/metrics/internal/storage"
 )
 
 // Send metrics to server
-func SendMetrics(ctx context.Context, wg *sync.WaitGroup, storageM storage.StorageAgent) {
+func SendMetrics(ctx context.Context, wg *sync.WaitGroup, logger *zap.Logger, pubKey string, storageM storage.StorageAgent) {
 	defer wg.Done()
 	for {
 		select {
 		case <-ctx.Done():
-			logrus.Info("Agent is down send metrics.")
+			logger.Info("Agent is down send metrics.")
 			return
 		case <-time.After(config.ArgsM.PollInterval):
-			err := SendMetricsSlice(ctx, config.ArgsM.Address, []byte(config.ArgsM.Key), storageM)
+			err := SendMetricsSlice(ctx, logger, config.ArgsM.Address, pubKey, []byte(config.ArgsM.Key), storageM)
 			if err != nil {
-				logrus.Error("Error sending POST: ", err)
+				logger.Error("Error sending POST: ", zap.Error(err))
 			}
 		}
 	}
 }
 
 // Prepare and sending metrics to server
-func SendMetricsSlice(ctx context.Context, address string, key []byte, storageM storage.StorageAgent) error {
+func SendMetricsSlice(ctx context.Context, logger *zap.Logger, address string, pubKey string, key []byte, storageM storage.StorageAgent) error {
 	client := resty.New()
 
 	JSONMetrics, err := storageM.GetMetricsJSON()
 	if err != nil {
-		logrus.Error("Error getting metrics json format", err)
+		logger.Error("Error getting metrics json format", zap.Error(err))
 	}
 
 	for i := 0; i < len(JSONMetrics); i++ {
 		select {
 		case <-ctx.Done():
-			logrus.Info("Send metrics in map ending!")
+			logger.Info("Send metrics in map ending!")
 			return nil
 		default:
 			if string(key) != "" {
 				_, err = saveHash(&JSONMetrics[i], []byte(key))
 				if err != nil {
-					logrus.Error("Error save hash of metrics: ", err)
+					logger.Error("Error save hash of metrics: ", zap.Error(err))
 				}
 			}
 		}
@@ -70,25 +71,44 @@ func SendMetricsSlice(ctx context.Context, address string, key []byte, storageM 
 	encoder := json.NewEncoder(&buf)
 	err = encoder.Encode(&JSONMetrics)
 	if err != nil {
-		logrus.Error(err)
+		logger.Error("Error encoding JSON metrics", zap.Error(err))
 	}
 
 	gz, _ := gzip.NewWriterLevel(&b, gzip.BestSpeed)
 
 	_, err = gz.Write(buf.Bytes())
 	if err != nil {
-		logrus.Error("Error write gz metrics: ", err)
+		logger.Error("Error write gz metrics: ", zap.Error(err))
 	}
 	gz.Close()
-	_, err = client.R().
-		SetHeader("Content-Encoding", "gzip").
-		SetHeader("Content-Type", "application/json").
-		SetBody(&b).
-		Post("http://" + address + "/updates/")
-	if err != nil {
-		return err
+	// Encryption
+	if pubKey != "" {
+
+		var data []byte
+		data, err = crypto.EncryptData(b.Bytes(), pubKey)
+		if err != nil {
+			logger.Error("Error encrypt data: ", zap.Error(err))
+		}
+		_, err = client.R().
+			SetHeader("Content-Encoding", "gzip").
+			SetHeader("Content-Type", "application/json").
+			SetBody(data).
+			Post("http://" + address + "/updates/")
+		if err != nil {
+			return err
+		}
+		return nil
+	} else {
+		_, err = client.R().
+			SetHeader("Content-Encoding", "gzip").
+			SetHeader("Content-Type", "application/json").
+			SetBody(&b).
+			Post("http://" + address + "/updates/")
+		if err != nil {
+			return err
+		}
+		return nil
 	}
-	return nil
 }
 
 // Set sha256 hash for metric
@@ -112,56 +132,56 @@ func saveHash(JSONMetric *storage.JSONMetrics, key []byte) (hash string, err err
 }
 
 //Update metrics terminating
-func UpdateMetrics(ctx context.Context, pollInterval time.Duration, wg *sync.WaitGroup, storageM storage.StorageAgent) {
+func UpdateMetrics(ctx context.Context, pollInterval time.Duration, wg *sync.WaitGroup, logger *zap.Logger, storageM storage.StorageAgent) {
 	defer wg.Done()
 	for {
 		select {
 		//send command to ending
 		case <-ctx.Done():
-			logrus.Info("Agent is down update metrics!")
+			logger.Info("Agent is down update metrics!")
 			return
 		case <-time.After(pollInterval):
 			var memStats runtime.MemStats
 			runtime.ReadMemStats(&memStats)
 			err := storageM.ChangeMetrics(memStats)
 			if err != nil {
-				logrus.Error("Error changing metrics ChangeMetrics: ", err)
+				logger.Error("Error changing metrics ChangeMetrics: ", zap.Error(err))
 			}
 		}
 	}
 }
 
 //Update new metrics
-func UpdateMetricsNew(ctx context.Context, pollInterval time.Duration, wg *sync.WaitGroup, storageM storage.StorageAgent) {
+func UpdateMetricsNew(ctx context.Context, pollInterval time.Duration, wg *sync.WaitGroup, logger *zap.Logger, storageM storage.StorageAgent) {
 	defer wg.Done()
 	for {
 		select {
 		case <-ctx.Done():
-			logrus.Info("Agent is down update metrics mem & cpu!")
+			logger.Info("Agent is down update metrics mem & cpu!")
 			return
 		case <-time.After(pollInterval):
 			mem, err := mem.VirtualMemory()
 			if err != nil {
-				logrus.Error(err)
+				logger.Error("Error get metic Virtualmemory: ", zap.Error(err))
 			}
 			cpu, err := cpu.Percent(time.Second, false)
 			if err != nil {
-				logrus.Error(err)
+				logger.Error("Error get metric cpu cover: ", zap.Error(err))
 			}
 			err = storageM.ChangeMetricsNew(mem, cpu)
 			if err != nil {
-				logrus.Error("Error change new metrics ChangeMetricsNew: ", err)
+				logger.Error("Error change new metrics ChangeMetricsNew: ", zap.Error(err))
 			}
 		}
 	}
 }
 
 // Wait siglans SIGTERM, SIGINT, SIGQUIT
-func WaitSignals(cancel context.CancelFunc, wg *sync.WaitGroup) {
+func WaitSignals(cancel context.CancelFunc, logger *zap.Logger, wg *sync.WaitGroup) {
 	defer wg.Done()
 	terminate := make(chan os.Signal, 1)
 	signal.Notify(terminate, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	<-terminate
-	logrus.Info("Agent is down terminate!")
+	logger.Info("Agent is down terminate!")
 	cancel()
 }

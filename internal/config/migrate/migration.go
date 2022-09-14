@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 )
 
 // MigrateFromDir executes database migrations
@@ -119,10 +120,14 @@ type PgxIface interface {
 }
 
 // MigrateFromFS executes database migrations
-func MigrateFromFS(ctx context.Context, db *pgxpool.Pool, migrations *embed.FS, loger logrus.FieldLogger) error {
-	if loger == nil {
-		loger = logrus.StandardLogger()
-	}
+func MigrateFromFS(ctx context.Context, db *pgxpool.Pool, migrations *embed.FS, loger *zap.Logger) error {
+	// if &loger == nil {
+	// 	var err error
+	// 	loger, err = zap.NewProduction()
+	// 	if err != nil {
+	// 		loger.Error("Error init loger", zap.Error(err))
+	// 	}
+	// }
 	tx, err := db.Begin(ctx)
 	if err != nil {
 		return err
@@ -146,7 +151,7 @@ func MigrateFromFS(ctx context.Context, db *pgxpool.Pool, migrations *embed.FS, 
 	if err != nil {
 		err = tx.Rollback(ctx)
 		if err != nil {
-			loger.Error(err)
+			loger.Error("Error rollback: ", zap.Error(err))
 			return err
 		}
 		return err
@@ -170,7 +175,7 @@ func MigrateFromFS(ctx context.Context, db *pgxpool.Pool, migrations *embed.FS, 
 		if err != nil && err != pgx.ErrNoRows {
 			err = tx.Rollback(ctx)
 			if err != nil {
-				loger.Error(err)
+				loger.Error("Error rollback: ", zap.Error(err))
 				return err
 			}
 			return err
@@ -182,17 +187,17 @@ func MigrateFromFS(ctx context.Context, db *pgxpool.Pool, migrations *embed.FS, 
 		if err != nil {
 			err = tx.Rollback(ctx)
 			if err != nil {
-				loger.Error(err)
+				loger.Error("Error rollback: ", zap.Error(err))
 				return err
 			}
 			return err
 		}
 		loger.Info(string(script))
 		if _, err := tx.Exec(ctx, string(script)); err != nil {
-			loger.Error(err)
+			loger.Error("Error exec sql transaction: ", zap.Error(err))
 			err = tx.Rollback(ctx)
 			if err != nil {
-				loger.Error(err)
+				loger.Error("Error rollback: ", zap.Error(err))
 				return err
 			}
 			return err
@@ -203,7 +208,7 @@ func MigrateFromFS(ctx context.Context, db *pgxpool.Pool, migrations *embed.FS, 
 		); err != nil {
 			err = tx.Rollback(ctx)
 			if err != nil {
-				loger.Error(err)
+				loger.Error("Error rollback: ", zap.Error(err))
 				return err
 			}
 			return err
