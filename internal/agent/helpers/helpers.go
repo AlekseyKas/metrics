@@ -90,6 +90,7 @@ func SendMetricsSlice(ctx context.Context, logger *zap.Logger, address string, p
 			logger.Error("Error encrypt data: ", zap.Error(err))
 		}
 		_, err = client.R().
+			SetHeader("X-Real-IP", "127.0.0.1").
 			SetHeader("Content-Encoding", "gzip").
 			SetHeader("Content-Type", "application/json").
 			SetBody(data).
@@ -100,6 +101,7 @@ func SendMetricsSlice(ctx context.Context, logger *zap.Logger, address string, p
 		return nil
 	} else {
 		_, err = client.R().
+			SetHeader("X-Real-IP", "127.0.0.1").
 			SetHeader("Content-Encoding", "gzip").
 			SetHeader("Content-Type", "application/json").
 			SetBody(&b).

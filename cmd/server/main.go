@@ -54,7 +54,6 @@ func main() {
 	handlers.InitConfig(config.ArgsM)
 	// Terminate storage metrics.
 	handlers.SetStorage(s)
-
 	// Load metrics from file.
 	if config.ArgsM.StoreFile != "" {
 		err = helpers.LoadFromFile(logger, config.ArgsM)

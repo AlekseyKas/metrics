@@ -25,6 +25,7 @@ type FlagsServ struct {
 	PrivateKey    string
 	DBURL         string
 	Config        string
+	TrustedSubnet string
 	Restore       bool
 	StoreInterval time.Duration
 }
@@ -48,6 +49,7 @@ type Param struct {
 	PrivateKey     string        `env:"CRYPTO_KEY"`
 	StoreFile      string        `env:"STORE_FILE" envDefault:"/tmp/devops-metrics-db.json"`
 	Config         string        `env:"CONFIG"`
+	TrustedSubnet  string        `env:"TRUSTED_SUBNET"`
 	Restore        bool          `env:"RESTORE" envDefault:"true"`
 	PollInterval   time.Duration `env:"POLL_INTERVAL" envDefault:"2s"`
 	ReportInterval time.Duration `env:"REPORT_INTERVAL" envDefault:"10s"`
@@ -63,6 +65,7 @@ type Args struct {
 	PubKey         string
 	PrivateKey     string
 	Config         string
+	TrustedSubnet  string
 	Restore        bool
 	PollInterval   time.Duration
 	ReportInterval time.Duration
@@ -91,10 +94,18 @@ func TermEnvFlags() {
 	flag.StringVar(&FlagsServer.PrivateKey, "crypto-key", "", "Private key")
 	flag.StringVar(&FlagsServer.Config, "c", "", "Path configuration file")
 	flag.StringVar(&FlagsServer.Config, "config", "", "Path configuration file")
+	flag.StringVar(&FlagsServer.TrustedSubnet, "t", "", "Trusted subnet")
 	flag.BoolVar(&FlagsServer.Restore, "r", true, "Restore from file")
 	flag.DurationVar(&FlagsServer.StoreInterval, "i", 300000000000, "Interval store file")
 	flag.Parse()
 	env := loadConfig()
+
+	envTrustedSubnet, _ := os.LookupEnv("TRUSTED_SUBNET")
+	if envTrustedSubnet == "" {
+		ArgsM.TrustedSubnet = FlagsServer.TrustedSubnet
+	} else {
+		ArgsM.TrustedSubnet = env.TrustedSubnet
+	}
 
 	envPrivateKey, _ := os.LookupEnv("CRYPTO_KEY")
 	if envPrivateKey == "" {
@@ -170,6 +181,7 @@ type Config struct {
 	CryptoKey      string   `json:"crypto_key"`
 	Address        string   `json:"address"`
 	StoreFile      string   `json:"store_file"`
+	TrustedSubnet  string   `json:"trusted_subnet"`
 	Restore        bool     `json:"restore"`
 	StoreInterval  Duration `json:"store_interval"`
 	ReportInterval Duration `json:"report_interval"`
@@ -199,6 +211,9 @@ func parseConfig(configPath string) error {
 	}
 	if ArgsM.StoreFile == "" {
 		ArgsM.StoreFile = config.StoreFile
+	}
+	if ArgsM.TrustedSubnet == "" {
+		ArgsM.TrustedSubnet = config.TrustedSubnet
 	}
 	return err
 }
