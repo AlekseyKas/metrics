@@ -21,7 +21,7 @@ type grpcServer struct {
 }
 
 // Init grpc server.
-var grpcSrv grpcServer
+var GRPCSrv grpcServer
 
 // Init type metrics gauge and counter
 type gauge float64
@@ -29,23 +29,23 @@ type counter int64
 
 // Terminate storage server
 func setStorage(s storage.Storage) {
-	grpcSrv.StorageM = s
+	GRPCSrv.StorageM = s
 }
 
 // Init grpc server
 func New(logger *zap.Logger, storage *storage.MetricsStore, args config.Args) *grpcServer {
-	grpcSrv := new(grpcServer)
-	grpcSrv.Logger = logger
+	srv := new(grpcServer)
+	GRPCSrv.Logger = logger
 	setStorage(storage)
-	grpcSrv.Args = args
-	return grpcSrv
+	GRPCSrv.Args = args
+	return srv
 }
 
 // Start grpc server.
 func (s *grpcServer) Start() error {
-	listen, err := net.Listen("tcp", grpcSrv.Args.Address)
+	listen, err := net.Listen("tcp", GRPCSrv.Args.Address)
 	if err != nil {
-		grpcSrv.Logger.Error("Error start grpc server", zap.Error(err))
+		GRPCSrv.Logger.Error("Error start grpc server", zap.Error(err))
 	}
 
 	srv := grpc.NewServer()
@@ -55,7 +55,7 @@ func (s *grpcServer) Start() error {
 	fmt.Println("Сервер gRPC начал работу")
 	// Get request grpc
 	if err := srv.Serve(listen); err != nil {
-		grpcSrv.Logger.Error("Error getting request grpc: ", zap.Error(err))
+		GRPCSrv.Logger.Error("Error getting request grpc: ", zap.Error(err))
 	}
 	return err
 }

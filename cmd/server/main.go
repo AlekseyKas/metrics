@@ -49,18 +49,60 @@ func main() {
 		MM:  structs.Map(storage.Metrics{}),
 		Ctx: ctx,
 	}
-
+	// Load metrics from file.
+	if config.ArgsM.StoreFile != "" {
+		err = helpers.LoadFromFile(logger, config.ArgsM)
+		if err != nil {
+			logger.Error("Error load from file: ", zap.Error(err))
+		}
+	}
 	// Start http server
 	if !config.ArgsM.GRPC {
-		runHTTPserver(ctx, cancel, logger, &wg, s)
+		err = runHTTPserver(ctx, cancel, logger, &wg, s)
+		if err != nil {
+			logger.Error("Error run http server: ", zap.Error(err))
+		}
 	} else {
-		// Start gRPC server.
-		go func() {
-			srv := grpc.New(logger, s, config.ArgsM)
-			srv.Start()
-		}()
+		runGRPCserver(ctx, cancel, logger, &wg, s)
+	}
+}
+
+func runGRPCserver(ctx context.Context, cancel context.CancelFunc, logger *zap.Logger, wg *sync.WaitGroup, s *storage.MetricsStore) {
+	var err error
+	// Connect to database if DBURL exist.
+	if config.ArgsM.DBURL != "" {
+		err = grpc.GRPCSrv.StorageM.InitDB(config.ArgsM.DBURL)
+		if err != nil {
+			logger.Error("Connection to postrgres faild: ", zap.Error(err))
+		}
+		// Restore from database.
+		if !config.ArgsM.Restore && config.ArgsM.DBURL != "" {
+			err = grpc.GRPCSrv.StorageM.LoadMetricsDB()
+			if err != nil {
+				logger.Error("Error load metrics to database LoadMetricsDB: ", zap.Error(err))
+			}
+		}
 	}
 
+	// Add count wait group.
+	wg.Add(1)
+	// Sync metrics with file.
+	go helpers.SyncFile(ctx, wg, logger, config.ArgsM)
+	fmt.Printf("Build version:%s \n", buildVersion)
+	fmt.Printf("Build date:%s \n", buildDate)
+	fmt.Printf("Build commit:%s \n", buildCommit)
+	// Add count wait group.
+	wg.Add(1)
+	// Wait signal from operation system.
+	go helpers.WaitSignals(cancel, logger, wg, nil)
+
+	// Start gRPC server.
+	go func() {
+		srv := grpc.New(logger, s, config.ArgsM)
+		srv.Start()
+	}()
+	// Add count wait group.
+	wg.Wait()
 }
 
 func runHTTPserver(ctx context.Context, cancel context.CancelFunc, logger *zap.Logger, wg *sync.WaitGroup, s *storage.MetricsStore) error {
@@ -122,5 +164,9 @@ func runHTTPserver(ctx context.Context, cancel context.CancelFunc, logger *zap.L
 	}()
 	// Add count wait group.
 	wg.Wait()
-	return err
+	if err != http.ErrServerClosed {
+		return err
+	} else {
+		return nil
+	}
 }
