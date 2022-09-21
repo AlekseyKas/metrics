@@ -114,13 +114,6 @@ func runHTTPserver(ctx context.Context, cancel context.CancelFunc, logger *zap.L
 	// Terminate storage metrics.
 	handlers.SetStorage(s)
 
-	// Load metrics from file.
-	if config.ArgsM.StoreFile != "" {
-		err = helpers.LoadFromFile(logger, config.ArgsM)
-		if err != nil {
-			logger.Error("Error load from file: ", zap.Error(err))
-		}
-	}
 	// Connect to database if DBURL exist.
 	if config.ArgsM.DBURL != "" {
 		err = handlers.StorageM.InitDB(config.ArgsM.DBURL)
