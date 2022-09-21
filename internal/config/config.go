@@ -26,6 +26,7 @@ type FlagsServ struct {
 	DBURL         string
 	Config        string
 	TrustedSubnet string
+	GRPC          bool
 	Restore       bool
 	StoreInterval time.Duration
 }
@@ -51,6 +52,7 @@ type Param struct {
 	Config         string        `env:"CONFIG"`
 	TrustedSubnet  string        `env:"TRUSTED_SUBNET"`
 	Restore        bool          `env:"RESTORE" envDefault:"true"`
+	GRPC           bool          `env:"GRPC"`
 	PollInterval   time.Duration `env:"POLL_INTERVAL" envDefault:"2s"`
 	ReportInterval time.Duration `env:"REPORT_INTERVAL" envDefault:"10s"`
 	StoreInterval  time.Duration `env:"STORE_INTERVAL" envDefault:"300s"`
@@ -67,6 +69,7 @@ type Args struct {
 	Config         string
 	TrustedSubnet  string
 	Restore        bool
+	GRPC           bool
 	PollInterval   time.Duration
 	ReportInterval time.Duration
 	StoreInterval  time.Duration
@@ -96,9 +99,17 @@ func TermEnvFlags() {
 	flag.StringVar(&FlagsServer.Config, "config", "", "Path configuration file")
 	flag.StringVar(&FlagsServer.TrustedSubnet, "t", "", "Trusted subnet")
 	flag.BoolVar(&FlagsServer.Restore, "r", true, "Restore from file")
+	flag.BoolVar(&FlagsServer.GRPC, "g", false, "GRPC")
 	flag.DurationVar(&FlagsServer.StoreInterval, "i", 300000000000, "Interval store file")
 	flag.Parse()
 	env := loadConfig()
+
+	envGRPC, _ := os.LookupEnv("GRPC")
+	if envGRPC == "" {
+		ArgsM.GRPC = FlagsServer.GRPC
+	} else {
+		ArgsM.GRPC = env.GRPC
+	}
 
 	envTrustedSubnet, _ := os.LookupEnv("TRUSTED_SUBNET")
 	if envTrustedSubnet == "" {

@@ -13,6 +13,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/AlekseyKas/metrics/internal/config"
+	"github.com/AlekseyKas/metrics/internal/server/grpc"
 	"github.com/AlekseyKas/metrics/internal/server/handlers"
 	"github.com/AlekseyKas/metrics/internal/server/helpers"
 	"github.com/AlekseyKas/metrics/internal/storage"
@@ -39,21 +40,38 @@ func main() {
 	if err != nil {
 		logger.Error("Error init logger: ", zap.Error(err))
 	}
+	// Terminate environment and flags.
+	config.TermEnvFlags()
 	// Send logger to storage
 	storage.InitLogger(logger)
-	// Send logger to handlers
-	handlers.InitLogger(logger)
 	// Inint storage server.
 	s := &storage.MetricsStore{
 		MM:  structs.Map(storage.Metrics{}),
 		Ctx: ctx,
 	}
-	// Terminate environment and flags.
-	config.TermEnvFlags()
+
+	// Start http server
+	if !config.ArgsM.GRPC {
+		runHTTPserver(ctx, cancel, logger, &wg, s)
+	} else {
+		// Start gRPC server.
+		go func() {
+			srv := grpc.New(logger, s, config.ArgsM)
+			srv.Start()
+		}()
+	}
+
+}
+
+func runHTTPserver(ctx context.Context, cancel context.CancelFunc, logger *zap.Logger, wg *sync.WaitGroup, s *storage.MetricsStore) error {
+	var err error
+	// Send logger to handlers
+	handlers.InitLogger(logger)
 	// Init config
 	handlers.InitConfig(config.ArgsM)
 	// Terminate storage metrics.
 	handlers.SetStorage(s)
+
 	// Load metrics from file.
 	if config.ArgsM.StoreFile != "" {
 		err = helpers.LoadFromFile(logger, config.ArgsM)
@@ -79,7 +97,7 @@ func main() {
 	// Add count wait group.
 	wg.Add(1)
 	// Sync metrics with file.
-	go helpers.SyncFile(ctx, &wg, logger, config.ArgsM)
+	go helpers.SyncFile(ctx, wg, logger, config.ArgsM)
 	// Init chi router.
 	r := chi.NewRouter()
 	r.Route("/", handlers.Router)
@@ -92,7 +110,7 @@ func main() {
 	// Add count wait group.
 	wg.Add(1)
 	// Wait signal from operation system.
-	go helpers.WaitSignals(cancel, logger, &wg, &srv)
+	go helpers.WaitSignals(cancel, logger, wg, &srv)
 	// Start http server.
 	go func() {
 		switch err = srv.ListenAndServe(); err {
@@ -104,4 +122,5 @@ func main() {
 	}()
 	// Add count wait group.
 	wg.Wait()
+	return err
 }
