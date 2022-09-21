@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package proto;
+
+option go_package = "metrics/proto";
+
+
+message GetMetricsJSONRequest {
+}
+
+message GetMetricsJSONResponse {
+  string result = 1;
+}
+
+service Metrics {
+  rpc GetallMetricsJSON (GetMetricsJSONRequest) returns (GetMetricsJSONResponse) {}
+} 
