@@ -49,13 +49,7 @@ func main() {
 		MM:  structs.Map(storage.Metrics{}),
 		Ctx: ctx,
 	}
-	// Load metrics from file.
-	if config.ArgsM.StoreFile != "" {
-		err = helpers.LoadFromFile(logger, config.ArgsM)
-		if err != nil {
-			logger.Error("Error load from file: ", zap.Error(err))
-		}
-	}
+
 	// Start http server
 	if !config.ArgsM.GRPC {
 		err = runHTTPserver(ctx, cancel, logger, &wg, s)
@@ -63,7 +57,7 @@ func main() {
 			logger.Error("Error run http server: ", zap.Error(err))
 		}
 	} else {
-		runGRPCserver(ctx, cancel, logger, &wg, s)
+		// runGRPCserver(ctx, cancel, logger, &wg, s)
 	}
 }
 
@@ -113,7 +107,13 @@ func runHTTPserver(ctx context.Context, cancel context.CancelFunc, logger *zap.L
 	handlers.InitConfig(config.ArgsM)
 	// Terminate storage metrics.
 	handlers.SetStorage(s)
-
+	// Load metrics from file.
+	if config.ArgsM.StoreFile != "" {
+		err = helpers.LoadFromFile(logger, config.ArgsM)
+		if err != nil {
+			logger.Error("Error load from file: ", zap.Error(err))
+		}
+	}
 	// Connect to database if DBURL exist.
 	if config.ArgsM.DBURL != "" {
 		err = handlers.StorageM.InitDB(config.ArgsM.DBURL)
