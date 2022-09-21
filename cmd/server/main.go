@@ -52,16 +52,21 @@ func main() {
 
 	// Start http server
 	if !config.ArgsM.GRPC {
+		logger.Info("Start http server!")
 		err = runHTTPserver(ctx, cancel, logger, &wg, s)
 		if err != nil {
 			logger.Error("Error run http server: ", zap.Error(err))
 		}
 	} else {
-		// runGRPCserver(ctx, cancel, logger, &wg, s)
+		logger.Info("Start grpc server!")
+		err = runGRPCserver(ctx, cancel, logger, &wg, s)
+		if err != nil {
+			logger.Error("Error run grpc server: ", zap.Error(err))
+		}
 	}
 }
 
-func runGRPCserver(ctx context.Context, cancel context.CancelFunc, logger *zap.Logger, wg *sync.WaitGroup, s *storage.MetricsStore) {
+func runGRPCserver(ctx context.Context, cancel context.CancelFunc, logger *zap.Logger, wg *sync.WaitGroup, s *storage.MetricsStore) error {
 	var err error
 	// Connect to database if DBURL exist.
 	if config.ArgsM.DBURL != "" {
@@ -97,6 +102,7 @@ func runGRPCserver(ctx context.Context, cancel context.CancelFunc, logger *zap.L
 	}()
 	// Add count wait group.
 	wg.Wait()
+	return err
 }
 
 func runHTTPserver(ctx context.Context, cancel context.CancelFunc, logger *zap.Logger, wg *sync.WaitGroup, s *storage.MetricsStore) error {
