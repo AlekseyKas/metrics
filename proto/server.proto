@@ -2,16 +2,83 @@ syntax = "proto3";
 
 package proto;
 
-option go_package = "metrics/proto";
+option go_package = "./proto";
 
 
-message GetMetricsJSONRequest {
+message Metrics {
+	double Alloc         = 1;
+	double BuckHashSys   = 2;
+	double Frees         = 3;
+	double GCCPUFraction = 4;
+	double GCSys         = 5;
+	double HeapAlloc     = 6;
+	double HeapIdle      = 7;
+	double HeapInuse     = 8;
+	double HeapObjects   = 9;
+	double HeapReleased  = 10;
+	double HeapSys       = 11;
+	double LastGC        = 12;
+	double Lookups       = 13;
+	double MCacheInuse   = 14;
+	double MCacheSys     = 15;
+	double MSpanInuse    = 16;
+	double MSpanSys      = 17;
+	double Mallocs       = 18;
+	double NextGC        = 19;
+	double NumForcedGC   = 20;
+	double NumGC         = 21;
+	double OtherSys      = 22;
+	double PauseTotalNs  = 23;
+	double StackInuse    = 24;
+	double StackSys      = 25;
+	double Sys           = 26;
+	double TotalAlloc    = 27;
+	int64   PollCount  = 28;
+	double RandomValue = 29;
+}
+
+
+message JSONMetrics {
+  int64 Delta = 1;
+  double Value = 2;
+  string ID = 3;
+  string MType = 4;
+  string Hash = 5;
+}
+
+message SendMetricsJSONRequest {
+  repeated JSONMetrics JSONMetrics = 1;
+}
+
+message Empty {
 }
 
 message GetMetricsJSONResponse {
-  string result = 1;
+  repeated JSONMetrics JSONMetrics = 1;
+}
+message Metric {
+  string  MType = 1;
+  string  ID = 2 ;
+
 }
 
-service Metrics {
-  rpc GetallMetricsJSON (GetMetricsJSONRequest) returns (GetMetricsJSONResponse) {}
-} 
+message MetricData {
+  int64 Delta = 1;
+  double Value = 2;
+  string Mtype = 3;
+  string ID = 4;
+  string Data = 5;
+}
+
+
+
+service MetricsM {
+  // GET /
+  rpc GetMetricsJSON (Empty) returns (GetMetricsJSONResponse) {}
+  // GET /value/{typeMet}/{nameMet} and POST /value/
+  rpc GetMetricData (Metric) returns (MetricData) {}
+  // POST /updates
+  rpc SendMetricsJSON (SendMetricsJSONRequest) returns (Empty) {}
+  // POST /update/{typeMet}/{nameMet}/{value} POST /update
+  rpc UpdateMetric (MetricData) returns (Empty) {}
+}

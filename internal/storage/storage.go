@@ -308,6 +308,7 @@ func (m *MetricsStore) ChangeMetrics(memStats runtime.MemStats) error {
 	m.MM["TotalAlloc"] = gauge(memStats.TotalAlloc)
 	m.MM["RandomValue"] = gauge(rand.Float64())
 	m.MM["PollCount"] = counter(m.PollCount)
+
 	return nil
 }
 

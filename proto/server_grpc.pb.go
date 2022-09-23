@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.2.0
 // - protoc             v3.12.4
-// source: proto/server.proto
+// source: server.proto
 
 package proto
 
@@ -18,88 +18,204 @@ import (
 // Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
-// MetricsClient is the client API for Metrics service.
+// MetricsMClient is the client API for MetricsM service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type MetricsClient interface {
-	GetallMetricsJSON(ctx context.Context, in *GetMetricsJSONRequest, opts ...grpc.CallOption) (*GetMetricsJSONResponse, error)
+type MetricsMClient interface {
+	// GET /
+	GetMetricsJSON(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*GetMetricsJSONResponse, error)
+	// GET /value/{typeMet}/{nameMet} and POST /value/
+	GetMetricData(ctx context.Context, in *Metric, opts ...grpc.CallOption) (*MetricData, error)
+	// POST /updates
+	SendMetricsJSON(ctx context.Context, in *SendMetricsJSONRequest, opts ...grpc.CallOption) (*Empty, error)
+	// POST /update/{typeMet}/{nameMet}/{value} POST /update
+	UpdateMetric(ctx context.Context, in *MetricData, opts ...grpc.CallOption) (*Empty, error)
 }
 
-type metricsClient struct {
+type metricsMClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewMetricsClient(cc grpc.ClientConnInterface) MetricsClient {
-	return &metricsClient{cc}
+func NewMetricsMClient(cc grpc.ClientConnInterface) MetricsMClient {
+	return &metricsMClient{cc}
 }
 
-func (c *metricsClient) GetallMetricsJSON(ctx context.Context, in *GetMetricsJSONRequest, opts ...grpc.CallOption) (*GetMetricsJSONResponse, error) {
+func (c *metricsMClient) GetMetricsJSON(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*GetMetricsJSONResponse, error) {
 	out := new(GetMetricsJSONResponse)
-	err := c.cc.Invoke(ctx, "/proto.Metrics/GetallMetricsJSON", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/proto.MetricsM/GetMetricsJSON", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// MetricsServer is the server API for Metrics service.
-// All implementations must embed UnimplementedMetricsServer
+func (c *metricsMClient) GetMetricData(ctx context.Context, in *Metric, opts ...grpc.CallOption) (*MetricData, error) {
+	out := new(MetricData)
+	err := c.cc.Invoke(ctx, "/proto.MetricsM/GetMetricData", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *metricsMClient) SendMetricsJSON(ctx context.Context, in *SendMetricsJSONRequest, opts ...grpc.CallOption) (*Empty, error) {
+	out := new(Empty)
+	err := c.cc.Invoke(ctx, "/proto.MetricsM/SendMetricsJSON", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *metricsMClient) UpdateMetric(ctx context.Context, in *MetricData, opts ...grpc.CallOption) (*Empty, error) {
+	out := new(Empty)
+	err := c.cc.Invoke(ctx, "/proto.MetricsM/UpdateMetric", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// MetricsMServer is the server API for MetricsM service.
+// All implementations must embed UnimplementedMetricsMServer
 // for forward compatibility
-type MetricsServer interface {
-	GetallMetricsJSON(context.Context, *GetMetricsJSONRequest) (*GetMetricsJSONResponse, error)
-	mustEmbedUnimplementedMetricsServer()
+type MetricsMServer interface {
+	// GET /
+	GetMetricsJSON(context.Context, *Empty) (*GetMetricsJSONResponse, error)
+	// GET /value/{typeMet}/{nameMet} and POST /value/
+	GetMetricData(context.Context, *Metric) (*MetricData, error)
+	// POST /updates
+	SendMetricsJSON(context.Context, *SendMetricsJSONRequest) (*Empty, error)
+	// POST /update/{typeMet}/{nameMet}/{value} POST /update
+	UpdateMetric(context.Context, *MetricData) (*Empty, error)
+	mustEmbedUnimplementedMetricsMServer()
 }
 
-// UnimplementedMetricsServer must be embedded to have forward compatible implementations.
-type UnimplementedMetricsServer struct {
+// UnimplementedMetricsMServer must be embedded to have forward compatible implementations.
+type UnimplementedMetricsMServer struct {
 }
 
-func (UnimplementedMetricsServer) GetallMetricsJSON(context.Context, *GetMetricsJSONRequest) (*GetMetricsJSONResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetallMetricsJSON not implemented")
+func (UnimplementedMetricsMServer) GetMetricsJSON(context.Context, *Empty) (*GetMetricsJSONResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetMetricsJSON not implemented")
 }
-func (UnimplementedMetricsServer) mustEmbedUnimplementedMetricsServer() {}
+func (UnimplementedMetricsMServer) GetMetricData(context.Context, *Metric) (*MetricData, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetMetricData not implemented")
+}
+func (UnimplementedMetricsMServer) SendMetricsJSON(context.Context, *SendMetricsJSONRequest) (*Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SendMetricsJSON not implemented")
+}
+func (UnimplementedMetricsMServer) UpdateMetric(context.Context, *MetricData) (*Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateMetric not implemented")
+}
+func (UnimplementedMetricsMServer) mustEmbedUnimplementedMetricsMServer() {}
 
-// UnsafeMetricsServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to MetricsServer will
+// UnsafeMetricsMServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to MetricsMServer will
 // result in compilation errors.
-type UnsafeMetricsServer interface {
-	mustEmbedUnimplementedMetricsServer()
+type UnsafeMetricsMServer interface {
+	mustEmbedUnimplementedMetricsMServer()
 }
 
-func RegisterMetricsServer(s grpc.ServiceRegistrar, srv MetricsServer) {
-	s.RegisterService(&Metrics_ServiceDesc, srv)
+func RegisterMetricsMServer(s grpc.ServiceRegistrar, srv MetricsMServer) {
+	s.RegisterService(&MetricsM_ServiceDesc, srv)
 }
 
-func _Metrics_GetallMetricsJSON_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetMetricsJSONRequest)
+func _MetricsM_GetMetricsJSON_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MetricsServer).GetallMetricsJSON(ctx, in)
+		return srv.(MetricsMServer).GetMetricsJSON(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/proto.Metrics/GetallMetricsJSON",
+		FullMethod: "/proto.MetricsM/GetMetricsJSON",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MetricsServer).GetallMetricsJSON(ctx, req.(*GetMetricsJSONRequest))
+		return srv.(MetricsMServer).GetMetricsJSON(ctx, req.(*Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-// Metrics_ServiceDesc is the grpc.ServiceDesc for Metrics service.
+func _MetricsM_GetMetricData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Metric)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MetricsMServer).GetMetricData(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/proto.MetricsM/GetMetricData",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MetricsMServer).GetMetricData(ctx, req.(*Metric))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MetricsM_SendMetricsJSON_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SendMetricsJSONRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MetricsMServer).SendMetricsJSON(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/proto.MetricsM/SendMetricsJSON",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MetricsMServer).SendMetricsJSON(ctx, req.(*SendMetricsJSONRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MetricsM_UpdateMetric_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MetricData)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MetricsMServer).UpdateMetric(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/proto.MetricsM/UpdateMetric",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MetricsMServer).UpdateMetric(ctx, req.(*MetricData))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// MetricsM_ServiceDesc is the grpc.ServiceDesc for MetricsM service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var Metrics_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "proto.Metrics",
-	HandlerType: (*MetricsServer)(nil),
+var MetricsM_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "proto.MetricsM",
+	HandlerType: (*MetricsMServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "GetallMetricsJSON",
-			Handler:    _Metrics_GetallMetricsJSON_Handler,
+			MethodName: "GetMetricsJSON",
+			Handler:    _MetricsM_GetMetricsJSON_Handler,
+		},
+		{
+			MethodName: "GetMetricData",
+			Handler:    _MetricsM_GetMetricData_Handler,
+		},
+		{
+			MethodName: "SendMetricsJSON",
+			Handler:    _MetricsM_SendMetricsJSON_Handler,
+		},
+		{
+			MethodName: "UpdateMetric",
+			Handler:    _MetricsM_UpdateMetric_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "proto/server.proto",
+	Metadata: "server.proto",
 }

@@ -82,7 +82,6 @@ func runGRPCserver(ctx context.Context, cancel context.CancelFunc, logger *zap.L
 			}
 		}
 	}
-
 	// Add count wait group.
 	wg.Add(1)
 	// Sync metrics with file.
@@ -97,7 +96,7 @@ func runGRPCserver(ctx context.Context, cancel context.CancelFunc, logger *zap.L
 
 	// Start gRPC server.
 	go func() {
-		srv := grpc.New(logger, s, config.ArgsM)
+		srv := grpc.New(ctx, logger, s, config.ArgsM)
 		srv.Start()
 	}()
 	// Add count wait group.

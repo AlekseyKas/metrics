@@ -202,7 +202,7 @@ func saveMetricsSlice() http.HandlerFunc {
 
 			if config.ArgsM.Key != "" {
 				var b bool
-				b, err = compareHash(&s[i], []byte(config.ArgsM.Key))
+				b, err = CompareHash(&s[i], []byte(config.ArgsM.Key))
 				if err != nil {
 					Logger.Error("Error compare hash of metrics: ", zap.Error(err))
 				}
@@ -463,7 +463,7 @@ func saveMetricsJSON() http.HandlerFunc {
 		nameMet := s.ID
 		if config.ArgsM.Key != "" {
 			var b bool
-			b, err = compareHash(&s, []byte(config.ArgsM.Key))
+			b, err = CompareHash(&s, []byte(config.ArgsM.Key))
 			if err != nil {
 				Logger.Error("Error compare hash of metrics: ", zap.Error(err))
 			}
@@ -544,7 +544,7 @@ func saveMetricsJSON() http.HandlerFunc {
 }
 
 // Compare hashe metrics
-func compareHash(s *storage.JSONMetrics, key []byte) (b bool, err error) {
+func CompareHash(s *storage.JSONMetrics, key []byte) (b bool, err error) {
 	var h hash.Hash
 	switch s.MType {
 	case "counter":

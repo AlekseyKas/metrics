@@ -37,6 +37,7 @@ type FlagsAg struct {
 	Key            string
 	PubKey         string
 	Config         string
+	GRPC           bool
 	ReportInterval time.Duration
 	PollInterval   time.Duration
 }
@@ -237,10 +238,18 @@ func TermEnvFlagsAgent() {
 	flag.StringVar(&FlagsAgent.Config, "config", "", "Path configuration file")
 	flag.DurationVar(&FlagsAgent.ReportInterval, "r", 10000000000, "Report interval")
 	flag.DurationVar(&FlagsAgent.PollInterval, "p", 2000000000, "Poll interval")
+	flag.BoolVar(&FlagsAgent.GRPC, "g", false, "GRPC")
 	flag.StringVar(&FlagsAgent.PubKey, "crypto-key", "", "Public key")
 	flag.Parse()
 
 	env := loadConfig()
+
+	envGRPC, _ := os.LookupEnv("GRPC")
+	if envGRPC == "" {
+		ArgsM.GRPC = FlagsAgent.GRPC
+	} else {
+		ArgsM.GRPC = env.GRPC
+	}
 
 	envPubKey, _ := os.LookupEnv("CRYPTO_KEY")
 	if envPubKey == "" {
