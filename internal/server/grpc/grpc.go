@@ -68,19 +68,19 @@ func (s *grpcServer) Start() error {
 }
 
 // Get and save metrics
-func (srv *grpcServer) SendMetricsJSON(ctx context.Context, req *pb.SendMetricsJSONRequest) (*pb.Empty, error) {
+func (s *grpcServer) SendMetricsJSON(ctx context.Context, req *pb.SendMetricsJSONRequest) (*pb.Empty, error) {
 	var err error
-	s := convertToSJSONMetrics(req.JSONMetrics)
+	srv := convertToSJSONMetrics(req.JSONMetrics)
 	var typeMet string
 	var nameMet string
-	for i := 0; i < len(s); i++ {
-		typeMet = s[i].MType
-		nameMet = s[i].ID
+	for i := 0; i < len(srv); i++ {
+		typeMet = srv[i].MType
+		nameMet = srv[i].ID
 		metrics := GRPCSrv.StorageM.GetMetrics()
 
 		if GRPCSrv.Args.Key != "" {
 			var b bool
-			b, err = handlers.CompareHash(&s[i], []byte(config.ArgsM.Key))
+			b, err = handlers.CompareHash(&srv[i], []byte(config.ArgsM.Key))
 			if err != nil {
 				GRPCSrv.Logger.Error("Error compare hash of metrics: ", zap.Error(err))
 				return nil, status.Error(codes.Internal, err.Error())
@@ -88,14 +88,14 @@ func (srv *grpcServer) SendMetricsJSON(ctx context.Context, req *pb.SendMetricsJ
 			if b {
 				//update gauge
 				if typeMet == "gauge" {
-					if s[i].Value != nil {
-						if metrics[nameMet] != gauge(*s[i].Value) {
-							err = GRPCSrv.StorageM.ChangeMetric(nameMet, gauge(*s[i].Value), config.ArgsM)
+					if srv[i].Value != nil {
+						if metrics[nameMet] != gauge(*srv[i].Value) {
+							err = GRPCSrv.StorageM.ChangeMetric(nameMet, gauge(*srv[i].Value), config.ArgsM)
 							if err != nil {
 								GRPCSrv.Logger.Error("Error changing metric ChangeMetric: ", zap.Error(err))
 								return nil, status.Error(codes.Internal, err.Error())
 							}
-							err = GRPCSrv.StorageM.ChangeMetricDB(nameMet, *s[i].Value, typeMet, config.ArgsM)
+							err = GRPCSrv.StorageM.ChangeMetricDB(nameMet, *srv[i].Value, typeMet, config.ArgsM)
 							if err != nil {
 								GRPCSrv.Logger.Error("Error changing metric ChangeMetricDB: ", zap.Error(err))
 								return nil, status.Error(codes.Internal, err.Error())
@@ -106,14 +106,14 @@ func (srv *grpcServer) SendMetricsJSON(ctx context.Context, req *pb.SendMetricsJ
 				//update counter
 				if typeMet == "counter" {
 					var valueMetInt int
-					if s[i].Delta != nil {
+					if srv[i].Delta != nil {
 						if _, ok := metrics[nameMet]; ok {
 							var ii int
 							ii, err = strconv.Atoi(fmt.Sprintf("%v", metrics[nameMet]))
 							if err != nil {
 								return nil, status.Error(codes.Internal, err.Error())
 							}
-							valueMetInt = int(*s[i].Delta) + ii
+							valueMetInt = int(*srv[i].Delta) + ii
 							err = GRPCSrv.StorageM.ChangeMetric(nameMet, counter(valueMetInt), config.ArgsM)
 							if err != nil {
 								GRPCSrv.Logger.Error("Error changing metric ChangeMetric: ", zap.Error(err))
@@ -123,7 +123,7 @@ func (srv *grpcServer) SendMetricsJSON(ctx context.Context, req *pb.SendMetricsJ
 								GRPCSrv.Logger.Error("Error changing metric ChangeMetricDB: ", zap.Error(err))
 							}
 						} else {
-							valueMetInt = int(*s[i].Delta)
+							valueMetInt = int(*srv[i].Delta)
 							err = GRPCSrv.StorageM.ChangeMetric(nameMet, counter(valueMetInt), config.ArgsM)
 							if err != nil {
 								GRPCSrv.Logger.Error("Error changing metric ChangeMetric: ", zap.Error(err))
@@ -139,13 +139,13 @@ func (srv *grpcServer) SendMetricsJSON(ctx context.Context, req *pb.SendMetricsJ
 
 		} else {
 			if typeMet == "gauge" {
-				if s[i].Value != nil {
-					if metrics[nameMet] != gauge(*s[i].Value) {
-						err = GRPCSrv.StorageM.ChangeMetric(nameMet, gauge(*s[i].Value), config.ArgsM)
+				if srv[i].Value != nil {
+					if metrics[nameMet] != gauge(*srv[i].Value) {
+						err = GRPCSrv.StorageM.ChangeMetric(nameMet, gauge(*srv[i].Value), config.ArgsM)
 						if err != nil {
 							GRPCSrv.Logger.Error("Error changing metric ChangeMetric: ", zap.Error(err))
 						}
-						err = GRPCSrv.StorageM.ChangeMetricDB(nameMet, *s[i].Value, typeMet, config.ArgsM)
+						err = GRPCSrv.StorageM.ChangeMetricDB(nameMet, *srv[i].Value, typeMet, config.ArgsM)
 						if err != nil {
 							GRPCSrv.Logger.Error("Error changing metric ChangeMetricDB: ", zap.Error(err))
 						}
@@ -155,14 +155,14 @@ func (srv *grpcServer) SendMetricsJSON(ctx context.Context, req *pb.SendMetricsJ
 			//update counter
 			if typeMet == "counter" {
 				var valueMetInt int
-				if s[i].Delta != nil {
+				if srv[i].Delta != nil {
 					if _, ok := metrics[nameMet]; ok {
 						var ii int
 						ii, err = strconv.Atoi(fmt.Sprintf("%v", metrics[nameMet]))
 						if err != nil {
 							return nil, status.Error(codes.Internal, err.Error())
 						}
-						valueMetInt = int(*s[i].Delta) + ii
+						valueMetInt = int(*srv[i].Delta) + ii
 						err = GRPCSrv.StorageM.ChangeMetric(nameMet, counter(valueMetInt), config.ArgsM)
 						if err != nil {
 							GRPCSrv.Logger.Error("Error changing metric ChangeMetric: ", zap.Error(err))
@@ -174,7 +174,7 @@ func (srv *grpcServer) SendMetricsJSON(ctx context.Context, req *pb.SendMetricsJ
 							return nil, status.Error(codes.Internal, err.Error())
 						}
 					} else {
-						valueMetInt = int(*s[i].Delta)
+						valueMetInt = int(*srv[i].Delta)
 						err = GRPCSrv.StorageM.ChangeMetric(nameMet, counter(valueMetInt), config.ArgsM)
 						if err != nil {
 							GRPCSrv.Logger.Error("Error changing metric ChangeMetric: ", zap.Error(err))
@@ -244,20 +244,20 @@ func (s *grpcServer) UpdateMetric(ctx context.Context, m *pb.MetricData) (p *pb.
 	}
 	if typeMet != "gauge" && typeMet != "counter" {
 		GRPCSrv.Logger.Error("Error changing metric ChangeMetricDB: ", zap.Error(err))
-		return nil, status.Error(codes.Internal, err.Error())
+		return p, status.Error(codes.Internal, err.Error())
 	}
 	// Update gauge
 	if typeMet == "gauge" && nameMet != "PollCount" {
 		valueMetFloat, err := strconv.ParseFloat(value, 64)
 		if err != nil {
 			GRPCSrv.Logger.Error("Error changing metric ChangeMetricDB: ", zap.Error(err))
-			return nil, status.Error(codes.Internal, err.Error())
+			return p, status.Error(codes.Internal, err.Error())
 		} else {
 			if metrics[nameMet] != gauge(valueMetFloat) {
 				err = GRPCSrv.StorageM.ChangeMetric(nameMet, gauge(valueMetFloat), config.ArgsM)
 				if err != nil {
 					GRPCSrv.Logger.Error("Error changing metric ChangeMetric: ", zap.Error(err))
-					return nil, status.Error(codes.Internal, err.Error())
+					return p, status.Error(codes.Internal, err.Error())
 
 				}
 			}
@@ -268,7 +268,7 @@ func (s *grpcServer) UpdateMetric(ctx context.Context, m *pb.MetricData) (p *pb.
 		valueMetInt, err := strconv.Atoi(value)
 		if err != nil {
 			GRPCSrv.Logger.Error("Error changing metric ChangeMetric: ", zap.Error(err))
-			return nil, status.Error(codes.NotFound, err.Error())
+			return p, status.Error(codes.NotFound, err.Error())
 		}
 		if err == nil {
 			if _, ok := metrics[nameMet]; ok {
@@ -276,19 +276,19 @@ func (s *grpcServer) UpdateMetric(ctx context.Context, m *pb.MetricData) (p *pb.
 				i, err = strconv.Atoi(fmt.Sprintf("%v", metrics[nameMet]))
 				if err != nil {
 					GRPCSrv.Logger.Error("Error changing metric ChangeMetric: ", zap.Error(err))
-					return nil, status.Error(codes.Unknown, err.Error())
+					return p, status.Error(codes.Unknown, err.Error())
 				}
 				valueMetInt = valueMetInt + i
 				err = GRPCSrv.StorageM.ChangeMetric(nameMet, counter(valueMetInt), config.ArgsM)
 				if err != nil {
 					GRPCSrv.Logger.Error("Error changing metric ChangeMetric: ", zap.Error(err))
-					return nil, status.Error(codes.Internal, err.Error())
+					return p, status.Error(codes.Internal, err.Error())
 				}
 			} else {
 				err = GRPCSrv.StorageM.ChangeMetric(nameMet, counter(valueMetInt), config.ArgsM)
 				if err != nil {
 					GRPCSrv.Logger.Error("Error changing metric ChangeMetric: ", zap.Error(err))
-					return nil, status.Error(codes.Internal, err.Error())
+					return p, status.Error(codes.Internal, err.Error())
 				}
 			}
 		}

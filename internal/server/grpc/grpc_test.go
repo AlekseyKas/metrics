@@ -69,23 +69,3 @@ func runClient(address string) pb.MetricsMClient {
 	c := pb.NewMetricsMClient(conn)
 	return c
 }
-
-// func client() {
-// 	conn, err := grpc.Dial("127.0.0.1:8080", grpc.WithTransportCredentials(insecure.NewCredentials()))
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	c := pb.NewMetricsMClient(conn)
-// 	ctx, cancel := context.WithCancel(context.Background())
-// 	defer cancel()
-// 	response, _ := c.GetMetricsJSON(ctx, &pb.Empty{})
-// 	fmt.Println("===============================aa===", response)
-
-// 	// metric := &pb.Metric{
-// 	// 	ID:    "Alloc",
-// 	// 	MType: "gauge",
-// 	// }
-// 	// data, _ := c.GetMetricJSON(ctx, metric)
-// 	// fmt.Println("==================================", data)
-
-// }
