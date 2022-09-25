@@ -244,7 +244,7 @@ func (s *grpcServer) UpdateMetric(ctx context.Context, m *pb.MetricData) (p *pb.
 	}
 	if typeMet != "gauge" && typeMet != "counter" {
 		GRPCSrv.Logger.Error("Error changing metric ChangeMetricDB: ", zap.Error(err))
-		return p, status.Error(codes.Internal, err.Error())
+		return p, status.Error(codes.Internal, "Error metric update")
 	}
 	// Update gauge
 	if typeMet == "gauge" && nameMet != "PollCount" {
@@ -331,11 +331,6 @@ func (s *grpcServer) GetMetricData(ctx context.Context, m *pb.Metric) (result *p
 		a := metrics[nameMet]
 		result = &pb.MetricData{
 			Value: *(*float64)(unsafe.Pointer(&a)),
-		}
-		if err != nil {
-			GRPCSrv.Logger.Error("Error write bytes to req: ", zap.Error(err))
-			return &pb.MetricData{}, status.Error(codes.Internal, err.Error())
-
 		}
 		return result, nil
 	}
