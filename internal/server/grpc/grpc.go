@@ -299,7 +299,7 @@ func (s *grpcServer) UpdateMetric(ctx context.Context, m *pb.MetricData) (p *pb.
 func (s *grpcServer) GetMetricData(ctx context.Context, m *pb.Metric) (result *pb.MetricData, err error) {
 
 	metrics := GRPCSrv.StorageM.GetMetrics()
-
+	result = &pb.MetricData{}
 	typeMet := m.MType
 	nameMet := m.ID
 
@@ -310,11 +310,11 @@ func (s *grpcServer) GetMetricData(ctx context.Context, m *pb.Metric) (result *p
 		typeMet = "counter"
 	}
 	if typeMet != "gauge" && typeMet != "counter" {
-		return &pb.MetricData{}, status.Error(codes.Internal, err.Error())
+		return result, status.Error(codes.Internal, "Error getting metric type of metric != counter || gauge")
 	}
 
 	if typeMet == "gauge" && nameMet == "PollCount" {
-		return &pb.MetricData{}, status.Error(codes.NotFound, err.Error())
+		return result, status.Error(codes.NotFound, "Error getting metric type of metric == gauge && metrics name == Pollcount")
 	}
 	if _, ok := metrics[nameMet]; ok {
 		if typeMet == "counter" {
@@ -325,7 +325,7 @@ func (s *grpcServer) GetMetricData(ctx context.Context, m *pb.Metric) (result *p
 			return result, nil
 		}
 	} else {
-		return &pb.MetricData{}, status.Error(codes.NotFound, err.Error())
+		return result, status.Error(codes.NotFound, "Error getting metric, metric not found")
 	}
 	if typeMet == "gauge" && nameMet != "PollCount" {
 		a := metrics[nameMet]
