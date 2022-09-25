@@ -297,7 +297,7 @@ func (s *grpcServer) UpdateMetric(ctx context.Context, m *pb.MetricData) (p *pb.
 }
 
 func (s *grpcServer) GetMetricData(ctx context.Context, m *pb.Metric) (result *pb.MetricData, err error) {
-
+	result = &pb.MetricData{}
 	metrics := GRPCSrv.StorageM.GetMetrics()
 
 	typeMet := m.MType
