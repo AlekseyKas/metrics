@@ -269,8 +269,8 @@ func (s *grpcServer) UpdateMetric(ctx context.Context, m *pb.MetricData) (p *pb.
 		if err != nil {
 			GRPCSrv.Logger.Error("Error changing metric ChangeMetric: ", zap.Error(err))
 			return p, status.Error(codes.NotFound, err.Error())
-		}
-		if err == nil {
+		} else {
+			// if err == nil {
 			if _, ok := metrics[nameMet]; ok {
 				var i int
 				i, err = strconv.Atoi(fmt.Sprintf("%v", metrics[nameMet]))
