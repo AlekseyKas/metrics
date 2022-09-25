@@ -77,7 +77,6 @@ func SendMetricsSlice(ctx context.Context, logger *zap.Logger, address string, p
 			grpcMetrics = append(grpcMetrics, converToGRPC(v))
 		}
 	}
-	// fmt.Println("====================", grpcMetrics)
 	client()
 	_, err = c.SendMetricsJSON(ctx, &pb.SendMetricsJSONRequest{JSONMetrics: grpcMetrics})
 	if err != nil {
@@ -94,14 +93,7 @@ func client() {
 	c := pb.NewMetricsMClient(conn)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	// response, _ := c.GetMetricsJSON(ctx, &pb.Empty{})
-	// fmt.Println("==================================", response)
-	// metric := &pb.Metric{
-	// 	ID:    "Alloc",
-	// 	MType: "gauge",
-	// }
-	// data, _ := c.GetMetricData(ctx, metric)
-	// fmt.Println("==================================", data)
+
 	m := &pb.MetricData{
 		ID:    "Alloc",
 		Mtype: "gauge",
@@ -111,8 +103,6 @@ func client() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("==================================")
-
 }
 
 func converToGRPC(s storage.JSONMetrics) (result *pb.JSONMetrics) {
