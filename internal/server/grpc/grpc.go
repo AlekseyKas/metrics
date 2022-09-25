@@ -310,11 +310,11 @@ func (s *grpcServer) GetMetricData(ctx context.Context, m *pb.Metric) (result *p
 		typeMet = "counter"
 	}
 	if typeMet != "gauge" && typeMet != "counter" {
-		return nil, status.Error(codes.Internal, err.Error())
+		return result, status.Error(codes.Internal, err.Error())
 	}
 
 	if typeMet == "gauge" && nameMet == "PollCount" {
-		return nil, status.Error(codes.NotFound, err.Error())
+		return result, status.Error(codes.NotFound, err.Error())
 	}
 	if _, ok := metrics[nameMet]; ok {
 		if typeMet == "counter" {
@@ -325,7 +325,7 @@ func (s *grpcServer) GetMetricData(ctx context.Context, m *pb.Metric) (result *p
 			return result, status.Error(codes.Internal, err.Error())
 		}
 	} else {
-		return nil, status.Error(codes.NotFound, err.Error())
+		return result, status.Error(codes.NotFound, err.Error())
 	}
 	if typeMet == "gauge" && nameMet != "PollCount" {
 		a := metrics[nameMet]
@@ -334,7 +334,7 @@ func (s *grpcServer) GetMetricData(ctx context.Context, m *pb.Metric) (result *p
 		}
 		if err != nil {
 			GRPCSrv.Logger.Error("Error write bytes to req: ", zap.Error(err))
-			return nil, status.Error(codes.Internal, err.Error())
+			return result, status.Error(codes.Internal, err.Error())
 
 		}
 	}

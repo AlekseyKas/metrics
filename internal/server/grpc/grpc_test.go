@@ -23,15 +23,14 @@ func TestGRPC(t *testing.T) {
 	logger := GRPCSrv.Logger
 	config.TermEnvFlags()
 	srv := New(s.Ctx, logger, s, config.ArgsM)
-	// fmt.Println(srv)
 	go func() {
 		err := srv.Start()
 		log.Fatal(err)
 		time.Sleep(10 * time.Second)
 
 	}()
-	c := runClient(config.ArgsM.Address)
 	//client for test
+	c := runClient(config.ArgsM.Address)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
