@@ -54,8 +54,8 @@ func TestSaveHash(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := saveHash(tt.args.JSONMetric, tt.args.key)
-			require.Empty(t, err)
+			_, err := SaveHash(tt.args.JSONMetric, tt.args.key)
+			require.NoError(t, err)
 			require.Equal(t, tt.sha, tt.args.JSONMetric.Hash)
 		})
 	}

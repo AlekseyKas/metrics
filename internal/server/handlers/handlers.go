@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"hash"
 	"io"
+	"net"
 	"net/http"
 	"net/http/pprof"
 	"reflect"
@@ -58,10 +59,10 @@ func Router(r chi.Router) {
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+	r.Use(CheckSubnet)
 	r.Use(Dencrypt)
 	r.Use(CompressGzip)
 	r.Use(DecompressGzip)
-	// r.Use(Encrypt)
 	r.Get("/", getMetrics())
 	r.Get("/value/{typeMet}/{nameMet}", getMetric())
 	r.Get("/ping", checkConnection())
@@ -75,6 +76,27 @@ func Router(r chi.Router) {
 	r.Get("/debug/pprof/profile", pprof.Profile)
 	r.Get("/debug/pprof/symbol", pprof.Symbol)
 	r.Get("/debug/pprof/trace", pprof.Trace)
+}
+
+func CheckSubnet(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if Args.TrustedSubnet != "" {
+			ipStr := r.Header.Get("X-Real-IP")
+			ip := net.ParseIP(ipStr)
+			_, n, err := net.ParseCIDR(Args.TrustedSubnet)
+			if err != nil {
+				Logger.Error("Error parse parse trusted subnet: ", zap.Error(err))
+			}
+			result := n.Contains(ip)
+			if result {
+				next.ServeHTTP(w, r)
+			} else {
+				w.WriteHeader(http.StatusForbidden)
+				return
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func Dencrypt(next http.Handler) http.Handler {
@@ -180,7 +202,7 @@ func saveMetricsSlice() http.HandlerFunc {
 
 			if config.ArgsM.Key != "" {
 				var b bool
-				b, err = compareHash(&s[i], []byte(config.ArgsM.Key))
+				b, err = CompareHash(&s[i], []byte(config.ArgsM.Key))
 				if err != nil {
 					Logger.Error("Error compare hash of metrics: ", zap.Error(err))
 				}
@@ -441,7 +463,7 @@ func saveMetricsJSON() http.HandlerFunc {
 		nameMet := s.ID
 		if config.ArgsM.Key != "" {
 			var b bool
-			b, err = compareHash(&s, []byte(config.ArgsM.Key))
+			b, err = CompareHash(&s, []byte(config.ArgsM.Key))
 			if err != nil {
 				Logger.Error("Error compare hash of metrics: ", zap.Error(err))
 			}
@@ -522,7 +544,7 @@ func saveMetricsJSON() http.HandlerFunc {
 }
 
 // Compare hashe metrics
-func compareHash(s *storage.JSONMetrics, key []byte) (b bool, err error) {
+func CompareHash(s *storage.JSONMetrics, key []byte) (b bool, err error) {
 	var h hash.Hash
 	switch s.MType {
 	case "counter":

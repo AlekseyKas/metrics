@@ -53,9 +53,11 @@ func WaitSignals(cancel context.CancelFunc, logger *zap.Logger, wg *sync.WaitGro
 		sig := <-terminate
 		switch sig {
 		case os.Interrupt:
-			err := srv.Shutdown(context.Background())
-			if err != nil {
-				logger.Error("Error shutdown http server: ", zap.Error(err))
+			if srv != nil {
+				err := srv.Shutdown(context.Background())
+				if err != nil {
+					logger.Error("Error shutdown http server: ", zap.Error(err))
+				}
 			}
 			if config.ArgsM.DBURL != "" {
 				handlers.StorageM.StopDB()

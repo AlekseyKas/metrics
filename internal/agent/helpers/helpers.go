@@ -58,7 +58,7 @@ func SendMetricsSlice(ctx context.Context, logger *zap.Logger, address string, p
 			return nil
 		default:
 			if string(key) != "" {
-				_, err = saveHash(&JSONMetrics[i], []byte(key))
+				_, err = SaveHash(&JSONMetrics[i], []byte(key))
 				if err != nil {
 					logger.Error("Error save hash of metrics: ", zap.Error(err))
 				}
@@ -90,6 +90,7 @@ func SendMetricsSlice(ctx context.Context, logger *zap.Logger, address string, p
 			logger.Error("Error encrypt data: ", zap.Error(err))
 		}
 		_, err = client.R().
+			SetHeader("X-Real-IP", "127.0.0.1").
 			SetHeader("Content-Encoding", "gzip").
 			SetHeader("Content-Type", "application/json").
 			SetBody(data).
@@ -100,6 +101,7 @@ func SendMetricsSlice(ctx context.Context, logger *zap.Logger, address string, p
 		return nil
 	} else {
 		_, err = client.R().
+			SetHeader("X-Real-IP", "127.0.0.1").
 			SetHeader("Content-Encoding", "gzip").
 			SetHeader("Content-Type", "application/json").
 			SetBody(&b).
@@ -112,7 +114,7 @@ func SendMetricsSlice(ctx context.Context, logger *zap.Logger, address string, p
 }
 
 // Set sha256 hash for metric
-func saveHash(JSONMetric *storage.JSONMetrics, key []byte) (hash string, err error) {
+func SaveHash(JSONMetric *storage.JSONMetrics, key []byte) (hash string, err error) {
 	var hh string
 	switch JSONMetric.MType {
 	case "counter":
