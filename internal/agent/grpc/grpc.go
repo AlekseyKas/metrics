@@ -3,7 +3,6 @@ package grpc
 import (
 	"context"
 	"fmt"
-	"log"
 	"sync"
 	"time"
 
@@ -15,18 +14,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
-
-// func client() {
-// 	conn, err := grpc.Dial("127.0.0.1:8080", grpc.WithTransportCredentials(insecure.NewCredentials()))
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	c := pb.NewMetricsClient(conn)
-// 	ctx, cancel := context.WithCancel(context.Background())
-// 	defer cancel()
-// 	response, _ := c.GetallMetricsJSON(ctx, &pb.GetMetricsJSONRequest{})
-// 	fmt.Println(string(response.Result))
-// }
 
 // Send metrics to server
 func SendMetrics(ctx context.Context, wg *sync.WaitGroup, logger *zap.Logger, pubKey string, storageM storage.StorageAgent) {
@@ -57,7 +44,8 @@ func SendMetricsSlice(ctx context.Context, logger *zap.Logger, address string, p
 	// grpc client
 	conn, err := grpc.Dial(address, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		log.Fatal(err)
+		logger.Error("Error dialing to grpc: ", zap.Error(err))
+		return nil
 	}
 	c := pb.NewMetricsMClient(conn)
 
@@ -88,7 +76,7 @@ func SendMetricsSlice(ctx context.Context, logger *zap.Logger, address string, p
 func client() {
 	conn, err := grpc.Dial("127.0.0.1:8080", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		log.Fatal(err)
+		zap.Error(err)
 	}
 	c := pb.NewMetricsMClient(conn)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -101,7 +89,7 @@ func client() {
 	}
 	_, err = c.UpdateMetric(ctx, m)
 	if err != nil {
-		log.Fatal(err)
+		zap.Error(err)
 	}
 }
 
